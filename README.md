@@ -90,10 +90,10 @@ Example (Netlify)
 ## 📌 Project Vision
 ### FUNDEX is built with extensibility in mind. Planned enhancements include:
 
--🔁 Advanced fund comparison tools
--⭐ Watchlists & portfolio tracking
--🎯 Personalized fund insights
--🔐 User authentication & profiles
+-🔁 **Advanced fund comparison tools**
+-⭐ **Watchlists & portfolio tracking**
+-🎯 **Personalized fund insights**
+-🔐 **User authentication & profiles**
 
 ---
 
