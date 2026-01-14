@@ -58,53 +58,55 @@ The application will be available at:
 
 http://localhost:8080
 
-📦 Production Build
+---
 
-Create an optimized production build:
+##📦 Production Build
+
+###Create an optimized production build:
 
 npm run build
 
-
-Preview the production build locally:
+###Preview the production build locally:
 
 npm run preview
 
-🌐 Deployment
+---
+
+##🌐 Deployment
 
 FUNDEX is a frontend-only application and can be deployed easily on:
 
-Netlify
-
-Vercel
-
-GitHub Pages
+-**Netlify**
+-**Vercel**
+-**GitHub Pages**
 
 Example (Netlify)
-Setting	Value
-Build command	npm run build
-Publish directory	dist
-📌 Project Vision
+-Setting	Value
+-Build command	npm run build
+-Publish directory	dist
 
-FUNDEX is built with extensibility in mind. Planned enhancements include:
+---
 
-🔁 Advanced fund comparison tools
+##📌 Project Vision
+###FUNDEX is built with extensibility in mind. Planned enhancements include:
 
-⭐ Watchlists & portfolio tracking
+-🔁 Advanced fund comparison tools
+-⭐ Watchlists & portfolio tracking
+-🎯 Personalized fund insights
+-🔐 User authentication & profiles
 
-🎯 Personalized fund insights
+---
 
-🔐 User authentication & profiles
+##👨‍💻 Authors
 
-👨‍💻 Authors
+**Dhruv Dalal** | **Vedansh Taparia**
+###Frontend Developer & Data Enthusiast | API Ideation, Data Analysis & Finance Enthusiast
 
-Dhruv Dalal | Vedansh Taparia
-Frontend Developer & Data Enthusiast | API Ideation, Data Analysis & Finance Enthusiast
+###Contributions
 
-Contributions
+-**Dhruv Dalal**: Frontend development, UI/UX, data analysis
 
-Dhruv Dalal: Frontend development, UI/UX, data analysis
-
-Vedansh Taparia: API ideation, data analysis, finance-focused insights
+-**Vedansh Taparia**: API ideation, data analysis, finance-focused insights
 
 
 
