@@ -43,16 +43,16 @@ Make sure you have:
   
 ## Installation
 
--### Clone the repository
+- Clone the repository
 git clone https://github.com/10Vedansh/Fundex-app.git
 
--### Navigate into the project directory
+- Navigate into the project directory
 cd Fundex-app
 
--### Install dependencies
+- Install dependencies
 npm install
 
--### Start the development server
+- Start the development server
 npm run dev
 
 The application will be available at:
