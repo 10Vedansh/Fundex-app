@@ -43,16 +43,16 @@ Make sure you have:
   
 ## Installation
 
-### Clone the repository
+-### Clone the repository
 git clone https://github.com/10Vedansh/Fundex-app.git
 
-### Navigate into the project directory
+-### Navigate into the project directory
 cd Fundex-app
 
-### Install dependencies
+-### Install dependencies
 npm install
 
-### Start the development server
+-### Start the development server
 npm run dev
 
 The application will be available at:
@@ -77,7 +77,9 @@ npm run preview
 FUNDEX is a frontend-only application and can be deployed easily on:
 
 -**Netlify**
+
 -**Vercel**
+
 -**GitHub Pages**
 
 Example (Netlify)
@@ -91,8 +93,11 @@ Example (Netlify)
 ### FUNDEX is built with extensibility in mind. Planned enhancements include:
 
 -🔁 **Advanced fund comparison tools**
+
 -⭐ **Watchlists & portfolio tracking**
+
 -🎯 **Personalized fund insights**
+
 -🔐 **User authentication & profiles**
 
 ---
