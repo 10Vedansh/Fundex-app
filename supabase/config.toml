@@ -1,0 +1,7 @@
+project_id = "jyugiihjjmecsdqcxcsi"
+
+[functions.generate-insights]
+verify_jwt = false
+
+[functions.mfapi]
+verify_jwt = false
