@@ -62,11 +62,11 @@ The application will be available at:
 
 ## 📦 Production Build
 
-### Create an optimized production build:
+- Create an optimized production build:
 
 npm run build
 
-### Preview the production build locally:
+- Preview the production build locally:
 
 npm run preview
 
