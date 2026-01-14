@@ -39,40 +39,40 @@ Make sure you have:
 - **Node.js** (v18 or higher)
 - **npm**
 
-### Installation
+---
+  
+## Installation
 
-
-# Clone the repository
+### Clone the repository
 git clone https://github.com/10Vedansh/Fundex-app.git
 
-# Navigate into the project directory
+### Navigate into the project directory
 cd Fundex-app
 
-# Install dependencies
+### Install dependencies
 npm install
 
-# Start the development server
+### Start the development server
 npm run dev
 
 The application will be available at:
-
-http://localhost:8080
+**http://localhost:8080**
 
 ---
 
-##📦 Production Build
+## 📦 Production Build
 
-###Create an optimized production build:
+### Create an optimized production build:
 
 npm run build
 
-###Preview the production build locally:
+### Preview the production build locally:
 
 npm run preview
 
 ---
 
-##🌐 Deployment
+## 🌐 Deployment
 
 FUNDEX is a frontend-only application and can be deployed easily on:
 
@@ -87,8 +87,8 @@ Example (Netlify)
 
 ---
 
-##📌 Project Vision
-###FUNDEX is built with extensibility in mind. Planned enhancements include:
+## 📌 Project Vision
+### FUNDEX is built with extensibility in mind. Planned enhancements include:
 
 -🔁 Advanced fund comparison tools
 -⭐ Watchlists & portfolio tracking
@@ -97,15 +97,14 @@ Example (Netlify)
 
 ---
 
-##👨‍💻 Authors
+## 👨‍💻 Authors
 
 **Dhruv Dalal** | **Vedansh Taparia**
-###Frontend Developer & Data Enthusiast | API Ideation, Data Analysis & Finance Enthusiast
+### Frontend Developer & Data Enthusiast | API Ideation, Data Analysis & Finance Enthusiast
 
-###Contributions
+### Contributions
 
 -**Dhruv Dalal**: Frontend development, UI/UX, data analysis
-
 -**Vedansh Taparia**: API ideation, data analysis, finance-focused insights
 
 
