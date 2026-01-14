@@ -99,12 +99,13 @@ Example (Netlify)
 
 ## 👨‍💻 Authors
 
-**Dhruv Dalal** | **Vedansh Taparia**
+## **Dhruv Dalal** | **Vedansh Taparia**
 ### Frontend Developer & Data Enthusiast | API Ideation, Data Analysis & Finance Enthusiast
 
 ### Contributions
 
 -**Dhruv Dalal**: Frontend development, UI/UX, data analysis
+
 -**Vedansh Taparia**: API ideation, data analysis, finance-focused insights
 
 
