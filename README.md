@@ -1,57 +1,52 @@
-FUNDEX 🚀
-Mutual Fund Analytics & Insights Platform
+# FUNDEX 🚀  
+### Mutual Fund Analytics & Insights Platform
 
-FUNDEX is a modern web-based platform designed to help users explore, analyze, and compare Indian mutual funds with clarity. It simplifies complex fund data by presenting meaningful insights across performance, risk, and sector allocation in a clean and intuitive interface.
+**FUNDEX** is a modern, data-driven web platform designed to help users **analyze, compare, and understand Indian mutual funds** with clarity and confidence.
 
-The platform is built with a strong focus on usability, data-driven insights, and scalability, making it suitable for both learning and practical analysis.
+By transforming complex financial data into **clean visuals and actionable insights**, FUNDEX makes mutual fund analysis accessible for learners, investors, and finance enthusiasts alike.
 
-✨ Features
+---
 
-📊 Mutual fund overview with key performance metrics
+## ✨ Key Features
 
-⚖️ Risk & return analysis
+- 📊 **Fund Overview** — essential performance metrics at a glance  
+- ⚖️ **Risk & Return Analysis** — understand volatility vs rewards  
+- 🧩 **Sector Allocation Insights** — see where your money is invested  
+- 🔍 **Smart Search & Filters** — find funds by name or AMC  
+- 🎨 **Modern, Responsive UI** — optimized for clarity and usability  
 
-🧩 Sector-wise allocation insights
+---
 
-🔍 Search and filter funds by fund name or AMC
+## 🛠️ Tech Stack
 
-🎨 Clean, responsive UI using modern design components
+FUNDEX is built using a modern frontend stack focused on performance and scalability:
 
-🛠 Tech Stack
+- **React** – UI framework  
+- **TypeScript** – Type-safe development  
+- **Vite** – Fast build tool & dev server  
+- **Tailwind CSS** – Utility-first styling  
+- **shadcn/ui** – Reusable UI components  
+- **React Router** – Client-side routing  
+- **Recharts** – Interactive data visualizations  
+- **Supabase** – Backend services (optional / extensible)  
 
-FUNDEX is built using the following technologies:
+---
 
-React – Frontend framework
+## ⚙️ Getting Started (Local Setup)
 
-TypeScript – Type-safe development
+### Prerequisites
+Make sure you have:
+- **Node.js** (v18 or higher)
+- **npm**
 
-Vite – Fast build tool and development server
+### Installation
 
-Tailwind CSS – Utility-first CSS framework
 
-shadcn/ui – Reusable UI components
-
-React Router – Client-side routing
-
-Recharts – Charts and visualizations
-
-Supabase – Backend services (if applicable)
-
-⚙️ Getting Started (Local Setup)
-Prerequisites
-
-Ensure you have the following installed:
-
-Node.js (v18 or higher recommended)
-
-npm
-
-Installation
 # Clone the repository
-git clone https://github.com/10Vedansh/navi-fund.git
+git clone https://github.com/10Vedansh/Fundex-app.git
 
 # Navigate into the project directory
-cd navi-fund
+cd Fundex-app
 
 # Install dependencies
 npm install
@@ -59,12 +54,14 @@ npm install
 # Start the development server
 npm run dev
 
-
 The application will be available at:
 
-http://localhost:5173
+http://localhost:8080
 
-📦 Build for Production
+📦 Production Build
+
+Create an optimized production build:
+
 npm run build
 
 
@@ -74,7 +71,7 @@ npm run preview
 
 🌐 Deployment
 
-FUNDEX is a frontend-focused application and can be deployed on platforms such as:
+FUNDEX is a frontend-only application and can be deployed easily on:
 
 Netlify
 
@@ -82,35 +79,34 @@ Vercel
 
 GitHub Pages
 
-Example (Netlify):
-
-Build command: npm run build
-
-Publish directory: dist
-
+Example (Netlify)
+Setting	Value
+Build command	npm run build
+Publish directory	dist
 📌 Project Vision
 
-FUNDEX aims to evolve into a comprehensive mutual fund analysis platform with future enhancements such as:
+FUNDEX is built with extensibility in mind. Planned enhancements include:
 
-Advanced fund comparison tools
+🔁 Advanced fund comparison tools
 
-Watchlists and tracking
+⭐ Watchlists & portfolio tracking
 
-Personalized fund insights
+🎯 Personalized fund insights
 
-User authentication and profiles
+🔐 User authentication & profiles
 
 👨‍💻 Authors
 
 Dhruv Dalal | Vedansh Taparia
 Frontend Developer & Data Enthusiast | API Ideation, Data Analysis & Finance Enthusiast
 
-Contributions:
+Contributions
 
 Dhruv Dalal: Frontend development, UI/UX, data analysis
 
 Vedansh Taparia: API ideation, data analysis, finance-focused insights
 
-📄 License
 
-This project is open-source and available under the MIT License.
+
+
+
