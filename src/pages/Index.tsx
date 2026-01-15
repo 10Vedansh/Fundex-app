@@ -1,18 +1,19 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { FundCard } from '@/components/dashboard/FundCard';
 import { FundFilters } from '@/components/dashboard/FundFilters';
-import { RiskReturnChart } from '@/components/dashboard/RiskReturnChart';
 import { SectorAllocationChart } from '@/components/dashboard/SectorAllocationChart';
 import { RecommendationCard } from '@/components/dashboard/RecommendationCard';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FundDetailModal } from '@/components/dashboard/FundDetailModal';
+import { SectorSearchDropdown } from '@/components/dashboard/SectorSearchDropdown';
+import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getSectorDataForFund, mockSectorData } from '@/data/mockFunds';
-import { MutualFund, RiskProfile, FundRecommendation, AIInsight, FundSectorData, SECTOR_COLORS } from '@/types/mutualFund';
-import { LayoutGrid, TrendingUp, PieChart, Sparkles, AlertTriangle, Loader2, Wifi, WifiOff } from 'lucide-react';
+import { MutualFund, RiskProfile, FundRecommendation, AIInsight, FundSectorData } from '@/types/mutualFund';
+import { getCachedSectorData, clearSectorDataCache } from '@/utils/sectorDataGenerator';
+import { LayoutGrid, PieChart, Sparkles, AlertTriangle, Loader2, Wifi, WifiOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -28,9 +29,14 @@ const Index = () => {
   const [riskProfile, setRiskProfile] = useState<RiskProfile>('Moderate');
   const [recommendations, setRecommendations] = useState<FundRecommendation[]>([]);
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
+  
+  // Modal state
+  const [selectedFundForModal, setSelectedFundForModal] = useState<MutualFund | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchFunds = async () => {
     setIsLoading(true);
+    clearSectorDataCache(); // Clear cache when refreshing
     try {
       const { data, error } = await supabase.functions.invoke('mfapi');
       
@@ -92,58 +98,26 @@ const Index = () => {
     return result;
   }, [funds, searchQuery, categoryFilter, sortBy]);
 
-  const getSectorData = (fundId: string): FundSectorData | null => {
-    // First check mock data
-    const mockData = getSectorDataForFund(fundId);
-    if (mockData) return mockData;
-    
-    // Generate generic allocation based on fund category
+  // Get sector data for a fund using the new generator
+  const getSectorData = useCallback((fundId: string): FundSectorData | null => {
     const fund = funds.find(f => f.id === fundId);
     if (!fund) return null;
+    return getCachedSectorData(fund);
+  }, [funds]);
 
-    if (fund.category === 'Debt' || fund.category === 'Liquid') {
-      return {
-        fundId,
-        fundName: fund.name,
-        sectors: [
-          { sector: 'Government Securities', percentage: 35, color: SECTOR_COLORS[0] },
-          { sector: 'Corporate Bonds', percentage: 28, color: SECTOR_COLORS[1] },
-          { sector: 'AAA Rated', percentage: 22, color: SECTOR_COLORS[2] },
-          { sector: 'AA Rated', percentage: 10, color: SECTOR_COLORS[3] },
-          { sector: 'Others', percentage: 5, color: SECTOR_COLORS[4] },
-        ],
-      };
-    }
+  const sectorDataA = useMemo(() => getSectorData(selectedFundA), [selectedFundA, getSectorData]);
+  const sectorDataB = useMemo(() => getSectorData(selectedFundB), [selectedFundB, getSectorData]);
 
-    if (fund.category === 'Hybrid') {
-      return {
-        fundId,
-        fundName: fund.name,
-        sectors: [
-          { sector: 'Equity', percentage: 65, color: SECTOR_COLORS[0] },
-          { sector: 'Debt', percentage: 30, color: SECTOR_COLORS[1] },
-          { sector: 'Cash', percentage: 5, color: SECTOR_COLORS[2] },
-        ],
-      };
-    }
+  // Get sector data for modal
+  const modalSectorData = useMemo(() => {
+    if (!selectedFundForModal) return null;
+    return getCachedSectorData(selectedFundForModal);
+  }, [selectedFundForModal]);
 
-    // Default equity allocation
-    return {
-      fundId,
-      fundName: fund.name,
-      sectors: [
-        { sector: 'Financial Services', percentage: 30, color: SECTOR_COLORS[0] },
-        { sector: 'IT', percentage: 18, color: SECTOR_COLORS[1] },
-        { sector: 'Consumer Goods', percentage: 14, color: SECTOR_COLORS[2] },
-        { sector: 'Healthcare', percentage: 12, color: SECTOR_COLORS[3] },
-        { sector: 'Automobile', percentage: 10, color: SECTOR_COLORS[4] },
-        { sector: 'Others', percentage: 16, color: SECTOR_COLORS[5] },
-      ],
-    };
+  const handleFundClick = (fund: MutualFund) => {
+    setSelectedFundForModal(fund);
+    setIsModalOpen(true);
   };
-
-  const sectorDataA = useMemo(() => getSectorData(selectedFundA), [selectedFundA, funds]);
-  const sectorDataB = useMemo(() => getSectorData(selectedFundB), [selectedFundB, funds]);
 
   const generateRecommendations = async () => {
     setIsLoadingInsights(true);
@@ -230,10 +204,10 @@ const Index = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <DashboardHeader onRefresh={fetchFunds} isLoading={isLoading} />
       
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-4 py-6 flex-1">
         {/* Live Data Indicator */}
         <div className="flex items-center gap-2 mb-4 text-sm">
           {isLiveData ? (
@@ -251,14 +225,10 @@ const Index = () => {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-secondary/50">
+          <TabsList className="grid w-full grid-cols-3 bg-secondary/50">
             <TabsTrigger value="overview" className="gap-2">
               <LayoutGrid className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
-            </TabsTrigger>
-            <TabsTrigger value="risk-return" className="gap-2">
-              <TrendingUp className="h-4 w-4" />
-              <span className="hidden sm:inline">Risk & Return</span>
             </TabsTrigger>
             <TabsTrigger value="sectors" className="gap-2">
               <PieChart className="h-4 w-4" />
@@ -284,7 +254,11 @@ const Index = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredFunds.map(fund => (
-                  <FundCard key={fund.id} fund={fund} />
+                  <FundCard 
+                    key={fund.id} 
+                    fund={fund} 
+                    onClick={() => handleFundClick(fund)}
+                  />
                 ))}
               </div>
             )}
@@ -297,40 +271,20 @@ const Index = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="risk-return" className="animate-fade-in">
-            {isLoading ? (
-              <Card className="glass-card">
-                <CardContent className="h-[500px] flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </CardContent>
-              </Card>
-            ) : (
-              <RiskReturnChart funds={funds} />
-            )}
-          </TabsContent>
-
           <TabsContent value="sectors" className="animate-fade-in space-y-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Select value={selectedFundA} onValueChange={setSelectedFundA}>
-                <SelectTrigger className="bg-secondary/50">
-                  <SelectValue placeholder="Select Fund A" />
-                </SelectTrigger>
-                <SelectContent>
-                  {funds.map(f => (
-                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedFundB} onValueChange={setSelectedFundB}>
-                <SelectTrigger className="bg-secondary/50">
-                  <SelectValue placeholder="Select Fund B" />
-                </SelectTrigger>
-                <SelectContent>
-                  {funds.map(f => (
-                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <SectorSearchDropdown
+                funds={funds}
+                selectedFundId={selectedFundA}
+                onSelect={setSelectedFundA}
+                placeholder="Search Fund A by name or AMC..."
+              />
+              <SectorSearchDropdown
+                funds={funds}
+                selectedFundId={selectedFundB}
+                onSelect={setSelectedFundB}
+                placeholder="Search Fund B by name or AMC..."
+              />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {sectorDataA && <SectorAllocationChart sectorData={sectorDataA} />}
@@ -339,7 +293,7 @@ const Index = () => {
             <Card className="bg-secondary/30">
               <CardContent className="py-4">
                 <p className="text-sm text-muted-foreground">
-                  <strong className="text-foreground">Note:</strong> Sector allocation data is indicative and based on typical portfolio compositions for each fund category. For exact holdings, please refer to the fund's official factsheet.
+                  <strong className="text-foreground">Note:</strong> Sector allocation data is indicative and generated based on fund category and characteristics. For exact holdings, please refer to the fund's official factsheet.
                 </p>
               </CardContent>
             </Card>
@@ -398,6 +352,16 @@ const Index = () => {
           </TabsContent>
         </Tabs>
       </main>
+      
+      <Footer />
+
+      {/* Fund Detail Modal */}
+      <FundDetailModal
+        fund={selectedFundForModal}
+        sectorData={modalSectorData}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   );
 };
