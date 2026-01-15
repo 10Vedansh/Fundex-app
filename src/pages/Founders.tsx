@@ -91,7 +91,7 @@ export default function Founders() {
             Meet the Team
           </Badge>
           <h1 className="text-4xl font-bold text-foreground mb-4">
-            Know the <span className="text-gradient">Founders</span>
+            Know The Founders
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             The passionate minds behind Fundex, dedicated to revolutionizing how you analyze and invest in mutual funds.
