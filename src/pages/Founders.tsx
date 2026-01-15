@@ -7,6 +7,8 @@ import { Linkedin, Twitter, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import dhruvImage from '@/assets/dhruv-dalal.jpeg';
+import vedanshImage from '@/assets/vedansh-taparia.jpeg';
 
 interface FounderCardProps {
   name: string;
@@ -59,16 +61,18 @@ function FounderCard({ name, role, bio, initials, imageUrl }: FounderCardProps) 
 export default function Founders() {
   const founders = [
     {
-      name: 'Coming Soon',
+      name: 'Dhruv Dalal',
       role: 'Founder & CEO',
-      bio: 'Passionate about democratizing investment insights and making mutual fund analysis accessible to everyone. Bio will be updated soon.',
-      initials: 'F',
+      bio: 'Computer Science Engineer with a passion for building data-driven fintech solutions. Combines deep technical expertise in algorithms and system design with a vision to democratize investment insights for every Indian investor.',
+      initials: 'DD',
+      imageUrl: dhruvImage,
     },
     {
-      name: 'Coming Soon',
-      role: 'Co-Founder & CTO',
-      bio: 'Technology enthusiast with a vision to build intelligent tools that help investors make informed decisions. Bio will be updated soon.',
-      initials: 'C',
+      name: 'Vedansh Taparia',
+      role: 'Co-Founder & CFO',
+      bio: 'Computer Science Engineer with strong analytical skills in financial modeling and quantitative analysis. Bridges the gap between technology and finance to build intelligent tools that empower smarter investment decisions.',
+      initials: 'VT',
+      imageUrl: vedanshImage,
     },
   ];
 
