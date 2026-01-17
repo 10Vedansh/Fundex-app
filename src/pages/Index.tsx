@@ -13,7 +13,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MutualFund, RiskProfile, FundRecommendation, AIInsight, FundSectorData } from '@/types/mutualFund';
 import { getCachedSectorData, clearSectorDataCache } from '@/utils/sectorDataGenerator';
-import { LayoutGrid, PieChart, Sparkles, AlertTriangle, Loader2, Wifi, WifiOff } from 'lucide-react';
+import { LayoutGrid, PieChart, Sparkles, AlertTriangle, Loader2, Wifi, WifiOff, Bookmark, TrendingUp, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -28,6 +29,8 @@ const Index = () => {
   const [selectedFundB, setSelectedFundB] = useState('');
   const [riskProfile, setRiskProfile] = useState<RiskProfile>('Moderate');
   const [recommendations, setRecommendations] = useState<FundRecommendation[]>([]);
+  const [watchlist, setWatchlist] = useState<string[]>([]);
+  const [globalSearch, setGlobalSearch] = useState('');
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   
   // Modal state
@@ -119,6 +122,28 @@ const Index = () => {
     setIsModalOpen(true);
   };
 
+  const toggleWatchlist = (fundId: string) => {
+    setWatchlist(prev => 
+      prev.includes(fundId) 
+        ? prev.filter(id => id !== fundId)
+        : [...prev, fundId]
+    );
+  };
+
+  const watchlistFunds = useMemo(() => 
+    funds.filter(f => watchlist.includes(f.id)),
+    [funds, watchlist]
+  );
+
+  const globalFilteredFunds = useMemo(() => {
+    if (!globalSearch) return [];
+    const query = globalSearch.toLowerCase();
+    return funds.filter(f => 
+      f.name.toLowerCase().includes(query) || 
+      f.amc.toLowerCase().includes(query)
+    ).slice(0, 8);
+  }, [funds, globalSearch]);
+
   const generateRecommendations = async () => {
     setIsLoadingInsights(true);
     
@@ -208,6 +233,36 @@ const Index = () => {
       <DashboardHeader onRefresh={fetchFunds} isLoading={isLoading} />
       
       <main className="container mx-auto px-4 py-6 flex-1">
+        {/* Global Search Bar */}
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search all mutual funds by name or AMC..."
+            value={globalSearch}
+            onChange={(e) => setGlobalSearch(e.target.value)}
+            className="pl-10 bg-secondary/50 border-border/50 h-12"
+          />
+          {globalSearch && globalFilteredFunds.length > 0 && (
+            <Card className="absolute top-full left-0 right-0 mt-2 z-50 glass-card max-h-80 overflow-auto">
+              <CardContent className="p-2">
+                {globalFilteredFunds.map(fund => (
+                  <button
+                    key={fund.id}
+                    onClick={() => {
+                      handleFundClick(fund);
+                      setGlobalSearch('');
+                    }}
+                    className="w-full p-3 text-left hover:bg-secondary/50 rounded-lg transition-colors"
+                  >
+                    <p className="font-medium text-sm">{fund.name}</p>
+                    <p className="text-xs text-muted-foreground">{fund.amc} • {fund.category}</p>
+                  </button>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
         {/* Live Data Indicator */}
         <div className="flex items-center gap-2 mb-4 text-sm">
           {isLiveData ? (
@@ -225,7 +280,7 @@ const Index = () => {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-secondary/50">
+          <TabsList className="grid w-full grid-cols-4 bg-secondary/50">
             <TabsTrigger value="overview" className="gap-2">
               <LayoutGrid className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
@@ -234,9 +289,18 @@ const Index = () => {
               <PieChart className="h-4 w-4" />
               <span className="hidden sm:inline">Sectors</span>
             </TabsTrigger>
-            <TabsTrigger value="recommendations" className="gap-2">
-              <Sparkles className="h-4 w-4" />
-              <span className="hidden sm:inline">AI Picks</span>
+            <TabsTrigger value="watchlist" className="gap-2">
+              <Bookmark className="h-4 w-4" />
+              <span className="hidden sm:inline">Watchlist</span>
+              {watchlist.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 text-xs bg-primary/20 text-primary rounded-full">
+                  {watchlist.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="insights" className="gap-2">
+              <TrendingUp className="h-4 w-4" />
+              <span className="hidden sm:inline">Insights</span>
             </TabsTrigger>
           </TabsList>
 
@@ -254,11 +318,24 @@ const Index = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredFunds.map(fund => (
-                  <FundCard 
-                    key={fund.id} 
-                    fund={fund} 
-                    onClick={() => handleFundClick(fund)}
-                  />
+                  <div key={fund.id} className="relative group">
+                    <FundCard 
+                      fund={fund} 
+                      onClick={() => handleFundClick(fund)}
+                    />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="absolute top-2 right-2 h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleWatchlist(fund.id);
+                        toast.success(watchlist.includes(fund.id) ? 'Removed from watchlist' : 'Added to watchlist');
+                      }}
+                    >
+                      <Bookmark className={`h-4 w-4 ${watchlist.includes(fund.id) ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
+                    </Button>
+                  </div>
                 ))}
               </div>
             )}
@@ -299,7 +376,45 @@ const Index = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="recommendations" className="animate-fade-in space-y-6">
+          {/* Watchlist Tab */}
+          <TabsContent value="watchlist" className="animate-fade-in space-y-6">
+            {watchlistFunds.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {watchlistFunds.map(fund => (
+                  <div key={fund.id} className="relative">
+                    <FundCard 
+                      fund={fund} 
+                      onClick={() => handleFundClick(fund)}
+                    />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="absolute top-2 right-2 h-8 w-8 p-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleWatchlist(fund.id);
+                      }}
+                    >
+                      <Bookmark className="h-4 w-4 fill-primary text-primary" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <Card className="glass-card">
+                <CardContent className="py-12 text-center">
+                  <Bookmark className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p className="text-muted-foreground mb-2">Your watchlist is empty</p>
+                  <p className="text-sm text-muted-foreground">
+                    Click the bookmark icon on any fund to add it to your watchlist
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Portfolio Insights Tab */}
+          <TabsContent value="insights" className="animate-fade-in space-y-6">
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div className="flex gap-2">
                 {(['Conservative', 'Moderate', 'Aggressive'] as RiskProfile[]).map(profile => (
@@ -323,7 +438,7 @@ const Index = () => {
                 ) : (
                   <Sparkles className="h-4 w-4" />
                 )}
-                Generate AI Insights
+                Generate Insights
               </Button>
             </div>
 
@@ -336,7 +451,7 @@ const Index = () => {
             ) : (
               <Card className="glass-card">
                 <CardContent className="py-12 text-center text-muted-foreground">
-                  Select a risk profile and click "Generate AI Insights" to get personalized recommendations
+                  Select a risk profile and click "Generate Insights" to get personalized fund suggestions
                 </CardContent>
               </Card>
             )}
@@ -345,7 +460,7 @@ const Index = () => {
               <CardContent className="py-4 flex items-start gap-3">
                 <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-muted-foreground">
-                  <strong className="text-warning">Disclaimer:</strong> AI-generated insights are for informational purposes only. Past performance does not guarantee future results. Mutual fund investments are subject to market risks. Please read all scheme-related documents carefully and consult a SEBI-registered advisor before investing.
+                  <strong className="text-warning">Disclaimer:</strong> Insights are for informational purposes only. Past performance does not guarantee future results. Mutual fund investments are subject to market risks. Please read all scheme-related documents carefully and consult a SEBI-registered advisor before investing.
                 </p>
               </CardContent>
             </Card>
