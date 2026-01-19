@@ -6,6 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { ArrowLeft, Mail, Lock, User, Loader2, TrendingUp, Shield, Target } from 'lucide-react';
 import { FundexLogo } from '@/components/landing/FundexLogo';
@@ -19,12 +26,18 @@ const nameSchema = z.string().min(2, 'Name must be at least 2 characters');
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, signInWithGoogle, signInWithEmail, signUpWithEmail, isLoading: authLoading } = useAuth();
+  const { user, signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string; name?: string }>({});
+  
+  // Forgot password state
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetEmailError, setResetEmailError] = useState<string | undefined>();
+  const [isResetting, setIsResetting] = useState(false);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -150,6 +163,45 @@ export default function Auth() {
       toast.error('An unexpected error occurred');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const validateResetEmail = (value: string) => {
+    try {
+      emailSchema.parse(value);
+      setResetEmailError(undefined);
+      return true;
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        setResetEmailError(err.errors[0].message);
+      }
+      return false;
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateResetEmail(resetEmail)) {
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      const { error } = await resetPassword(resetEmail);
+      
+      if (error) {
+        toast.error(error.message || 'Failed to send reset email');
+        return;
+      }
+      
+      toast.success('Password reset email sent! Check your inbox.');
+      setShowForgotPassword(false);
+      setResetEmail('');
+    } catch (err) {
+      toast.error('An unexpected error occurred');
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -370,6 +422,16 @@ export default function Auth() {
                       </div>
                       {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
                     </div>
+                    <div className="flex items-center justify-end">
+                      <Button
+                        type="button"
+                        variant="link"
+                        className="px-0 text-sm text-primary"
+                        onClick={() => setShowForgotPassword(true)}
+                      >
+                        Forgot password?
+                      </Button>
+                    </div>
                     <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
                       {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                       {isLoading ? 'Signing in...' : 'Sign In'}
@@ -451,6 +513,56 @@ export default function Auth() {
           </Card>
         </div>
       </div>
+
+      {/* Forgot Password Dialog */}
+      <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>
+              Enter your email address and we'll send you a link to reset your password.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  id="reset-email"
+                  type="email" 
+                  placeholder="you@example.com"
+                  value={resetEmail}
+                  onChange={(e) => {
+                    setResetEmail(e.target.value);
+                    if (resetEmailError) validateResetEmail(e.target.value);
+                  }}
+                  onBlur={() => validateResetEmail(resetEmail)}
+                  className={`pl-10 ${resetEmailError ? 'border-destructive' : ''}`}
+                />
+              </div>
+              {resetEmailError && <p className="text-xs text-destructive">{resetEmailError}</p>}
+            </div>
+            <div className="flex gap-3 justify-end">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setShowForgotPassword(false);
+                  setResetEmail('');
+                  setResetEmailError(undefined);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isResetting}>
+                {isResetting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                {isResetting ? 'Sending...' : 'Send Reset Link'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
