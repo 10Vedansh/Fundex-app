@@ -8,8 +8,8 @@ const corsHeaders = {
 
 const AMFI_NAV_URL = "https://www.amfiindia.com/spages/NAVAll.txt";
 const MFAPI_BASE = "https://api.mfapi.in";
-const MAX_FUNDS = 4000;
-const BATCH_SIZE = 30;
+const MAX_FUNDS = 1500;
+const BATCH_SIZE = 75;
 const RISK_FREE_RATE = 6; // India risk-free rate ~6%
 
 // Types
@@ -376,9 +376,9 @@ async function processFunds(amfiFunds: AMFIFund[]): Promise<ProcessedFund[]> {
     const validFunds = batchResults.filter((f): f is ProcessedFund => f !== null);
     processedFunds.push(...validFunds);
     
-    // Small delay between batches to avoid rate limiting
+    // Minimal delay between batches
     if (i + BATCH_SIZE < amfiFunds.length) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
   }
   
