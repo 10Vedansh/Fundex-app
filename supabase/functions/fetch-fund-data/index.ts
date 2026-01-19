@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const AMFI_NAV_URL = "https://www.amfiindia.com/spages/NAVAll.txt";
 const MFAPI_BASE = "https://api.mfapi.in";
-const MAX_FUNDS = 500;
+const MAX_FUNDS = 2000;
 const BATCH_SIZE = 30;
 const RISK_FREE_RATE = 6; // India risk-free rate ~6%
 

@@ -9,7 +9,7 @@ const MFAPI_BASE = "https://api.mfapi.in";
 
 // Batch size for parallel fetching to avoid overwhelming the API
 const BATCH_SIZE = 50;
-const MAX_FUNDS_TO_DISPLAY = 500; // Limit for performance
+const MAX_FUNDS_TO_DISPLAY = 2000; // Increased limit for more fund coverage
 
 interface MFAPIResponse {
   meta: {
