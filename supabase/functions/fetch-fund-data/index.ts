@@ -316,16 +316,50 @@ function getBenchmark(category: string): string {
   }
 }
 
+// Priority AMCs - major fund houses that must be included
+const PRIORITY_AMCS = [
+  'HDFC Mutual Fund',
+  'ICICI Prudential Mutual Fund',
+  'SBI Mutual Fund',
+  'Axis Mutual Fund',
+  'Kotak Mahindra Mutual Fund',
+  'Nippon India Mutual Fund',
+  'Mirae Asset Mutual Fund',
+  'Aditya Birla Sun Life Mutual Fund',
+  'UTI Mutual Fund',
+  'DSP Mutual Fund',
+  'Franklin Templeton Mutual Fund',
+  'Tata Mutual Fund',
+  'PPFAS Mutual Fund',
+  'Canara Robeco Mutual Fund',
+  'Sundaram Mutual Fund',
+  'Groww Mutual Fund',
+  'quant Mutual Fund',
+];
+
 // ============================================
 // STEP 4: Process and Merge Data
 // ============================================
 async function processFunds(amfiFunds: AMFIFund[]): Promise<ProcessedFund[]> {
   const processedFunds: ProcessedFund[] = [];
   
+  // Sort funds to prioritize major AMCs first
+  const sortedFunds = [...amfiFunds].sort((a, b) => {
+    const aPriority = PRIORITY_AMCS.findIndex(amc => a.amc.includes(amc.split(' ')[0]));
+    const bPriority = PRIORITY_AMCS.findIndex(amc => b.amc.includes(amc.split(' ')[0]));
+    
+    // If both are priority, maintain their order within priority
+    if (aPriority !== -1 && bPriority !== -1) return aPriority - bPriority;
+    // Priority funds come first
+    if (aPriority !== -1) return -1;
+    if (bPriority !== -1) return 1;
+    return 0;
+  });
+  
   // Process in batches
-  for (let i = 0; i < Math.min(amfiFunds.length, MAX_FUNDS); i += BATCH_SIZE) {
-    const batch = amfiFunds.slice(i, i + BATCH_SIZE);
-    console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(Math.min(amfiFunds.length, MAX_FUNDS) / BATCH_SIZE)}`);
+  for (let i = 0; i < Math.min(sortedFunds.length, MAX_FUNDS); i += BATCH_SIZE) {
+    const batch = sortedFunds.slice(i, i + BATCH_SIZE);
+    console.log(`Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(Math.min(sortedFunds.length, MAX_FUNDS) / BATCH_SIZE)}`);
     
     const batchPromises = batch.map(async (amfiFund): Promise<ProcessedFund | null> => {
       try {
