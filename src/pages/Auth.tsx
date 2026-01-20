@@ -290,18 +290,6 @@ export default function Auth() {
 
       {/* Right Side - Auth Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative">
-        {/* Header with back button and logo */}
-        <div className="absolute top-6 left-6 right-6 flex items-center justify-between">
-          <Button 
-            variant="ghost" 
-            onClick={() => navigate('/')}
-            className="gap-2 text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-          <div className="w-20" /> {/* Spacer for layout balance */}
-        </div>
 
         <div className="w-full max-w-md mt-16 lg:mt-0">
           <div className="text-center mb-8">
