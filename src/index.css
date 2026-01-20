@@ -122,6 +122,36 @@
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
+
+  /* Custom scrollbar styling for dark fintech theme */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--primary) / 0.4) hsl(var(--secondary));
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: hsl(var(--secondary));
+    border-radius: 4px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.4);
+    border-radius: 4px;
+    border: 2px solid hsl(var(--secondary));
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.6);
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: hsl(var(--secondary));
+  }
 }
 
 @layer utilities {
