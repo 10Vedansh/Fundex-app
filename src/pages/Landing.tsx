@@ -32,43 +32,43 @@ export default function Landing() {
 
   const faqs = [
     { 
-      q: 'What is Fundex?', 
-      a: 'Fundex is an educational platform that helps users explore and understand mutual fund data through clear metrics, visual comparisons, and personalized discovery tools. It is designed to improve financial literacy and assist with informed decision-making.' 
+      q: 'What is 50Stacks?', 
+      a: '50Stacks is an educational platform that helps users explore and understand mutual fund data through clear metrics, visual comparisons, and personalized discovery tools. It is designed to improve financial literacy and assist with informed decision-making.' 
     },
     { 
-      q: 'Is Fundex free to use?', 
-      a: 'Yes, Fundex offers free access to core features including fund analysis, comparisons, watchlist functionality, and portfolio tracking. We believe financial education should be accessible to everyone.' 
+      q: 'Is 50Stacks free to use?', 
+      a: 'Yes, 50Stacks offers free access to core features including fund analysis, comparisons, watchlist functionality, and portfolio tracking. We believe financial education should be accessible to everyone.' 
     },
     { 
-      q: 'Does Fundex provide investment advice?', 
-      a: 'No. Fundex provides educational insights and data analysis tools only. We do not offer investment advice, recommendations, or execution services. All decisions should be made after consulting with a qualified financial advisor.' 
+      q: 'Does 50Stacks provide investment advice?', 
+      a: 'No. 50Stacks provides educational insights and data analysis tools only. We do not offer investment advice, recommendations, or execution services. All decisions should be made after consulting with a qualified financial advisor.' 
     },
     { 
-      q: 'How does Fundex personalize mutual fund suggestions?', 
-      a: 'During onboarding, you answer simple questions about your risk tolerance, investment timeline, and goals. Fundex uses these preferences to filter and surface funds that align with your stated profile—not as recommendations, but as relevant options to explore.' 
+      q: 'How does 50Stacks personalize mutual fund suggestions?', 
+      a: 'During onboarding, you answer simple questions about your risk tolerance, investment timeline, and goals. 50Stacks uses these preferences to filter and surface funds that align with your stated profile—not as recommendations, but as relevant options to explore.' 
     },
     { 
       q: 'Where does the mutual fund data come from?', 
-      a: 'Fundex aggregates publicly available mutual fund data from official sources including AMFI (Association of Mutual Funds in India) and fund house disclosures. We do not create or manipulate this data.' 
+      a: '50Stacks aggregates publicly available mutual fund data from official sources including AMFI (Association of Mutual Funds in India) and fund house disclosures. We do not create or manipulate this data.' 
     },
     { 
       q: 'How often is mutual fund data updated?', 
       a: 'Mutual fund data is refreshed daily, typically after market close (around 9:30 PM IST). NAV updates, returns calculations, and other metrics reflect the most recent publicly available information.' 
     },
     { 
-      q: 'Does Fundex execute investments or handle money?', 
-      a: 'No. Fundex is purely an educational and analytical tool. We do not execute trades, hold funds, or handle any financial transactions. To invest, you must use your chosen broker or AMC platform.' 
+      q: 'Does 50Stacks execute investments or handle money?', 
+      a: 'No. 50Stacks is purely an educational and analytical tool. We do not execute trades, hold funds, or handle any financial transactions. To invest, you must use your chosen broker or AMC platform.' 
     },
     { 
-      q: 'Is my data safe on Fundex?', 
+      q: 'Is my data safe on 50Stacks?', 
       a: 'Yes. We use industry-standard encryption and security practices. Your personal information and preferences are stored securely and never shared with third parties. We do not store any financial account credentials.' 
     },
     { 
-      q: 'Who is Fundex built for?', 
-      a: 'Fundex is built for anyone interested in understanding mutual funds better—beginners learning the basics, intermediate investors comparing options, or experienced users wanting a clean analytical dashboard.' 
+      q: 'Who is 50Stacks built for?', 
+      a: '50Stacks is built for anyone interested in understanding mutual funds better—beginners learning the basics, intermediate investors comparing options, or experienced users wanting a clean analytical dashboard.' 
     },
     { 
-      q: 'Can I track my own portfolio on Fundex?', 
+      q: 'Can I track my own portfolio on 50Stacks?', 
       a: 'Yes! You can manually add funds you have invested in, track allocation, and receive educational insights about your portfolio composition. This helps you understand your risk exposure and diversification.' 
     },
   ];
@@ -137,7 +137,7 @@ export default function Landing() {
             
             <ScrollReveal animation="fade-up" delay={200}>
               <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-                Fundex helps you explore, understand, and organize mutual fund data — 
+                50Stacks helps you explore, understand, and organize mutual fund data — 
                 with clarity and context.
               </p>
             </ScrollReveal>
@@ -166,13 +166,13 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Section 2: Why Fundex Exists */}
+      {/* Section 2: Why 50Stacks Exists */}
       <section id="about" className="relative py-24 z-10">
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <ScrollReveal animation="fade-right">
-                <Badge variant="outline" className="mb-4 bg-secondary/50">Why Fundex?</Badge>
+                <Badge variant="outline" className="mb-4 bg-secondary/50">Why 50Stacks?</Badge>
               </ScrollReveal>
               <ScrollReveal animation="fade-right" delay={100}>
                 <h2 className="text-3xl md:text-4xl font-bold mb-6 tracking-tight">
@@ -181,7 +181,7 @@ export default function Landing() {
               </ScrollReveal>
               <ScrollReveal animation="fade-right" delay={200}>
                 <p className="text-muted-foreground text-lg mb-8 leading-relaxed">
-                  Too much data, not enough understanding. Fundex focuses on simplicity, 
+                  Too much data, not enough understanding. 50Stacks focuses on simplicity, 
                   comparability, and structured insights.
                 </p>
               </ScrollReveal>
@@ -234,7 +234,7 @@ export default function Landing() {
               <Badge variant="outline" className="mb-4 bg-primary/10 text-primary border-primary/30">Features</Badge>
             </ScrollReveal>
             <ScrollReveal animation="fade-up" delay={100}>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">What Fundex Offers</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">What 50Stacks Offers</h2>
             </ScrollReveal>
             <ScrollReveal animation="fade-up" delay={200}>
               <p className="text-muted-foreground max-w-2xl mx-auto">
@@ -288,7 +288,7 @@ export default function Landing() {
           <ScrollReveal animation="fade-up" delay={400}>
             <p className="text-center text-sm text-muted-foreground max-w-xl mx-auto">
               <Lock className="h-4 w-4 inline mr-1" />
-              Fundex does not provide investment advice. All insights are informational.
+              50Stacks does not provide investment advice. All insights are informational.
             </p>
           </ScrollReveal>
         </div>
@@ -468,7 +468,7 @@ export default function Landing() {
           </ScrollReveal>
           <ScrollReveal animation="scale" delay={100}>
             <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-              Join thousands of investors who use Fundex to understand mutual fund performance.
+              Join thousands of investors who use 50Stacks to understand mutual fund performance.
             </p>
           </ScrollReveal>
           <ScrollReveal animation="scale" delay={200}>
@@ -489,7 +489,7 @@ export default function Landing() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <FundexLogo size="sm" />
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Fundex – All rights reserved
+              © {new Date().getFullYear()} 50Stacks – All rights reserved
             </p>
           </div>
         </div>

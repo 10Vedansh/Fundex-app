@@ -20,7 +20,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
       <DialogContent className="sm:max-w-md glass-card border-border/50">
         <DialogHeader>
           <DialogTitle className="text-center text-xl font-bold">
-            Welcome to Fundex
+            Welcome to 50Stacks
           </DialogTitle>
         </DialogHeader>
         

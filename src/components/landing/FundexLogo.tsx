@@ -1,13 +1,13 @@
 import { cn } from '@/lib/utils';
 import { TrendingUp } from 'lucide-react';
 
-interface FundexLogoProps {
+interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
   showText?: boolean;
   className?: string;
 }
 
-export function FundexLogo({ size = 'md', showText = true, className }: FundexLogoProps) {
+export function FundexLogo({ size = 'md', showText = true, className }: LogoProps) {
   const sizeClasses = {
     sm: 'h-8 w-8',
     md: 'h-10 w-10',
@@ -43,7 +43,7 @@ export function FundexLogo({ size = 'md', showText = true, className }: FundexLo
           textSizeClasses[size],
           'bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent'
         )}>
-          Fundex
+          50Stacks
         </span>
       )}
     </div>
