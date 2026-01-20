@@ -415,7 +415,7 @@ export default function Landing() {
             <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight">Know The Founders</h2>
           </ScrollReveal>
           <ScrollReveal animation="fade-up" delay={200}>
-            <p className="text-muted-foreground mb-8">Two CSE engineers with a shared vision for better financial literacy.</p>
+            <p className="text-muted-foreground mb-8">3 CSE engineers with a shared vision for better financial literacy.</p>
           </ScrollReveal>
           
           <ScrollReveal animation="fade-up" delay={300}>
