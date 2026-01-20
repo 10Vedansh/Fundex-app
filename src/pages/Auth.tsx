@@ -305,7 +305,7 @@ export default function Auth() {
 
         <div className="w-full max-w-md mt-16 lg:mt-0">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold">Welcome to Fundex</h2>
+            <h2 className="text-2xl font-bold">Welcome to 50Stacks</h2>
             <p className="text-muted-foreground mt-1">
               Sign in to access your personalized dashboard
             </p>
