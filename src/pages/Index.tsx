@@ -262,8 +262,8 @@ const Index = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* Single Global Search Bar - Hidden on Sectors tab and during loading */}
-          {activeTab !== 'sectors' && !isLoading && (
+          {/* Single Global Search Bar - Hidden on Sectors tab */}
+          {activeTab !== 'sectors' && (
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -296,46 +296,42 @@ const Index = () => {
 
           {/* Overview Tab - Personalized Funds */}
           <TabsContent value="overview" className="animate-fade-in space-y-6">
+            {/* Personalization explanation - Only in Overview */}
+            <Card className="bg-primary/5 border-primary/20">
+              <CardContent className="py-3 flex items-center gap-3">
+                <Info className="h-4 w-4 text-primary flex-shrink-0" />
+                <p className="text-sm text-muted-foreground">
+                  <span className="text-foreground font-medium">Funds shown based on your risk profile and goals.</span>
+                  {' '}Use the search bar above to explore mutual funds.
+                </p>
+              </CardContent>
+            </Card>
+
             {isLoading ? (
               <DashboardLoadingState />
+            ) : personalizedFunds.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {personalizedFunds.map(fund => (
+                  <FundCard 
+                    key={fund.id}
+                    fund={fund} 
+                    onClick={() => handleFundClick(fund)}
+                    isBookmarked={isInWatchlist(fund.id)}
+                    onBookmarkToggle={() => toggleWatchlist(fund)}
+                  />
+                ))}
+              </div>
             ) : (
-              <>
-                {/* Personalization explanation - Only shown after loading */}
-                <Card className="bg-primary/5 border-primary/20">
-                  <CardContent className="py-3 flex items-center gap-3">
-                    <Info className="h-4 w-4 text-primary flex-shrink-0" />
-                    <p className="text-sm text-muted-foreground">
-                      <span className="text-foreground font-medium">Funds shown based on your risk profile and goals.</span>
-                      {' '}Use the search bar above to explore mutual funds.
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {personalizedFunds.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {personalizedFunds.map(fund => (
-                      <FundCard 
-                        key={fund.id}
-                        fund={fund} 
-                        onClick={() => handleFundClick(fund)}
-                        isBookmarked={isInWatchlist(fund.id)}
-                        onBookmarkToggle={() => toggleWatchlist(fund)}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <Card className="glass-card">
-                    <CardContent className="py-12 text-center">
-                      <p className="text-muted-foreground mb-4">
-                        No personalized funds available. Complete your profile to get tailored suggestions.
-                      </p>
-                      <Button onClick={() => navigate('/onboarding')}>
-                        Complete Profile
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
-              </>
+              <Card className="glass-card">
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground mb-4">
+                    No personalized funds available. Complete your profile to get tailored suggestions.
+                  </p>
+                  <Button onClick={() => navigate('/onboarding')}>
+                    Complete Profile
+                  </Button>
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
 
