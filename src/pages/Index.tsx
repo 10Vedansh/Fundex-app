@@ -8,10 +8,10 @@ import { FundDetailModal } from '@/components/dashboard/FundDetailModal';
 import { SectorSearchDropdown } from '@/components/dashboard/SectorSearchDropdown';
 import { FundComparisonCard } from '@/components/dashboard/FundComparisonCard';
 import { PortfolioFundModal } from '@/components/dashboard/PortfolioFundModal';
+import { DashboardLoadingState } from '@/components/dashboard/DashboardLoadingState';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -217,26 +217,7 @@ const Index = () => {
     return { type: 'continue', message: 'Performance in line with expectations.' };
   };
 
-  const LoadingCards = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {[...Array(6)].map((_, i) => (
-        <Card key={i} className="glass-card">
-          <CardContent className="p-6 space-y-4">
-            <div className="flex gap-2">
-              <Skeleton className="h-6 w-16" />
-              <Skeleton className="h-6 w-20" />
-            </div>
-            <Skeleton className="h-6 w-full" />
-            <Skeleton className="h-4 w-24" />
-            <div className="grid grid-cols-2 gap-4 pt-4">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
+  // Loading state now handled by DashboardLoadingState component
 
   if (authLoading) {
     return (
@@ -327,7 +308,7 @@ const Index = () => {
             </Card>
 
             {isLoading ? (
-              <LoadingCards />
+              <DashboardLoadingState />
             ) : personalizedFunds.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {personalizedFunds.map(fund => (
@@ -458,7 +439,7 @@ const Index = () => {
             </div>
 
             {portfolioLoading ? (
-              <LoadingCards />
+              <DashboardLoadingState />
             ) : portfolio.length > 0 ? (
               <div className="space-y-4">
                 {portfolio.map(item => {
