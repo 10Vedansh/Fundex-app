@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -6,6 +7,10 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { AnimatedStockGraph } from '@/components/landing/AnimatedStockGraph';
 import { ScrollReveal } from '@/components/landing/ScrollReveal';
 import { FundexLogo } from '@/components/landing/FundexLogo';
+import { TermsAndConditions } from '@/components/legal/TermsAndConditions';
+import { PrivacyPolicy } from '@/components/legal/PrivacyPolicy';
+import { Disclaimer } from '@/components/legal/Disclaimer';
+import { RefundPolicy } from '@/components/legal/RefundPolicy';
 import { 
   ChevronRight, 
   BarChart3, 
@@ -29,6 +34,10 @@ import {
 
 export default function Landing() {
   const navigate = useNavigate();
+  const [termsOpen, setTermsOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [disclaimerOpen, setDisclaimerOpen] = useState(false);
+  const [refundOpen, setRefundOpen] = useState(false);
 
   const faqs = [
     { 
@@ -486,14 +495,64 @@ export default function Landing() {
       {/* Footer */}
       <footer className="relative z-10 border-t border-border/40 bg-background/80 backdrop-blur-sm py-8">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          {/* Main footer content */}
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <FundexLogo size="sm" />
+            
+            {/* Legal links */}
+            <div className="flex flex-wrap justify-center gap-4 text-sm">
+              <button
+                onClick={() => setTermsOpen(true)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Terms & Conditions
+              </button>
+              <span className="text-border hidden md:inline">|</span>
+              <button
+                onClick={() => setPrivacyOpen(true)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Privacy Policy
+              </button>
+              <span className="text-border hidden md:inline">|</span>
+              <button
+                onClick={() => setDisclaimerOpen(true)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Disclaimer
+              </button>
+              <span className="text-border hidden md:inline">|</span>
+              <button
+                onClick={() => setRefundOpen(true)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Refund Policy
+              </button>
+            </div>
+
+            {/* Copyright */}
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} 50Stacks – All rights reserved
             </p>
           </div>
+
+          {/* Mandatory SEBI disclaimer */}
+          <div className="mt-6 pt-4 border-t border-border/30">
+            <p className="text-xs text-muted-foreground text-center max-w-4xl mx-auto">
+              <strong>Disclaimer:</strong> Mutual fund investments are subject to market risks. 
+              Read all scheme-related documents carefully before investing. Past performance is not 
+              indicative of future returns. 50Stacks is an educational platform and is NOT a 
+              SEBI-registered Investment Advisor. We do not provide any investment advice or recommendations.
+            </p>
+          </div>
         </div>
       </footer>
+
+      {/* Legal modals */}
+      <TermsAndConditions open={termsOpen} onOpenChange={setTermsOpen} />
+      <PrivacyPolicy open={privacyOpen} onOpenChange={setPrivacyOpen} />
+      <Disclaimer open={disclaimerOpen} onOpenChange={setDisclaimerOpen} />
+      <RefundPolicy open={refundOpen} onOpenChange={setRefundOpen} />
     </div>
   );
 }
