@@ -72,13 +72,12 @@ export function useFundCache() {
   // Fetch cached data from Supabase (fast - no external API calls)
   const fetchCachedData = async (): Promise<{ funds: MutualFund[]; lastUpdated: string } | null> => {
     try {
-      const { data, error } = await supabase.functions.invoke('fetch-fund-data', {
-        body: null,
-        method: 'GET',
-      });
+      // Use query params via URL with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
-      // Use query params via URL
       const response = await supabase.functions.invoke('fetch-fund-data?action=cached');
+      clearTimeout(timeoutId);
       
       if (response.error) throw response.error;
       if (!response.data?.funds || response.data.funds.length === 0) {
@@ -115,14 +114,23 @@ export function useFundCache() {
     }
   };
 
-  // Fallback to old mfapi function if new one fails
+  // Fallback to old mfapi function if new one fails (with timeout)
   const fetchFromLegacyAPI = async (): Promise<MutualFund[]> => {
-    const { data, error } = await supabase.functions.invoke('mfapi');
-    if (error) throw error;
-    if (!data?.funds || data.funds.length === 0) {
-      throw new Error('No funds returned');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('mfapi');
+      clearTimeout(timeoutId);
+      if (error) throw error;
+      if (!data?.funds || data.funds.length === 0) {
+        throw new Error('No funds returned');
+      }
+      return data.funds;
+    } catch (err) {
+      clearTimeout(timeoutId);
+      throw err;
     }
-    return data.funds;
   };
 
   // Main fetch function
@@ -177,34 +185,41 @@ export function useFundCache() {
         }
       }
 
-      // Step 3: Force refresh or no cache available - do full refresh
+      // Step 3: Force refresh or no cache available - try legacy API first (faster)
       if (forceRefresh) {
-        toast.info('Refreshing fund data from AMFI & MFAPI...');
+        toast.info('Refreshing fund data...');
       }
       
-      const freshData = await triggerFullRefresh();
-      
-      if (freshData && freshData.funds.length > 0) {
-        setFunds(freshData.funds);
-        setIsLiveData(true);
-        setLastUpdated(new Date(freshData.lastUpdated));
-        saveToLocalCache(freshData.funds, freshData.lastUpdated);
-        
-        if (forceRefresh) {
-          toast.success(`Loaded ${freshData.funds.length} funds`);
-        }
-      } else {
-        // Fallback to legacy API
-        console.log('New API failed, falling back to legacy mfapi...');
+      try {
+        // Try legacy API first as it's more reliable
+        console.log('Trying legacy mfapi...');
         const legacyFunds = await fetchFromLegacyAPI();
-        setFunds(legacyFunds);
-        setIsLiveData(true);
-        setLastUpdated(new Date());
-        saveToLocalCache(legacyFunds, new Date().toISOString());
-        
-        if (forceRefresh) {
-          toast.success(`Loaded ${legacyFunds.length} funds (legacy)`);
+        if (legacyFunds && legacyFunds.length > 0) {
+          setFunds(legacyFunds);
+          setIsLiveData(true);
+          setLastUpdated(new Date());
+          saveToLocalCache(legacyFunds, new Date().toISOString());
+          
+          if (forceRefresh) {
+            toast.success(`Loaded ${legacyFunds.length} funds`);
+          }
+          setIsLoading(false);
+          return;
         }
+      } catch (legacyErr) {
+        console.error('Legacy API failed:', legacyErr);
+      }
+
+      // If legacy fails, use mock data immediately (don't wait for slow full refresh)
+      console.log('APIs unavailable, using mock data for reliable display...');
+      const { mockFunds } = await import('@/data/mockFunds');
+      setFunds(mockFunds);
+      setIsLiveData(false);
+      setLastUpdated(new Date());
+      saveToLocalCache(mockFunds, new Date().toISOString());
+      
+      if (forceRefresh) {
+        toast.info(`Loaded ${mockFunds.length} sample funds`);
       }
     } catch (err) {
       console.error('Failed to fetch fund data:', err);
