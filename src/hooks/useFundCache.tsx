@@ -116,24 +116,19 @@ export function useFundCache() {
 
   // Fallback to old mfapi function if new one fails (with timeout)
   const fetchFromLegacyAPI = async (): Promise<MutualFund[]> => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
     try {
       const { data, error } = await supabase.functions.invoke('mfapi');
-      clearTimeout(timeoutId);
       if (error) throw error;
       if (!data?.funds || data.funds.length === 0) {
         throw new Error('No funds returned');
       }
       return data.funds;
     } catch (err) {
-      clearTimeout(timeoutId);
       throw err;
     }
   };
 
-  // Main fetch function
+  // Main fetch function - API only, no mock data fallback
   const fetchFunds = useCallback(async (forceRefresh = false) => {
     setIsLoading(true);
     
@@ -185,57 +180,70 @@ export function useFundCache() {
         }
       }
 
-      // Step 3: Force refresh or no cache available - try legacy API first (faster)
+      // Step 3: Force refresh or no cache - fetch from APIs
       if (forceRefresh) {
-        toast.info('Refreshing fund data...');
+        toast.info('Refreshing fund data from API...');
       }
       
-      try {
-        // Try legacy API first as it's more reliable
-        console.log('Trying legacy mfapi...');
-        const legacyFunds = await fetchFromLegacyAPI();
-        if (legacyFunds && legacyFunds.length > 0) {
-          setFunds(legacyFunds);
-          setIsLiveData(true);
-          setLastUpdated(new Date());
-          saveToLocalCache(legacyFunds, new Date().toISOString());
-          
-          if (forceRefresh) {
-            toast.success(`Loaded ${legacyFunds.length} funds`);
-          }
-          setIsLoading(false);
-          return;
+      // Try full refresh first (AMFI + MFAPI)
+      console.log('Fetching fresh data from APIs...');
+      const freshData = await triggerFullRefresh();
+      if (freshData && freshData.funds.length > 0) {
+        setFunds(freshData.funds);
+        setIsLiveData(true);
+        setLastUpdated(new Date(freshData.lastUpdated));
+        saveToLocalCache(freshData.funds, freshData.lastUpdated);
+        
+        if (forceRefresh) {
+          toast.success(`Loaded ${freshData.funds.length} funds from API`);
         }
-      } catch (legacyErr) {
-        console.error('Legacy API failed:', legacyErr);
+        setIsLoading(false);
+        return;
       }
 
-      // If legacy fails, use mock data immediately (don't wait for slow full refresh)
-      console.log('APIs unavailable, using mock data for reliable display...');
-      const { mockFunds } = await import('@/data/mockFunds');
-      setFunds(mockFunds);
-      setIsLiveData(false);
-      setLastUpdated(new Date());
-      saveToLocalCache(mockFunds, new Date().toISOString());
-      
-      if (forceRefresh) {
-        toast.info(`Loaded ${mockFunds.length} sample funds`);
+      // If full refresh fails, try legacy API
+      console.log('Trying legacy mfapi...');
+      const legacyFunds = await fetchFromLegacyAPI();
+      if (legacyFunds && legacyFunds.length > 0) {
+        setFunds(legacyFunds);
+        setIsLiveData(true);
+        setLastUpdated(new Date());
+        saveToLocalCache(legacyFunds, new Date().toISOString());
+        
+        if (forceRefresh) {
+          toast.success(`Loaded ${legacyFunds.length} funds from API`);
+        }
+        setIsLoading(false);
+        return;
       }
+
+      // If both fail but we have local cache, use it
+      if (localCache && localCache.funds.length > 0) {
+        setFunds(localCache.funds);
+        setIsLiveData(true);
+        setLastUpdated(new Date(localCache.lastUpdated));
+        toast.info('Using cached data');
+        setIsLoading(false);
+        return;
+      }
+
+      // No data available
+      toast.error('Unable to fetch fund data. Please try again later.');
+      setFunds([]);
+      setIsLiveData(false);
     } catch (err) {
       console.error('Failed to fetch fund data:', err);
       
-      // Fall back to local cache or mock data
+      // Fall back to local cache only
       const localCache = loadFromLocalCache();
       if (localCache && localCache.funds.length > 0) {
         setFunds(localCache.funds);
         setIsLiveData(true);
         toast.info('Using cached data');
       } else {
-        // Import mock data as ultimate fallback
-        const { mockFunds } = await import('@/data/mockFunds');
-        setFunds(mockFunds);
+        toast.error('Failed to fetch fund data. Please try again.');
+        setFunds([]);
         setIsLiveData(false);
-        toast.error('Failed to fetch live data. Using sample data.');
       }
     } finally {
       setIsLoading(false);
