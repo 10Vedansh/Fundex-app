@@ -160,13 +160,13 @@ export default function Landing() {
         <div className="max-w-5xl mx-auto px-6 py-24">
           <div className="max-w-2xl">
             <OpacityReveal>
-              <p className="text-xs text-muted-foreground mb-6 tracking-[0.2em] uppercase font-medium">
+              <p className="text-sm text-muted-foreground mb-6 tracking-[0.2em] uppercase font-medium">
                 Mutual Fund Analytics Platform
               </p>
             </OpacityReveal>
             
             <OpacityReveal delay={50}>
-              <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-medium mb-8 leading-[1.15] tracking-tight text-foreground">
+              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-semibold mb-8 leading-[1.1] tracking-tight text-foreground">
                 See what the numbers
                 <br />
                 <span className="text-muted-foreground">actually mean</span>
@@ -174,7 +174,7 @@ export default function Landing() {
             </OpacityReveal>
             
             <OpacityReveal delay={100}>
-              <p className="text-base text-muted-foreground max-w-md mb-10 leading-relaxed">
+              <p className="text-lg text-muted-foreground max-w-lg mb-10 leading-relaxed">
                 50Stacks transforms mutual fund data into clarity. 
                 Compare performance, understand risk, make informed decisions.
               </p>
@@ -217,25 +217,25 @@ export default function Landing() {
           <div className="grid lg:grid-cols-2 gap-16 items-start">
             <div>
               <OpacityReveal>
-                <p className="text-xs text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
+                <p className="text-sm text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
                   The Problem
                 </p>
               </OpacityReveal>
               <OpacityReveal delay={50}>
-                <h2 className="text-3xl font-medium mb-6 tracking-tight text-foreground leading-tight">
+                <h2 className="text-3xl md:text-4xl font-semibold mb-6 tracking-tight text-foreground leading-tight">
                   Data everywhere.
                   <br />
                   <span className="text-muted-foreground">Understanding nowhere.</span>
                 </h2>
               </OpacityReveal>
               <OpacityReveal delay={100}>
-                <p className="text-muted-foreground leading-relaxed mb-6">
+                <p className="text-base text-muted-foreground leading-relaxed mb-6">
                   Every fund shows returns. Few explain what they mean. NAVs, expense ratios, 
                   risk grades—numbers without context are just noise.
                 </p>
               </OpacityReveal>
               <OpacityReveal delay={150}>
-                <p className="text-muted-foreground leading-relaxed text-sm">
+                <p className="text-muted-foreground leading-relaxed">
                   The problem is not access to information. It is the absence of interpretation.
                 </p>
               </OpacityReveal>
@@ -254,9 +254,9 @@ export default function Landing() {
                 'No standard way to compare fairly'
               ].map((item, idx) => (
                 <OpacityReveal key={idx} delay={150 + idx * 50}>
-                  <div className="flex items-center gap-4 py-3 border-b border-border/30">
-                    <span className="text-xs text-muted-foreground/50 font-mono">{String(idx + 1).padStart(2, '0')}</span>
-                    <p className="text-sm text-foreground/80">{item}</p>
+                  <div className="flex items-center gap-4 py-4 border-b border-border/30">
+                    <span className="text-sm text-muted-foreground/50 font-mono">{String(idx + 1).padStart(2, '0')}</span>
+                    <p className="text-base text-foreground/80">{item}</p>
                   </div>
                 </OpacityReveal>
               ))}
@@ -270,17 +270,17 @@ export default function Landing() {
         <div className="max-w-5xl mx-auto px-6">
           <div className="max-w-xl mb-16">
             <OpacityReveal>
-              <p className="text-xs text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
+              <p className="text-sm text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
                 Features
               </p>
             </OpacityReveal>
             <OpacityReveal delay={50}>
-              <h2 className="text-3xl font-medium mb-4 tracking-tight text-foreground">
+              <h2 className="text-3xl md:text-4xl font-semibold mb-4 tracking-tight text-foreground">
                 Tools that reveal, not recommend
               </h2>
             </OpacityReveal>
             <OpacityReveal delay={100}>
-              <p className="text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 Analysis features built for understanding, not selling.
               </p>
             </OpacityReveal>
@@ -314,11 +314,11 @@ export default function Landing() {
                   className="p-6 rounded-lg border border-border/40 bg-card/30 h-full"
                   intensity={0.015}
                 >
-                  <div className="h-9 w-9 rounded-md bg-secondary/80 flex items-center justify-center mb-4">
-                    <feature.icon className="h-4 w-4 text-foreground/70" />
+                  <div className="h-11 w-11 rounded-md bg-secondary/80 flex items-center justify-center mb-4">
+                    <feature.icon className="h-5 w-5 text-foreground/70" />
                   </div>
-                  <h3 className="font-medium text-base mb-2 text-foreground">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{feature.desc}</p>
+                  <h3 className="font-medium text-lg mb-2 text-foreground">{feature.title}</h3>
+                  <p className="text-base text-muted-foreground leading-relaxed">{feature.desc}</p>
                 </ProximityCard>
               </OpacityReveal>
             ))}
@@ -332,19 +332,19 @@ export default function Landing() {
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
               <OpacityReveal>
-                <p className="text-xs text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
+                <p className="text-sm text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
                   Transparency
                 </p>
               </OpacityReveal>
               <OpacityReveal delay={50}>
-                <h2 className="text-3xl font-medium mb-6 tracking-tight text-foreground">
+                <h2 className="text-3xl md:text-4xl font-semibold mb-6 tracking-tight text-foreground">
                   No hidden agendas.
                   <br />
                   <span className="text-muted-foreground">Just transparent data.</span>
                 </h2>
               </OpacityReveal>
               <OpacityReveal delay={100}>
-                <p className="text-muted-foreground leading-relaxed">
+                <p className="text-base text-muted-foreground leading-relaxed">
                   We source data from AMFI and official fund house disclosures. 
                   No commissions, no fund promotions, no conflicts of interest. 
                   What you see is what exists—unmanipulated.
@@ -363,10 +363,10 @@ export default function Landing() {
                     className="flex items-center gap-4 p-4 rounded-lg border border-border/30 bg-card/20"
                     intensity={0.01}
                   >
-                    <div className="h-10 w-10 rounded-md bg-secondary/60 flex items-center justify-center flex-shrink-0">
-                      <item.icon className="h-4 w-4 text-foreground/60" />
+                    <div className="h-11 w-11 rounded-md bg-secondary/60 flex items-center justify-center flex-shrink-0">
+                      <item.icon className="h-5 w-5 text-foreground/60" />
                     </div>
-                    <p className="text-sm text-foreground/80">{item.text}</p>
+                    <p className="text-base text-foreground/80">{item.text}</p>
                   </ProximityCard>
                 </OpacityReveal>
               ))}
@@ -380,17 +380,17 @@ export default function Landing() {
         <div className="max-w-5xl mx-auto px-6">
           <div className="max-w-xl mb-16">
             <OpacityReveal>
-              <p className="text-xs text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
+              <p className="text-sm text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
                 How It Works
               </p>
             </OpacityReveal>
             <OpacityReveal delay={50}>
-              <h2 className="text-3xl font-medium mb-4 tracking-tight text-foreground">
+              <h2 className="text-3xl md:text-4xl font-semibold mb-4 tracking-tight text-foreground">
                 Your analysis. Your decisions.
               </h2>
             </OpacityReveal>
             <OpacityReveal delay={100}>
-              <p className="text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 Simple onboarding. Meaningful output. You stay in control.
               </p>
             </OpacityReveal>
@@ -405,9 +405,9 @@ export default function Landing() {
             ].map((item, idx) => (
               <OpacityReveal key={idx} delay={idx * 75}>
                 <div>
-                  <p className="text-3xl font-light text-muted-foreground/20 mb-3 font-mono">{item.step}</p>
-                  <h3 className="font-medium text-foreground mb-1 text-sm">{item.title}</h3>
-                  <p className="text-xs text-muted-foreground">{item.desc}</p>
+                  <p className="text-4xl font-light text-muted-foreground/25 mb-3 font-mono">{item.step}</p>
+                  <h3 className="font-medium text-foreground mb-1 text-base">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground">{item.desc}</p>
                 </div>
               </OpacityReveal>
             ))}
@@ -420,17 +420,17 @@ export default function Landing() {
         <div className="max-w-5xl mx-auto px-6">
           <div className="max-w-xl mx-auto text-center">
             <OpacityReveal>
-              <p className="text-xs text-muted-foreground mb-4 tracking-[0.15em] uppercase font-medium">
+              <p className="text-sm text-muted-foreground mb-4 tracking-[0.15em] uppercase font-medium">
                 The Team
               </p>
             </OpacityReveal>
             <OpacityReveal delay={50}>
-              <h2 className="text-2xl font-medium mb-4 tracking-tight text-foreground">
+              <h2 className="text-3xl font-semibold mb-4 tracking-tight text-foreground">
                 Built by engineers who invest
               </h2>
             </OpacityReveal>
             <OpacityReveal delay={100}>
-              <p className="text-muted-foreground mb-8 text-sm">
+              <p className="text-base text-muted-foreground mb-8">
                 Three computer science engineers frustrated by the gap between 
                 great financial data and tools to understand it.
               </p>
@@ -454,12 +454,12 @@ export default function Landing() {
         <div className="max-w-2xl mx-auto px-6">
           <div className="text-center mb-12">
             <OpacityReveal>
-              <p className="text-xs text-muted-foreground mb-4 tracking-[0.15em] uppercase font-medium">
+              <p className="text-sm text-muted-foreground mb-4 tracking-[0.15em] uppercase font-medium">
                 FAQ
               </p>
             </OpacityReveal>
             <OpacityReveal delay={50}>
-              <h2 className="text-2xl font-medium tracking-tight text-foreground">
+              <h2 className="text-3xl font-semibold tracking-tight text-foreground">
                 Common questions
               </h2>
             </OpacityReveal>
@@ -472,10 +472,10 @@ export default function Landing() {
                   value={`item-${idx}`} 
                   className="border border-border/30 rounded-lg px-5 bg-card/20 data-[state=open]:bg-card/40 transition-colors duration-200"
                 >
-                  <AccordionTrigger className="text-left hover:no-underline py-4 text-sm font-medium text-foreground">
+                  <AccordionTrigger className="text-left hover:no-underline py-4 text-base font-medium text-foreground">
                     {faq.q}
                   </AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground pb-4 text-sm leading-relaxed">
+                  <AccordionContent className="text-muted-foreground pb-4 text-base leading-relaxed">
                     {faq.a}
                   </AccordionContent>
                 </AccordionItem>
@@ -489,12 +489,12 @@ export default function Landing() {
       <section className="relative py-32 z-10">
         <div className="max-w-5xl mx-auto px-6 text-center">
           <OpacityReveal>
-            <h2 className="text-2xl sm:text-3xl font-medium mb-4 tracking-tight text-foreground">
+            <h2 className="text-3xl sm:text-4xl font-semibold mb-4 tracking-tight text-foreground">
               Ready to understand your investments?
             </h2>
           </OpacityReveal>
           <OpacityReveal delay={50}>
-            <p className="text-muted-foreground mb-8 max-w-md mx-auto text-sm">
+            <p className="text-base text-muted-foreground mb-8 max-w-md mx-auto">
               Join investors using 50Stacks for clear, contextual analysis.
             </p>
           </OpacityReveal>
