@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -6,7 +6,11 @@ import { TermsAndConditions } from '@/components/legal/TermsAndConditions';
 import { PrivacyPolicy } from '@/components/legal/PrivacyPolicy';
 import { Disclaimer } from '@/components/legal/Disclaimer';
 import { RefundPolicy } from '@/components/legal/RefundPolicy';
-import { TrendingUp, ArrowRight, BarChart2, Target, Bookmark, PieChart } from 'lucide-react';
+import { SubtleMarketBackground } from '@/components/landing/SubtleMarketBackground';
+import { OpacityReveal } from '@/components/landing/OpacityReveal';
+import { ProximityCard } from '@/components/landing/ProximityCard';
+import { TrendingUp, ArrowRight, BarChart2, Target, Bookmark, PieChart, Database, Shield, Lock } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -14,108 +18,113 @@ export default function Landing() {
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  // Navigation gains weight after scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const faqs = [
     { 
       q: 'What is 50Stacks?', 
-      a: '50Stacks is an educational platform that helps users explore and understand mutual fund data through clear metrics, visual comparisons, and personalized discovery tools. It is designed to improve financial literacy and assist with informed decision-making.' 
+      a: '50Stacks is an educational platform that helps users explore and understand mutual fund data through clear metrics, visual comparisons, and personalized discovery tools.' 
     },
     { 
       q: 'Is 50Stacks free to use?', 
-      a: 'Yes, 50Stacks offers free access to core features including fund analysis, comparisons, watchlist functionality, and portfolio tracking. We believe financial education should be accessible to everyone.' 
+      a: 'Yes, 50Stacks offers free access to core features including fund analysis, comparisons, watchlist functionality, and portfolio tracking.' 
     },
     { 
       q: 'Does 50Stacks provide investment advice?', 
-      a: 'No. 50Stacks provides educational insights and data analysis tools only. We do not offer investment advice, recommendations, or execution services. All decisions should be made after consulting with a qualified financial advisor.' 
+      a: 'No. 50Stacks provides educational insights and data analysis tools only. We do not offer investment advice or recommendations.' 
     },
     { 
       q: 'How does personalization work?', 
-      a: 'During onboarding, you answer simple questions about your risk tolerance, investment timeline, and goals. 50Stacks uses these preferences to filter and surface funds that align with your stated profile—not as recommendations, but as relevant options to explore.' 
+      a: 'During onboarding, you answer questions about your risk tolerance, timeline, and goals. 50Stacks filters funds that align with your profile—not as recommendations, but as relevant options to explore.' 
     },
     { 
       q: 'Where does the data come from?', 
-      a: '50Stacks aggregates publicly available mutual fund data from official sources including AMFI (Association of Mutual Funds in India) and fund house disclosures. Data is refreshed daily after market close.' 
+      a: '50Stacks aggregates publicly available mutual fund data from AMFI and fund house disclosures. Data is refreshed daily after market close.' 
     },
     { 
       q: 'Is my data secure?', 
-      a: 'Yes. We use industry-standard encryption and security practices. Your personal information and preferences are stored securely and never shared with third parties. We do not store any financial account credentials.' 
+      a: 'Yes. We use industry-standard encryption. Your information is stored securely and never shared with third parties.' 
     },
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Subtle grid background */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div 
-          className="absolute inset-0 opacity-[0.02]"
-          style={{
-            backgroundImage: `
-              linear-gradient(to right, hsl(var(--foreground)) 1px, transparent 1px),
-              linear-gradient(to bottom, hsl(var(--foreground)) 1px, transparent 1px)
-            `,
-            backgroundSize: '80px 80px'
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/50 to-background" />
-      </div>
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Premium Background */}
+      <SubtleMarketBackground />
 
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border/40">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      {/* Navigation - gains weight after scroll */}
+      <nav 
+        className={cn(
+          "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+          scrolled 
+            ? "bg-background/95 backdrop-blur-md border-b border-border/50 py-3" 
+            : "bg-transparent py-5"
+        )}
+      >
+        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between">
           <button 
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             className="flex items-center gap-2.5 group"
           >
-            <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
-              <TrendingUp size={18} className="text-primary-foreground" strokeWidth={2.5} />
+            <div className={cn(
+              "rounded-lg bg-primary flex items-center justify-center transition-all duration-300",
+              scrolled ? "h-8 w-8" : "h-9 w-9"
+            )}>
+              <TrendingUp size={scrolled ? 16 : 18} className="text-primary-foreground" strokeWidth={2.5} />
             </div>
-            <span className="text-lg font-semibold tracking-tight text-foreground">
+            <span className={cn(
+              "font-semibold tracking-tight text-foreground transition-all duration-300",
+              scrolled ? "text-base" : "text-lg"
+            )}>
               50Stacks
             </span>
           </button>
           
           <div className="hidden md:flex items-center gap-8">
-            <a 
-              href="#about" 
-              onClick={(e) => { e.preventDefault(); document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }); }} 
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
-            >
-              About
-            </a>
-            <a 
-              href="#features" 
-              onClick={(e) => { e.preventDefault(); document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); }} 
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
-            >
-              Features
-            </a>
-            <a 
-              href="#founders" 
-              onClick={(e) => { e.preventDefault(); document.getElementById('founders')?.scrollIntoView({ behavior: 'smooth' }); }} 
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
-            >
-              Team
-            </a>
-            <a 
-              href="#faqs" 
-              onClick={(e) => { e.preventDefault(); document.getElementById('faqs')?.scrollIntoView({ behavior: 'smooth' }); }} 
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
-            >
-              FAQ
-            </a>
+            {['Clarity', 'Insight', 'Trust', 'Control'].map((item, idx) => (
+              <a 
+                key={idx}
+                href={`#chapter-${idx + 1}`}
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  document.getElementById(`chapter-${idx + 1}`)?.scrollIntoView({ behavior: 'smooth' }); 
+                }}
+                className={cn(
+                  "text-sm transition-colors duration-200",
+                  scrolled ? "text-muted-foreground hover:text-foreground" : "text-foreground/70 hover:text-foreground"
+                )}
+              >
+                {item}
+              </a>
+            ))}
           </div>
 
           <div className="flex items-center gap-3">
             <Button 
               variant="ghost" 
               onClick={() => navigate('/auth')} 
-              className="hidden sm:inline-flex text-sm font-medium"
+              className={cn(
+                "hidden sm:inline-flex text-sm font-medium transition-all duration-300",
+                !scrolled && "text-foreground/80 hover:text-foreground hover:bg-white/5"
+              )}
             >
               Log in
             </Button>
             <Button 
               onClick={() => navigate('/auth')} 
-              className="text-sm font-medium"
+              className={cn(
+                "text-sm font-medium transition-all duration-300",
+                scrolled ? "" : "bg-primary/90 hover:bg-primary"
+              )}
             >
               Get Started
             </Button>
@@ -123,257 +132,388 @@ export default function Landing() {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center pt-20">
-        <div className="max-w-6xl mx-auto px-6 py-24">
-          <div className="max-w-3xl">
-            <p className="text-sm text-muted-foreground mb-6 tracking-wide uppercase">
-              Mutual Fund Analytics Platform
-            </p>
+      {/* ═══════════════════════════════════════════════════════════════════
+          HERO - The Opening
+      ═══════════════════════════════════════════════════════════════════ */}
+      <section className="relative min-h-screen flex items-center pt-20 z-10">
+        <div className="max-w-5xl mx-auto px-6 py-24">
+          <div className="max-w-2xl">
+            <OpacityReveal>
+              <p className="text-xs text-muted-foreground mb-6 tracking-[0.2em] uppercase font-medium">
+                Mutual Fund Analytics
+              </p>
+            </OpacityReveal>
             
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold mb-8 leading-[1.1] tracking-tight text-foreground">
-              Understand your investments with clarity
-            </h1>
+            <OpacityReveal delay={50}>
+              <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-medium mb-8 leading-[1.15] tracking-tight text-foreground">
+                See what the numbers
+                <br />
+                <span className="text-muted-foreground">actually mean</span>
+              </h1>
+            </OpacityReveal>
             
-            <p className="text-lg text-muted-foreground max-w-xl mb-10 leading-relaxed">
-              50Stacks helps you analyze, compare, and track Indian mutual funds with 
-              transparent data and meaningful context. No advice. No noise. Just insight.
-            </p>
+            <OpacityReveal delay={100}>
+              <p className="text-base text-muted-foreground max-w-md mb-10 leading-relaxed">
+                50Stacks transforms mutual fund data into clarity. 
+                Compare performance, understand risk, make informed decisions.
+              </p>
+            </OpacityReveal>
             
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button 
-                size="lg" 
-                onClick={() => navigate('/auth')}
-                className="text-base px-6 py-5 font-medium"
-              >
-                Start analyzing
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline" 
-                onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}
-                className="text-base px-6 py-5 font-medium border-border/60"
-              >
-                Learn more
-              </Button>
-            </div>
+            <OpacityReveal delay={150}>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button 
+                  size="lg" 
+                  onClick={() => navigate('/auth')}
+                  className="text-sm px-6 py-5 font-medium"
+                >
+                  Start analyzing
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+                <Button 
+                  size="lg" 
+                  variant="ghost" 
+                  onClick={() => document.getElementById('chapter-1')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="text-sm px-6 py-5 font-medium text-muted-foreground hover:text-foreground"
+                >
+                  Learn more
+                </Button>
+              </div>
+            </OpacityReveal>
           </div>
+        </div>
+        
+        {/* Scroll indicator */}
+        <div className="absolute bottom-12 left-1/2 -translate-x-1/2">
+          <OpacityReveal delay={400}>
+            <div className="w-px h-12 bg-gradient-to-b from-transparent via-muted-foreground/30 to-transparent" />
+          </OpacityReveal>
         </div>
       </section>
 
-      {/* About Section */}
-      <section id="about" className="relative py-24 border-t border-border/40">
-        <div className="max-w-6xl mx-auto px-6">
+      {/* ═══════════════════════════════════════════════════════════════════
+          CHAPTER 1: CLARITY - The Problem
+      ═══════════════════════════════════════════════════════════════════ */}
+      <section id="chapter-1" className="relative py-32 z-10">
+        <div className="max-w-5xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-16 items-start">
             <div>
-              <p className="text-sm text-primary mb-4 font-medium">The Problem</p>
-              <h2 className="text-3xl font-semibold mb-6 tracking-tight text-foreground">
-                Too much data, not enough understanding
-              </h2>
-              <p className="text-muted-foreground text-lg leading-relaxed mb-6">
-                Most investors see numbers—NAVs, returns, expense ratios—but lack the context 
-                to interpret them meaningfully. Information exists everywhere, but clarity is rare.
-              </p>
-              <p className="text-muted-foreground leading-relaxed">
-                50Stacks focuses on what matters: structured data, honest comparisons, and 
-                personalized discovery based on your stated preferences. We don't tell you 
-                what to buy. We help you understand what you're looking at.
-              </p>
+              <OpacityReveal>
+                <p className="text-xs text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
+                  Chapter 01 — Clarity
+                </p>
+              </OpacityReveal>
+              <OpacityReveal delay={50}>
+                <h2 className="text-3xl font-medium mb-6 tracking-tight text-foreground leading-tight">
+                  Data everywhere.
+                  <br />
+                  <span className="text-muted-foreground">Understanding nowhere.</span>
+                </h2>
+              </OpacityReveal>
+              <OpacityReveal delay={100}>
+                <p className="text-muted-foreground leading-relaxed mb-6">
+                  Every fund shows returns. Few explain what they mean. NAVs, expense ratios, 
+                  risk grades—numbers without context are just noise.
+                </p>
+              </OpacityReveal>
+              <OpacityReveal delay={150}>
+                <p className="text-muted-foreground leading-relaxed text-sm">
+                  The problem isn't access to information. It's the absence of interpretation.
+                </p>
+              </OpacityReveal>
             </div>
 
-            <div className="space-y-6">
-              <p className="text-sm text-muted-foreground mb-4 font-medium uppercase tracking-wide">
-                Our Principles
-              </p>
+            <div className="space-y-4">
+              <OpacityReveal delay={100}>
+                <p className="text-xs text-muted-foreground mb-6 tracking-[0.1em] uppercase">
+                  What investors face
+                </p>
+              </OpacityReveal>
               {[
-                { title: 'Clarity over complexity', desc: 'Clean metrics presented in context, not isolation' },
-                { title: 'Transparency first', desc: 'All data sourced from AMFI and official disclosures' },
-                { title: 'Education, not advice', desc: 'We inform your thinking, not your decisions' },
-                { title: 'No hidden agendas', desc: 'No commission, no fund promotions, no conflicts' }
+                '5,000+ mutual fund schemes in India',
+                'Returns shown without risk context',
+                'Category confusion (Large-cap? Flexi-cap?)',
+                'No standard way to compare fairly'
               ].map((item, idx) => (
-                <div key={idx} className="border-l-2 border-border pl-4 py-1">
-                  <h3 className="font-medium text-foreground mb-1">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground">{item.desc}</p>
-                </div>
+                <OpacityReveal key={idx} delay={150 + idx * 50}>
+                  <div className="flex items-center gap-4 py-3 border-b border-border/30">
+                    <span className="text-xs text-muted-foreground/50 font-mono">{String(idx + 1).padStart(2, '0')}</span>
+                    <p className="text-sm text-foreground/80">{item}</p>
+                  </div>
+                </OpacityReveal>
               ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="relative py-24 bg-secondary/30 border-t border-border/40">
-        <div className="max-w-6xl mx-auto px-6">
+      {/* ═══════════════════════════════════════════════════════════════════
+          CHAPTER 2: INSIGHT - How 50Stacks Helps
+      ═══════════════════════════════════════════════════════════════════ */}
+      <section id="chapter-2" className="relative py-32 z-10 bg-secondary/20">
+        <div className="max-w-5xl mx-auto px-6">
           <div className="max-w-xl mb-16">
-            <p className="text-sm text-primary mb-4 font-medium">Features</p>
-            <h2 className="text-3xl font-semibold mb-4 tracking-tight text-foreground">
-              Tools built for understanding
-            </h2>
-            <p className="text-muted-foreground">
-              Analysis and organization features designed to support informed decision-making.
-            </p>
+            <OpacityReveal>
+              <p className="text-xs text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
+                Chapter 02 — Insight
+              </p>
+            </OpacityReveal>
+            <OpacityReveal delay={50}>
+              <h2 className="text-3xl font-medium mb-4 tracking-tight text-foreground">
+                Tools that reveal, not recommend
+              </h2>
+            </OpacityReveal>
+            <OpacityReveal delay={100}>
+              <p className="text-muted-foreground">
+                Analysis features built for understanding, not selling.
+              </p>
+            </OpacityReveal>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid md:grid-cols-2 gap-6">
             {[
               {
                 icon: BarChart2,
                 title: 'Fund Analysis',
-                desc: 'Structured data for every mutual fund scheme. Compare NAVs, returns, expense ratios, and risk metrics across consistent time periods.',
+                desc: 'Compare NAVs, returns, expense ratios, and risk metrics across consistent time periods. Context, not just data.',
               },
               {
                 icon: Target,
                 title: 'Personalized Discovery',
-                desc: 'Surface funds that match your stated risk tolerance, investment horizon, and goals. Preference-based filtering, not recommendations.',
+                desc: 'Surface funds matching your risk tolerance, horizon, and goals. Preference-based filtering—not advice.',
               },
               {
                 icon: Bookmark,
                 title: 'Watchlist & Tracking',
-                desc: 'Save funds you are researching. Track changes over time. Organize your analysis without losing context.',
+                desc: 'Save funds you are researching. Track changes. Organize analysis without losing context.',
               },
               {
                 icon: PieChart,
                 title: 'Portfolio Insights',
-                desc: 'Understand your allocation, risk exposure, and diversification. Educational signals to inform your thinking.',
+                desc: 'Understand allocation, exposure, and diversification. Educational signals for clearer thinking.',
               }
             ].map((feature, idx) => (
-              <div 
-                key={idx} 
-                className="p-6 rounded-lg border border-border/50 bg-card/50 hover:border-border transition-colors duration-200"
-              >
-                <div className="h-10 w-10 rounded-md bg-secondary flex items-center justify-center mb-4">
-                  <feature.icon className="h-5 w-5 text-foreground" />
-                </div>
-                <h3 className="font-medium text-lg mb-2 text-foreground">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{feature.desc}</p>
-              </div>
+              <OpacityReveal key={idx} delay={idx * 75}>
+                <ProximityCard 
+                  className="p-6 rounded-lg border border-border/40 bg-card/30 h-full"
+                  intensity={0.015}
+                >
+                  <div className="h-9 w-9 rounded-md bg-secondary/80 flex items-center justify-center mb-4">
+                    <feature.icon className="h-4 w-4 text-foreground/70" />
+                  </div>
+                  <h3 className="font-medium text-base mb-2 text-foreground">{feature.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{feature.desc}</p>
+                </ProximityCard>
+              </OpacityReveal>
             ))}
           </div>
-
-          <p className="text-sm text-muted-foreground mt-12 text-center">
-            50Stacks is an educational tool. We do not provide investment advice or execute transactions.
-          </p>
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <section className="relative py-24 border-t border-border/40">
-        <div className="max-w-6xl mx-auto px-6">
+      {/* ═══════════════════════════════════════════════════════════════════
+          CHAPTER 3: TRUST - Transparency & Data
+      ═══════════════════════════════════════════════════════════════════ */}
+      <section id="chapter-3" className="relative py-32 z-10">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <OpacityReveal>
+                <p className="text-xs text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
+                  Chapter 03 — Trust
+                </p>
+              </OpacityReveal>
+              <OpacityReveal delay={50}>
+                <h2 className="text-3xl font-medium mb-6 tracking-tight text-foreground">
+                  No hidden agendas.
+                  <br />
+                  <span className="text-muted-foreground">Just transparent data.</span>
+                </h2>
+              </OpacityReveal>
+              <OpacityReveal delay={100}>
+                <p className="text-muted-foreground leading-relaxed">
+                  We source data from AMFI and official fund house disclosures. 
+                  No commissions, no fund promotions, no conflicts of interest. 
+                  What you see is what exists—unmanipulated.
+                </p>
+              </OpacityReveal>
+            </div>
+
+            <div className="space-y-4">
+              {[
+                { icon: Database, text: 'Publicly sourced mutual fund data' },
+                { icon: Lock, text: 'No investment execution or money handling' },
+                { icon: Shield, text: 'No hidden fund partnerships or promotions' },
+              ].map((item, idx) => (
+                <OpacityReveal key={idx} delay={100 + idx * 75}>
+                  <ProximityCard 
+                    className="flex items-center gap-4 p-4 rounded-lg border border-border/30 bg-card/20"
+                    intensity={0.01}
+                  >
+                    <div className="h-10 w-10 rounded-md bg-secondary/60 flex items-center justify-center flex-shrink-0">
+                      <item.icon className="h-4 w-4 text-foreground/60" />
+                    </div>
+                    <p className="text-sm text-foreground/80">{item.text}</p>
+                  </ProximityCard>
+                </OpacityReveal>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          CHAPTER 4: CONTROL - User Empowerment
+      ═══════════════════════════════════════════════════════════════════ */}
+      <section id="chapter-4" className="relative py-32 z-10 bg-secondary/20">
+        <div className="max-w-5xl mx-auto px-6">
           <div className="max-w-xl mb-16">
-            <p className="text-sm text-primary mb-4 font-medium">How It Works</p>
-            <h2 className="text-3xl font-semibold mb-4 tracking-tight text-foreground">
-              Simple onboarding, meaningful output
-            </h2>
-            <p className="text-muted-foreground">
-              Answer a few questions. Get a filtered view of funds that align with your preferences.
-            </p>
+            <OpacityReveal>
+              <p className="text-xs text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
+                Chapter 04 — Control
+              </p>
+            </OpacityReveal>
+            <OpacityReveal delay={50}>
+              <h2 className="text-3xl font-medium mb-4 tracking-tight text-foreground">
+                Your analysis. Your decisions.
+              </h2>
+            </OpacityReveal>
+            <OpacityReveal delay={100}>
+              <p className="text-muted-foreground">
+                Simple onboarding. Meaningful output. You stay in control.
+              </p>
+            </OpacityReveal>
           </div>
 
           <div className="grid md:grid-cols-4 gap-8">
             {[
-              { step: '01', title: 'Create account', desc: 'Quick signup with email or social login' },
-              { step: '02', title: 'Set preferences', desc: 'Risk tolerance, goals, and investment horizon' },
-              { step: '03', title: 'Explore funds', desc: 'Browse filtered results based on your profile' },
-              { step: '04', title: 'Track & analyze', desc: 'Save funds, compare data, build understanding' }
+              { step: '01', title: 'Create account', desc: 'Quick signup with email' },
+              { step: '02', title: 'Set preferences', desc: 'Risk, goals, timeline' },
+              { step: '03', title: 'Explore funds', desc: 'Filtered to your profile' },
+              { step: '04', title: 'Track & analyze', desc: 'Build understanding' }
             ].map((item, idx) => (
-              <div key={idx} className="relative">
-                <p className="text-4xl font-light text-muted-foreground/30 mb-3">{item.step}</p>
-                <h3 className="font-medium text-foreground mb-2">{item.title}</h3>
-                <p className="text-sm text-muted-foreground">{item.desc}</p>
-              </div>
+              <OpacityReveal key={idx} delay={idx * 75}>
+                <div>
+                  <p className="text-3xl font-light text-muted-foreground/20 mb-3 font-mono">{item.step}</p>
+                  <h3 className="font-medium text-foreground mb-1 text-sm">{item.title}</h3>
+                  <p className="text-xs text-muted-foreground">{item.desc}</p>
+                </div>
+              </OpacityReveal>
             ))}
           </div>
         </div>
       </section>
 
       {/* Team Section */}
-      <section id="founders" className="relative py-24 bg-secondary/30 border-t border-border/40">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="max-w-2xl mx-auto text-center">
-            <p className="text-sm text-primary mb-4 font-medium">The Team</p>
-            <h2 className="text-3xl font-semibold mb-4 tracking-tight text-foreground">
-              Built by engineers who invest
-            </h2>
-            <p className="text-muted-foreground mb-8">
-              Three computer science engineers with a shared frustration: great financial data 
-              exists, but tools to understand it don't. So we built one.
-            </p>
-            <Button 
-              onClick={() => navigate('/founders')} 
-              variant="outline" 
-              className="font-medium border-border/60"
-            >
-              Meet the founders
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
+      <section className="relative py-32 z-10">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="max-w-xl mx-auto text-center">
+            <OpacityReveal>
+              <p className="text-xs text-muted-foreground mb-4 tracking-[0.15em] uppercase font-medium">
+                The Team
+              </p>
+            </OpacityReveal>
+            <OpacityReveal delay={50}>
+              <h2 className="text-2xl font-medium mb-4 tracking-tight text-foreground">
+                Built by engineers who invest
+              </h2>
+            </OpacityReveal>
+            <OpacityReveal delay={100}>
+              <p className="text-muted-foreground mb-8 text-sm">
+                Three computer science engineers frustrated by the gap between 
+                great financial data and tools to understand it.
+              </p>
+            </OpacityReveal>
+            <OpacityReveal delay={150}>
+              <Button 
+                onClick={() => navigate('/founders')} 
+                variant="outline" 
+                className="font-medium text-sm border-border/50"
+              >
+                Meet the founders
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </OpacityReveal>
           </div>
         </div>
       </section>
 
       {/* FAQ Section */}
-      <section id="faqs" className="relative py-24 border-t border-border/40">
-        <div className="max-w-3xl mx-auto px-6">
+      <section id="faqs" className="relative py-32 z-10 bg-secondary/20">
+        <div className="max-w-2xl mx-auto px-6">
           <div className="text-center mb-12">
-            <p className="text-sm text-primary mb-4 font-medium">FAQ</p>
-            <h2 className="text-3xl font-semibold tracking-tight text-foreground">
-              Common questions
-            </h2>
+            <OpacityReveal>
+              <p className="text-xs text-muted-foreground mb-4 tracking-[0.15em] uppercase font-medium">
+                FAQ
+              </p>
+            </OpacityReveal>
+            <OpacityReveal delay={50}>
+              <h2 className="text-2xl font-medium tracking-tight text-foreground">
+                Common questions
+              </h2>
+            </OpacityReveal>
           </div>
 
-          <Accordion type="single" collapsible className="space-y-3">
+          <Accordion type="single" collapsible className="space-y-2">
             {faqs.map((faq, idx) => (
-              <AccordionItem 
-                key={idx} 
-                value={`item-${idx}`} 
-                className="border border-border/50 rounded-lg px-6 bg-card/30"
-              >
-                <AccordionTrigger className="text-left hover:no-underline py-4 text-sm font-medium text-foreground">
-                  {faq.q}
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground pb-4 text-sm leading-relaxed">
-                  {faq.a}
-                </AccordionContent>
-              </AccordionItem>
+              <OpacityReveal key={idx} delay={75 + idx * 50}>
+                <AccordionItem 
+                  value={`item-${idx}`} 
+                  className="border border-border/30 rounded-lg px-5 bg-card/20 data-[state=open]:bg-card/40 transition-colors duration-200"
+                >
+                  <AccordionTrigger className="text-left hover:no-underline py-4 text-sm font-medium text-foreground">
+                    {faq.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground pb-4 text-sm leading-relaxed">
+                    {faq.a}
+                  </AccordionContent>
+                </AccordionItem>
+              </OpacityReveal>
             ))}
           </Accordion>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="relative py-24 border-t border-border/40">
-        <div className="max-w-6xl mx-auto px-6 text-center">
-          <h2 className="text-3xl font-semibold mb-4 tracking-tight text-foreground">
-            Ready to understand your investments?
-          </h2>
-          <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-            Join investors who use 50Stacks for clear, contextual mutual fund analysis.
-          </p>
-          <Button 
-            size="lg" 
-            onClick={() => navigate('/auth')}
-            className="text-base px-6 py-5 font-medium"
-          >
-            Create free account
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
+      {/* ═══════════════════════════════════════════════════════════════════
+          INVITATION - Calm Confidence to Start
+      ═══════════════════════════════════════════════════════════════════ */}
+      <section className="relative py-32 z-10">
+        <div className="max-w-5xl mx-auto px-6 text-center">
+          <OpacityReveal>
+            <h2 className="text-2xl sm:text-3xl font-medium mb-4 tracking-tight text-foreground">
+              Ready to understand your investments?
+            </h2>
+          </OpacityReveal>
+          <OpacityReveal delay={50}>
+            <p className="text-muted-foreground mb-8 max-w-md mx-auto text-sm">
+              Join investors using 50Stacks for clear, contextual analysis.
+            </p>
+          </OpacityReveal>
+          <OpacityReveal delay={100}>
+            <Button 
+              size="lg" 
+              onClick={() => navigate('/auth')}
+              className="text-sm px-6 py-5 font-medium"
+            >
+              Create free account
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </OpacityReveal>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border/40 py-12">
-        <div className="max-w-6xl mx-auto px-6">
+      <footer className="relative z-10 border-t border-border/30 py-12 bg-background/80">
+        <div className="max-w-5xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-8">
             <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                <TrendingUp size={16} className="text-primary-foreground" strokeWidth={2.5} />
+              <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center">
+                <TrendingUp size={14} className="text-primary-foreground" strokeWidth={2.5} />
               </div>
-              <span className="text-base font-semibold tracking-tight text-foreground">
+              <span className="text-sm font-semibold tracking-tight text-foreground">
                 50Stacks
               </span>
             </div>
             
-            <div className="flex flex-wrap gap-6 text-sm">
+            <div className="flex flex-wrap gap-6 text-xs">
               <button
                 onClick={() => setTermsOpen(true)}
                 className="text-muted-foreground hover:text-foreground transition-colors duration-200"
@@ -396,20 +536,19 @@ export default function Landing() {
                 onClick={() => setRefundOpen(true)}
                 className="text-muted-foreground hover:text-foreground transition-colors duration-200"
               >
-                Refund Policy
+                Refund
               </button>
             </div>
           </div>
 
-          <div className="pt-6 border-t border-border/30">
-            <p className="text-xs text-muted-foreground max-w-3xl">
-              <strong>Disclaimer:</strong> Mutual fund investments are subject to market risks. 
-              Read all scheme-related documents carefully before investing. Past performance is not 
-              indicative of future returns. 50Stacks is an educational platform and is NOT a 
-              SEBI-registered Investment Advisor. We do not provide investment advice or recommendations.
+          <div className="pt-6 border-t border-border/20">
+            <p className="text-[11px] text-muted-foreground/70 max-w-2xl leading-relaxed">
+              <strong className="text-muted-foreground">Disclaimer:</strong> Mutual fund investments are subject to market risks. 
+              Read all scheme-related documents carefully. Past performance is not indicative of future returns. 
+              50Stacks is NOT a SEBI-registered Investment Advisor. We do not provide investment advice.
             </p>
-            <p className="text-xs text-muted-foreground mt-4">
-              © {new Date().getFullYear()} 50Stacks. All rights reserved.
+            <p className="text-[11px] text-muted-foreground/50 mt-4">
+              © {new Date().getFullYear()} 50Stacks
             </p>
           </div>
         </div>
