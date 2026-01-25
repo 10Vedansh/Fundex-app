@@ -20,7 +20,6 @@ export default function Landing() {
   const [refundOpen, setRefundOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // Navigation gains weight after scroll
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 50);
@@ -58,10 +57,10 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Premium Background */}
+      {/* Premium Financial Background */}
       <SubtleMarketBackground />
 
-      {/* Navigation - gains weight after scroll */}
+      {/* Navigation */}
       <nav 
         className={cn(
           "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
@@ -90,22 +89,46 @@ export default function Landing() {
           </button>
           
           <div className="hidden md:flex items-center gap-8">
-            {['Clarity', 'Insight', 'Trust', 'Control'].map((item, idx) => (
-              <a 
-                key={idx}
-                href={`#chapter-${idx + 1}`}
-                onClick={(e) => { 
-                  e.preventDefault(); 
-                  document.getElementById(`chapter-${idx + 1}`)?.scrollIntoView({ behavior: 'smooth' }); 
-                }}
-                className={cn(
-                  "text-sm transition-colors duration-200",
-                  scrolled ? "text-muted-foreground hover:text-foreground" : "text-foreground/70 hover:text-foreground"
-                )}
-              >
-                {item}
-              </a>
-            ))}
+            <a 
+              href="#about"
+              onClick={(e) => { e.preventDefault(); document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }); }}
+              className={cn(
+                "text-sm transition-colors duration-200",
+                scrolled ? "text-muted-foreground hover:text-foreground" : "text-foreground/70 hover:text-foreground"
+              )}
+            >
+              About
+            </a>
+            <a 
+              href="#features"
+              onClick={(e) => { e.preventDefault(); document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); }}
+              className={cn(
+                "text-sm transition-colors duration-200",
+                scrolled ? "text-muted-foreground hover:text-foreground" : "text-foreground/70 hover:text-foreground"
+              )}
+            >
+              Features
+            </a>
+            <a 
+              href="#founders"
+              onClick={(e) => { e.preventDefault(); document.getElementById('founders')?.scrollIntoView({ behavior: 'smooth' }); }}
+              className={cn(
+                "text-sm transition-colors duration-200",
+                scrolled ? "text-muted-foreground hover:text-foreground" : "text-foreground/70 hover:text-foreground"
+              )}
+            >
+              Founders
+            </a>
+            <a 
+              href="#faqs"
+              onClick={(e) => { e.preventDefault(); document.getElementById('faqs')?.scrollIntoView({ behavior: 'smooth' }); }}
+              className={cn(
+                "text-sm transition-colors duration-200",
+                scrolled ? "text-muted-foreground hover:text-foreground" : "text-foreground/70 hover:text-foreground"
+              )}
+            >
+              FAQs
+            </a>
           </div>
 
           <div className="flex items-center gap-3">
@@ -132,15 +155,13 @@ export default function Landing() {
         </div>
       </nav>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          HERO - The Opening
-      ═══════════════════════════════════════════════════════════════════ */}
+      {/* Hero Section */}
       <section className="relative min-h-screen flex items-center pt-20 z-10">
         <div className="max-w-5xl mx-auto px-6 py-24">
           <div className="max-w-2xl">
             <OpacityReveal>
               <p className="text-xs text-muted-foreground mb-6 tracking-[0.2em] uppercase font-medium">
-                Mutual Fund Analytics
+                Mutual Fund Analytics Platform
               </p>
             </OpacityReveal>
             
@@ -172,7 +193,7 @@ export default function Landing() {
                 <Button 
                   size="lg" 
                   variant="ghost" 
-                  onClick={() => document.getElementById('chapter-1')?.scrollIntoView({ behavior: 'smooth' })}
+                  onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}
                   className="text-sm px-6 py-5 font-medium text-muted-foreground hover:text-foreground"
                 >
                   Learn more
@@ -190,16 +211,14 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          CHAPTER 1: CLARITY - The Problem
-      ═══════════════════════════════════════════════════════════════════ */}
-      <section id="chapter-1" className="relative py-32 z-10">
+      {/* About Section */}
+      <section id="about" className="relative py-32 z-10">
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-16 items-start">
             <div>
               <OpacityReveal>
                 <p className="text-xs text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
-                  Chapter 01 — Clarity
+                  The Problem
                 </p>
               </OpacityReveal>
               <OpacityReveal delay={50}>
@@ -217,7 +236,7 @@ export default function Landing() {
               </OpacityReveal>
               <OpacityReveal delay={150}>
                 <p className="text-muted-foreground leading-relaxed text-sm">
-                  The problem isn't access to information. It's the absence of interpretation.
+                  The problem is not access to information. It is the absence of interpretation.
                 </p>
               </OpacityReveal>
             </div>
@@ -246,15 +265,13 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          CHAPTER 2: INSIGHT - How 50Stacks Helps
-      ═══════════════════════════════════════════════════════════════════ */}
-      <section id="chapter-2" className="relative py-32 z-10 bg-secondary/20">
+      {/* Features Section */}
+      <section id="features" className="relative py-32 z-10 bg-secondary/20">
         <div className="max-w-5xl mx-auto px-6">
           <div className="max-w-xl mb-16">
             <OpacityReveal>
               <p className="text-xs text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
-                Chapter 02 — Insight
+                Features
               </p>
             </OpacityReveal>
             <OpacityReveal delay={50}>
@@ -309,16 +326,14 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          CHAPTER 3: TRUST - Transparency & Data
-      ═══════════════════════════════════════════════════════════════════ */}
-      <section id="chapter-3" className="relative py-32 z-10">
+      {/* Trust Section */}
+      <section className="relative py-32 z-10">
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
               <OpacityReveal>
                 <p className="text-xs text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
-                  Chapter 03 — Trust
+                  Transparency
                 </p>
               </OpacityReveal>
               <OpacityReveal delay={50}>
@@ -360,15 +375,13 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          CHAPTER 4: CONTROL - User Empowerment
-      ═══════════════════════════════════════════════════════════════════ */}
-      <section id="chapter-4" className="relative py-32 z-10 bg-secondary/20">
+      {/* How It Works Section */}
+      <section className="relative py-32 z-10 bg-secondary/20">
         <div className="max-w-5xl mx-auto px-6">
           <div className="max-w-xl mb-16">
             <OpacityReveal>
               <p className="text-xs text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
-                Chapter 04 — Control
+                How It Works
               </p>
             </OpacityReveal>
             <OpacityReveal delay={50}>
@@ -402,8 +415,8 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Team Section */}
-      <section className="relative py-32 z-10">
+      {/* Founders Section */}
+      <section id="founders" className="relative py-32 z-10">
         <div className="max-w-5xl mx-auto px-6">
           <div className="max-w-xl mx-auto text-center">
             <OpacityReveal>
@@ -472,9 +485,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════════════════
-          INVITATION - Calm Confidence to Start
-      ═══════════════════════════════════════════════════════════════════ */}
+      {/* CTA Section */}
       <section className="relative py-32 z-10">
         <div className="max-w-5xl mx-auto px-6 text-center">
           <OpacityReveal>
