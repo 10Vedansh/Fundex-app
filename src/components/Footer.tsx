@@ -2,13 +2,11 @@ import { useState } from "react";
 import { TermsAndConditions } from "./legal/TermsAndConditions";
 import { PrivacyPolicy } from "./legal/PrivacyPolicy";
 import { Disclaimer } from "./legal/Disclaimer";
-import { RefundPolicy } from "./legal/RefundPolicy";
 
 export function Footer() {
   const [termsOpen, setTermsOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
-  const [refundOpen, setRefundOpen] = useState(false);
 
   return (
     <>
@@ -38,13 +36,6 @@ export function Footer() {
               >
                 Disclaimer
               </button>
-              <span className="text-border hidden md:inline">|</span>
-              <button
-                onClick={() => setRefundOpen(true)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Refund Policy
-              </button>
             </div>
 
             {/* Copyright */}
@@ -69,7 +60,6 @@ export function Footer() {
       <TermsAndConditions open={termsOpen} onOpenChange={setTermsOpen} />
       <PrivacyPolicy open={privacyOpen} onOpenChange={setPrivacyOpen} />
       <Disclaimer open={disclaimerOpen} onOpenChange={setDisclaimerOpen} />
-      <RefundPolicy open={refundOpen} onOpenChange={setRefundOpen} />
     </>
   );
 }
