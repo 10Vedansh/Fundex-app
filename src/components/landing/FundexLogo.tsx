@@ -9,19 +9,19 @@ interface LogoProps {
 
 export function FundexLogo({ size = 'md', showText = true, className }: LogoProps) {
   const sizeClasses = {
-    sm: 'h-8 w-8',
-    md: 'h-10 w-10',
-    lg: 'h-14 w-14',
+    sm: 'h-10 w-10',
+    md: 'h-14 w-14',
+    lg: 'h-18 w-18',
   };
 
   const textSizeClasses = {
-    sm: 'text-2xl',
-    md: 'text-3xl',
-    lg: 'text-4xl',
+    sm: 'text-3xl',
+    md: 'text-4xl',
+    lg: 'text-5xl',
   };
 
   return (
-    <div className={cn('flex items-center gap-1', className)}>
+    <div className={cn('flex items-center gap-0', className)}>
       {/* Money Bag Logo */}
       <img 
         src={logoImage} 
@@ -31,7 +31,7 @@ export function FundexLogo({ size = 'md', showText = true, className }: LogoProp
 
       {showText && (
         <span className={cn(
-          'tracking-normal',
+          'tracking-normal font-medium',
           textSizeClasses[size],
           'text-foreground'
         )}
