@@ -77,7 +77,7 @@ export default function Landing() {
           >
             <FundexLogo size="sm" className={cn(
               "transition-all duration-300",
-              scrolled ? "!h-10" : "!h-12"
+              scrolled ? "!h-14" : "!h-16"
             )} />
           </button>
           
