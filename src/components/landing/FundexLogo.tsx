@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { TrendingUp } from 'lucide-react';
+import logoImage from '@/assets/50stacks-logo.png';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -14,12 +14,6 @@ export function FundexLogo({ size = 'md', showText = true, className }: LogoProp
     lg: 'h-14 w-14',
   };
 
-  const iconSizeClasses = {
-    sm: 16,
-    md: 20,
-    lg: 28,
-  };
-
   const textSizeClasses = {
     sm: 'text-lg',
     md: 'text-xl',
@@ -27,22 +21,22 @@ export function FundexLogo({ size = 'md', showText = true, className }: LogoProp
   };
 
   return (
-    <div className={cn('flex items-center gap-2.5', className)}>
-      {/* Uprising Graph Logo */}
-      <div className={cn('relative flex items-center justify-center rounded-xl bg-gradient-to-br from-primary via-primary/90 to-accent', sizeClasses[size])}>
-        <TrendingUp 
-          size={iconSizeClasses[size]} 
-          className="text-primary-foreground" 
-          strokeWidth={2.5}
-        />
-      </div>
+    <div className={cn('flex items-center gap-3', className)}>
+      {/* Money Bag Logo */}
+      <img 
+        src={logoImage} 
+        alt="50Stacks Logo" 
+        className={cn('object-contain', sizeClasses[size])}
+      />
 
       {showText && (
         <span className={cn(
-          'font-bold tracking-tight',
+          'font-bold tracking-wide',
           textSizeClasses[size],
-          'bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent'
-        )}>
+          'bg-gradient-to-r from-primary via-accent-foreground to-primary bg-clip-text text-transparent'
+        )}
+        style={{ fontFamily: "'Playfair Display', serif" }}
+        >
           50Stacks
         </span>
       )}
