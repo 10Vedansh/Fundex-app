@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
-import { DashboardGreeting } from '@/components/dashboard/DashboardGreeting';
+import { DashboardHeaderZone } from '@/components/dashboard/DashboardHeaderZone';
 import { DashboardBackground } from '@/components/dashboard/DashboardBackground';
 import { MobileNavTabs } from '@/components/dashboard/MobileNavTabs';
 import { FundCard } from '@/components/dashboard/FundCard';
@@ -21,7 +21,6 @@ import { Badge } from '@/components/ui/badge';
 import { MutualFund, FundSectorData } from '@/types/mutualFund';
 import { getCachedSectorData } from '@/utils/sectorDataGenerator';
 import { 
-  Search, 
   Plus,
   AlertTriangle,
   TrendingUp,
@@ -29,8 +28,7 @@ import {
   Minus,
   Loader2,
   Bookmark,
-  Wallet,
-  Info
+  Wallet
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useFundCache } from '@/hooks/useFundCache';
@@ -241,58 +239,30 @@ const Index = () => {
           portfolioCount={portfolio.length}
         />
         
-        <main className="flex-1 px-4 md:px-6 lg:px-8 py-6 overflow-x-hidden">
+        <main className="flex-1 px-4 md:px-6 lg:px-8 py-6 overflow-x-hidden bg-gradient-to-b from-transparent via-background/50 to-background">
           <div className="max-w-6xl mx-auto">
-            {/* Greeting Section */}
-            <DashboardGreeting firstName={firstName} />
-            
-            {/* Mobile Navigation */}
-            <MobileNavTabs 
-              activeTab={activeTab} 
-              onTabChange={setActiveTab}
-              watchlistCount={watchlist.length}
-              portfolioCount={portfolio.length}
+            {/* Mobile Navigation - Before header zone on mobile */}
+            <div className="lg:hidden mb-4">
+              <MobileNavTabs 
+                activeTab={activeTab} 
+                onTabChange={setActiveTab}
+                watchlistCount={watchlist.length}
+                portfolioCount={portfolio.length}
+              />
+            </div>
+
+            {/* Dashboard Header Zone - Greeting + Search + Info */}
+            <DashboardHeaderZone
+              firstName={firstName}
+              globalSearch={globalSearch}
+              onGlobalSearchChange={setGlobalSearch}
+              globalFilteredFunds={globalFilteredFunds}
+              onFundClick={(fund) => {
+                handleFundClick(fund);
+              }}
+              showSearch={activeTab !== 'sectors'}
+              showInfoText={activeTab === 'overview'}
             />
-
-            {/* Global Search - Hidden on Sectors tab */}
-            {activeTab !== 'sectors' && (
-              <div className="relative mt-4 lg:mt-0 mb-4">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  placeholder="Search mutual funds by name or AMC..."
-                  value={globalSearch}
-                  onChange={(e) => setGlobalSearch(e.target.value)}
-                  className="pl-12 bg-secondary/30 border-border/30 h-12 text-base focus:bg-secondary/50 transition-colors"
-                />
-                {globalSearch && globalFilteredFunds.length > 0 && (
-                  <Card className="absolute top-full left-0 right-0 mt-2 z-50 glass-card max-h-80 overflow-auto">
-                    <CardContent className="p-2">
-                      {globalFilteredFunds.map(fund => (
-                        <button
-                          key={fund.id}
-                          onClick={() => {
-                            handleFundClick(fund);
-                            setGlobalSearch('');
-                          }}
-                          className="w-full p-3 text-left hover:bg-secondary/50 rounded-lg transition-colors"
-                        >
-                          <p className="font-medium text-sm">{fund.name}</p>
-                          <p className="text-xs text-muted-foreground">{fund.amc} • {fund.category}</p>
-                        </button>
-                      ))}
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            )}
-
-            {/* Informational Context - Only on Overview */}
-            {activeTab === 'overview' && (
-              <p className="text-sm text-muted-foreground mb-6">
-                <Info className="inline h-3.5 w-3.5 mr-1.5 -mt-0.5" />
-                Funds shown are based on your risk profile and goals. Use the search bar above to explore mutual funds.
-              </p>
-            )}
 
             {/* Tab Content */}
             <div className="space-y-6">
