@@ -28,10 +28,10 @@ export function DashboardSidebar({
   };
 
   return (
-    <aside className="w-20 shrink-0 bg-sidebar-background/60 backdrop-blur-sm hidden lg:flex flex-col items-center border-r border-sidebar-border/30">
+    <aside className="w-24 shrink-0 bg-sidebar-background/80 backdrop-blur-md hidden lg:flex flex-col items-center border-r border-sidebar-border/40 fixed left-0 top-[73px] bottom-0 z-40">
       {/* Vertically centered navigation group */}
       <nav className="flex-1 flex flex-col justify-center py-8">
-        <div className="space-y-2">
+        <div className="space-y-6">
           {navItems.map((item) => {
             const count = getCount(item.id);
             const isActive = activeTab === item.id;
@@ -41,20 +41,20 @@ export function DashboardSidebar({
                 key={item.id}
                 onClick={() => onTabChange(item.id)}
                 className={cn(
-                  "relative flex flex-col items-center justify-center w-14 h-14 rounded-xl text-xs font-medium transition-all duration-200",
+                  "relative flex flex-col items-center justify-center w-18 h-18 rounded-xl text-sm font-medium transition-all duration-200 px-3 py-3",
                   isActive
                     ? "bg-primary/15 text-primary"
                     : "text-muted-foreground hover:bg-sidebar-accent/40 hover:text-foreground"
                 )}
               >
                 <item.icon className={cn(
-                  "h-5 w-5 mb-1",
+                  "h-6 w-6 mb-1.5",
                   isActive ? "text-primary" : "text-muted-foreground"
                 )} />
-                <span className="text-[10px] leading-tight">{item.label}</span>
+                <span className="text-xs leading-tight font-medium">{item.label}</span>
                 {count > 0 && (
                   <span className={cn(
-                    "absolute -top-0.5 -right-0.5 px-1.5 py-0.5 text-[9px] rounded-full min-w-[16px] text-center",
+                    "absolute -top-1 -right-1 px-2 py-0.5 text-[10px] rounded-full min-w-[18px] text-center font-semibold",
                     isActive 
                       ? "bg-primary text-primary-foreground" 
                       : "bg-muted-foreground/20 text-muted-foreground"

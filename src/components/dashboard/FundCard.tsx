@@ -62,12 +62,12 @@ export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle
       <Button
         size="sm"
         variant="ghost"
-        className="absolute top-3 right-3 h-8 w-8 p-0 z-10"
+        className="absolute top-4 right-4 h-10 w-10 p-0 z-10"
         onClick={handleBookmarkClick}
       >
         <Bookmark 
           className={cn(
-            "h-4 w-4 transition-colors",
+            "h-5 w-5 transition-colors",
             isBookmarked 
               ? "fill-primary text-primary" 
               : "text-muted-foreground hover:text-primary"
@@ -75,37 +75,37 @@ export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle
         />
       </Button>
 
-      <CardHeader className="pb-2">
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap gap-2 pr-10">
-            <Badge variant="outline" className={getCategoryColor(fund.category)}>
+      <CardHeader className="pb-3 pt-5 px-5">
+        <div className="flex flex-col gap-2.5">
+          <div className="flex flex-wrap gap-2 pr-12">
+            <Badge variant="outline" className={cn(getCategoryColor(fund.category), "text-sm px-3 py-1")}>
               {fund.category}
             </Badge>
-            <Badge variant="outline" className={getStrengthColor(fund.strengthBadge)}>
+            <Badge variant="outline" className={cn(getStrengthColor(fund.strengthBadge), "text-sm px-3 py-1")}>
               {fund.strengthBadge}
             </Badge>
           </div>
-          <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 pr-10">
+          <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors line-clamp-2 pr-12 leading-snug">
             {fund.name}
           </h3>
-          <p className="text-xs text-muted-foreground">{fund.amc}</p>
+          <p className="text-sm text-muted-foreground">{fund.amc}</p>
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0">
-        <div className="grid grid-cols-2 gap-4 mt-4">
+      <CardContent className="pt-0 px-5 pb-5">
+        <div className="grid grid-cols-2 gap-5 mt-4">
           {/* CAGR */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               {isPositiveReturn ? (
-                <TrendingUp className="h-3 w-3 text-success" />
+                <TrendingUp className="h-4 w-4 text-success" />
               ) : (
-                <TrendingDown className="h-3 w-3 text-destructive" />
+                <TrendingDown className="h-4 w-4 text-destructive" />
               )}
               <span>1Y CAGR</span>
             </div>
             <p className={cn(
-              "text-lg font-bold",
+              "text-xl font-bold",
               isPositiveReturn ? "text-success" : "text-destructive"
             )}>
               {isPositiveReturn ? '+' : ''}{fund.cagr1Y.toFixed(1)}%
@@ -113,40 +113,40 @@ export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle
           </div>
 
           {/* Volatility */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <BarChart3 className="h-3 w-3" />
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <BarChart3 className="h-4 w-4" />
               <span>Volatility</span>
             </div>
-            <p className="text-lg font-bold text-foreground">
+            <p className="text-xl font-bold text-foreground">
               {fund.volatility.toFixed(1)}%
             </p>
           </div>
 
           {/* Sharpe Ratio */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <span>Sharpe</span>
             </div>
-            <p className="text-lg font-bold text-foreground">
+            <p className="text-xl font-bold text-foreground">
               {fund.sharpeRatio.toFixed(2)}
             </p>
           </div>
 
           {/* Expense Ratio */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Percent className="h-3 w-3" />
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <Percent className="h-4 w-4" />
               <span>Expense</span>
             </div>
-            <p className="text-lg font-bold text-foreground">
+            <p className="text-xl font-bold text-foreground">
               {fund.expenseRatio.toFixed(2)}%
             </p>
           </div>
         </div>
 
         {/* Bottom Stats */}
-        <div className="mt-4 pt-4 border-t border-border/50 flex justify-between text-xs text-muted-foreground">
+        <div className="mt-5 pt-4 border-t border-border/50 flex justify-between text-sm text-muted-foreground">
           <span>NAV: ₹{fund.nav.toFixed(2)}</span>
           <span>AUM: ₹{fund.aum.toLocaleString()}Cr</span>
         </div>

@@ -231,7 +231,7 @@ const Index = () => {
       <DashboardHeader onRefresh={refreshFunds} isLoading={isLoading} />
       
       <div className="flex flex-1">
-        {/* Desktop Sidebar */}
+        {/* Desktop Sidebar - Fixed position */}
         <DashboardSidebar 
           activeTab={activeTab} 
           onTabChange={setActiveTab}
@@ -239,7 +239,8 @@ const Index = () => {
           portfolioCount={portfolio.length}
         />
         
-        <main className="flex-1 px-4 md:px-6 lg:px-8 py-6 overflow-x-hidden bg-gradient-to-b from-transparent via-background/50 to-background">
+        {/* Main content with left margin to account for fixed sidebar */}
+        <main className="flex-1 px-4 md:px-6 lg:px-10 py-8 overflow-x-hidden bg-gradient-to-b from-transparent via-background/50 to-background lg:ml-24">
           <div className="max-w-6xl mx-auto">
             {/* Mobile Navigation - Before header zone on mobile */}
             <div className="lg:hidden mb-4">
