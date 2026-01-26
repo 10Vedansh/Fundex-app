@@ -15,13 +15,13 @@ export function FundexLogo({ size = 'md', showText = true, className }: LogoProp
   };
 
   const textSizeClasses = {
-    sm: 'text-lg',
-    md: 'text-xl',
-    lg: 'text-2xl',
+    sm: 'text-2xl',
+    md: 'text-3xl',
+    lg: 'text-4xl',
   };
 
   return (
-    <div className={cn('flex items-center gap-3', className)}>
+    <div className={cn('flex items-center gap-1', className)}>
       {/* Money Bag Logo */}
       <img 
         src={logoImage} 

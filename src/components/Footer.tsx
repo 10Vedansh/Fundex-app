@@ -10,8 +10,8 @@ export function Footer() {
 
   return (
     <>
-      <footer className="border-t border-border/40 bg-background/80 backdrop-blur-sm py-8">
-        <div className="container mx-auto px-4">
+      <footer className="border-t border-border/40 bg-background/80 backdrop-blur-sm py-8 lg:ml-24">
+        <div className="container mx-auto px-4 lg:px-8">
           {/* Main footer content */}
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             {/* Legal links */}
