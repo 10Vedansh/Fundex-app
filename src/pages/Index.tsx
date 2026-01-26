@@ -252,8 +252,9 @@ const Index = () => {
             </div>
 
             {/* Dashboard Header Zone - Greeting + Search + Info */}
+            {/* Show greeting only on Overview tab */}
             <DashboardHeaderZone
-              firstName={firstName}
+              firstName={activeTab === 'overview' ? firstName : null}
               globalSearch={globalSearch}
               onGlobalSearchChange={setGlobalSearch}
               globalFilteredFunds={globalFilteredFunds}
@@ -262,6 +263,7 @@ const Index = () => {
               }}
               showSearch={activeTab !== 'sectors'}
               showInfoText={activeTab === 'overview'}
+              showGreeting={activeTab === 'overview'}
             />
 
             {/* Tab Content */}

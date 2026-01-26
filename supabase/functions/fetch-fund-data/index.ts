@@ -380,26 +380,43 @@ async function processFunds(amfiFunds: AMFIFund[]): Promise<ProcessedFund[]> {
   
   console.log(`Found ${fundsByAMC.size} unique AMCs`);
   
-  // Build balanced list: take top funds from each AMC in round-robin
+  // True round-robin: take 1 fund at a time from each AMC until we hit limit
   const sortedFunds: AMFIFund[] = [];
-  const amcList = Array.from(fundsByAMC.keys()).sort((a, b) => {
-    // Prioritize listed AMCs but don't exclude others
-    const aPriority = PRIORITY_AMCS.findIndex(amc => a.includes(amc.split(' ')[0]));
-    const bPriority = PRIORITY_AMCS.findIndex(amc => b.includes(amc.split(' ')[0]));
-    if (aPriority !== -1 && bPriority !== -1) return aPriority - bPriority;
-    if (aPriority !== -1) return -1;
-    if (bPriority !== -1) return 1;
-    return a.localeCompare(b);
-  });
+  const amcList = Array.from(fundsByAMC.keys());
   
-  // Take up to 20 funds per AMC to ensure diversity (600 / 30 AMCs ≈ 20)
-  const maxPerAMC = Math.ceil(MAX_FUNDS / Math.max(amcList.length, 25));
-  for (const amc of amcList) {
-    const amcFunds = fundsByAMC.get(amc)!;
-    sortedFunds.push(...amcFunds.slice(0, maxPerAMC));
+  // Shuffle AMC order to avoid alphabetical bias
+  for (let i = amcList.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [amcList[i], amcList[j]] = [amcList[j], amcList[i]];
   }
   
-  console.log(`Selected ${sortedFunds.length} funds for processing from ${amcList.length} AMCs`);
+  // Track index per AMC for round-robin
+  const amcIndex = new Map<string, number>();
+  amcList.forEach(amc => amcIndex.set(amc, 0));
+  
+  // Round-robin until we have enough funds or run out
+  let addedCount = 0;
+  let exhaustedAMCs = 0;
+  
+  while (addedCount < MAX_FUNDS && exhaustedAMCs < amcList.length) {
+    exhaustedAMCs = 0;
+    for (const amc of amcList) {
+      if (addedCount >= MAX_FUNDS) break;
+      
+      const funds = fundsByAMC.get(amc)!;
+      const idx = amcIndex.get(amc)!;
+      
+      if (idx < funds.length) {
+        sortedFunds.push(funds[idx]);
+        amcIndex.set(amc, idx + 1);
+        addedCount++;
+      } else {
+        exhaustedAMCs++;
+      }
+    }
+  }
+  
+  console.log(`Selected ${sortedFunds.length} funds for processing from ${amcList.length} AMCs (round-robin)`);
   
   // Process in batches
   for (let i = 0; i < Math.min(sortedFunds.length, MAX_FUNDS); i += BATCH_SIZE) {
