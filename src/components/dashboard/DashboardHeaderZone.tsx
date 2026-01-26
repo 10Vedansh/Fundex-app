@@ -12,6 +12,7 @@ interface DashboardHeaderZoneProps {
   onFundClick: (fund: MutualFund) => void;
   showSearch?: boolean;
   showInfoText?: boolean;
+  showGreeting?: boolean;
 }
 
 const subtexts = [
@@ -28,6 +29,7 @@ export function DashboardHeaderZone({
   onFundClick,
   showSearch = true,
   showInfoText = true,
+  showGreeting = true,
 }: DashboardHeaderZoneProps) {
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -43,19 +45,26 @@ export function DashboardHeaderZone({
 
   const displayName = firstName || 'there';
 
+  // If no greeting and no search, don't render the zone
+  if (!showGreeting && !showSearch) {
+    return null;
+  }
+
   return (
-    <div className="relative mb-8">
+    <div className="relative mb-6">
       {/* Header zone with subtle gradient background */}
-      <div className="relative bg-gradient-to-b from-card/60 via-card/40 to-transparent rounded-xl px-6 py-8 border border-border/20">
-        {/* Greeting Section */}
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-semibold text-foreground tracking-tight mb-2">
-            {greeting}, {displayName}
-          </h1>
-          <p className="text-muted-foreground text-base md:text-lg">
-            {subtext}
-          </p>
-        </div>
+      <div className="relative bg-gradient-to-b from-card/40 via-card/20 to-transparent rounded-xl px-5 py-6 border border-border/10">
+        {/* Greeting Section - Only on Overview */}
+        {showGreeting && (
+          <div className="mb-5">
+            <h1 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight mb-1">
+              {greeting}, {displayName}
+            </h1>
+            <p className="text-muted-foreground text-sm md:text-base">
+              {subtext}
+            </p>
+          </div>
+        )}
 
         {/* Global Search */}
         {showSearch && (
@@ -65,7 +74,7 @@ export function DashboardHeaderZone({
               placeholder="Search mutual funds by name or AMC..."
               value={globalSearch}
               onChange={(e) => onGlobalSearchChange(e.target.value)}
-              className="pl-12 bg-secondary/40 border-border/40 h-12 text-base focus:bg-secondary/60 focus:border-primary/30 transition-all"
+              className="pl-12 bg-secondary/40 border-border/40 h-11 text-base focus:bg-secondary/60 focus:border-primary/30 transition-all"
             />
             {globalSearch && globalFilteredFunds.length > 0 && (
               <Card className="absolute top-full left-0 right-0 mt-2 z-50 glass-card max-h-80 overflow-auto">
@@ -90,16 +99,13 @@ export function DashboardHeaderZone({
         )}
 
         {/* Informational Context */}
-        {showInfoText && (
+        {showInfoText && showGreeting && (
           <p className="text-sm text-muted-foreground/80 mt-4 flex items-center gap-1.5">
             <Info className="h-3.5 w-3.5 shrink-0" />
-            <span>Funds shown are based on your risk profile and goals. Use the search bar above to explore mutual funds.</span>
+            <span>Funds shown are based on your risk profile and goals.</span>
           </p>
         )}
       </div>
-      
-      {/* Bottom fade transition */}
-      <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-b from-transparent to-background pointer-events-none" />
     </div>
   );
 }
