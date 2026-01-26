@@ -294,7 +294,7 @@ export default function Auth() {
       </div>
 
       {/* Right Side - Auth Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative z-10 bg-background/85 backdrop-blur-sm">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative z-10">
 
         <div className="w-full max-w-md mt-16 lg:mt-0">
           <div className="text-center mb-8">
