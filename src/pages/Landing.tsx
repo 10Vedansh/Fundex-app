@@ -9,7 +9,8 @@ import { RefundPolicy } from '@/components/legal/RefundPolicy';
 import { SubtleMarketBackground } from '@/components/landing/SubtleMarketBackground';
 import { OpacityReveal } from '@/components/landing/OpacityReveal';
 import { ProximityCard } from '@/components/landing/ProximityCard';
-import { TrendingUp, ArrowRight, BarChart2, Target, Bookmark, PieChart, Database, Shield, Lock } from 'lucide-react';
+import { FundexLogo } from '@/components/landing/FundexLogo';
+import { ArrowRight, BarChart2, Target, Bookmark, PieChart, Database, Shield, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function Landing() {
@@ -72,20 +73,12 @@ export default function Landing() {
         <div className="max-w-5xl mx-auto px-6 flex items-center justify-between">
           <button 
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex items-center gap-2.5 group"
+            className="flex items-center"
           >
-            <div className={cn(
-              "rounded-lg bg-primary flex items-center justify-center transition-all duration-300",
-              scrolled ? "h-8 w-8" : "h-9 w-9"
-            )}>
-              <TrendingUp size={scrolled ? 16 : 18} className="text-primary-foreground" strokeWidth={2.5} />
-            </div>
-            <span className={cn(
-              "font-semibold tracking-tight text-foreground transition-all duration-300",
-              scrolled ? "text-base" : "text-lg"
-            )}>
-              50Stacks
-            </span>
+            <FundexLogo size="sm" className={cn(
+              "transition-all duration-300",
+              scrolled ? "!h-10" : "!h-12"
+            )} />
           </button>
           
           <div className="hidden md:flex items-center gap-8">
@@ -515,13 +508,8 @@ export default function Landing() {
       <footer className="relative z-10 border-t border-border/30 py-12 bg-background/80">
         <div className="max-w-5xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-8">
-            <div className="flex items-center gap-2.5">
-              <div className="h-7 w-7 rounded-md bg-primary flex items-center justify-center">
-                <TrendingUp size={14} className="text-primary-foreground" strokeWidth={2.5} />
-              </div>
-              <span className="text-sm font-semibold tracking-tight text-foreground">
-                50Stacks
-              </span>
+            <div className="flex items-center">
+              <FundexLogo size="sm" className="!h-8" />
             </div>
             
             <div className="flex flex-wrap gap-6 text-xs">
