@@ -8,8 +8,8 @@ const corsHeaders = {
 
 const AMFI_NAV_URL = "https://www.amfiindia.com/spages/NAVAll.txt";
 const MFAPI_BASE = "https://api.mfapi.in";
-const MAX_FUNDS = 500; // Reduced to avoid CPU timeout
-const BATCH_SIZE = 25; // Smaller batches for reliability
+const MAX_FUNDS = 600; // Increased for diverse AMC coverage
+const BATCH_SIZE = 30; // Optimized batch size
 const RISK_FREE_RATE = 6; // India risk-free rate ~6%
 
 // Types
@@ -316,25 +316,50 @@ function getBenchmark(category: string): string {
   }
 }
 
-// Priority AMCs - major fund houses that must be included
+// Diverse AMCs - expanded list with equal priority for variety
 const PRIORITY_AMCS = [
+  // Large Fund Houses
   'HDFC Mutual Fund',
   'ICICI Prudential Mutual Fund',
   'SBI Mutual Fund',
   'Axis Mutual Fund',
   'Kotak Mahindra Mutual Fund',
   'Nippon India Mutual Fund',
-  'Mirae Asset Mutual Fund',
   'Aditya Birla Sun Life Mutual Fund',
   'UTI Mutual Fund',
+  // Mid-size Fund Houses
   'DSP Mutual Fund',
   'Franklin Templeton Mutual Fund',
   'Tata Mutual Fund',
+  'IDFC Mutual Fund',
+  'L&T Mutual Fund',
+  'Invesco Mutual Fund',
+  'Motilal Oswal Mutual Fund',
+  'HSBC Mutual Fund',
+  // Specialty & New-age Fund Houses
+  'Mirae Asset Mutual Fund',
   'PPFAS Mutual Fund',
   'Canara Robeco Mutual Fund',
   'Sundaram Mutual Fund',
-  'Groww Mutual Fund',
+  'Edelweiss Mutual Fund',
+  'PGIM India Mutual Fund',
   'quant Mutual Fund',
+  'Groww Mutual Fund',
+  'Bandhan Mutual Fund',
+  'Mahindra Manulife Mutual Fund',
+  'Baroda BNP Paribas Mutual Fund',
+  'JM Financial Mutual Fund',
+  'Navi Mutual Fund',
+  'WhiteOak Capital Mutual Fund',
+  'Bank of India Mutual Fund',
+  'LIC Mutual Fund',
+  'ITI Mutual Fund',
+  'Samco Mutual Fund',
+  'Trust Mutual Fund',
+  'Union Mutual Fund',
+  'Shriram Mutual Fund',
+  'ICICI Pru Mutual Fund', // Alias handling
+  'Nippon Mutual Fund', // Alias handling
 ];
 
 // ============================================
@@ -343,18 +368,38 @@ const PRIORITY_AMCS = [
 async function processFunds(amfiFunds: AMFIFund[]): Promise<ProcessedFund[]> {
   const processedFunds: ProcessedFund[] = [];
   
-  // Sort funds to prioritize major AMCs first
-  const sortedFunds = [...amfiFunds].sort((a, b) => {
-    const aPriority = PRIORITY_AMCS.findIndex(amc => a.amc.includes(amc.split(' ')[0]));
-    const bPriority = PRIORITY_AMCS.findIndex(amc => b.amc.includes(amc.split(' ')[0]));
-    
-    // If both are priority, maintain their order within priority
+  // Group funds by AMC first to ensure diverse coverage
+  const fundsByAMC = new Map<string, AMFIFund[]>();
+  for (const fund of amfiFunds) {
+    const amcKey = fund.amc || 'Unknown';
+    if (!fundsByAMC.has(amcKey)) {
+      fundsByAMC.set(amcKey, []);
+    }
+    fundsByAMC.get(amcKey)!.push(fund);
+  }
+  
+  console.log(`Found ${fundsByAMC.size} unique AMCs`);
+  
+  // Build balanced list: take top funds from each AMC in round-robin
+  const sortedFunds: AMFIFund[] = [];
+  const amcList = Array.from(fundsByAMC.keys()).sort((a, b) => {
+    // Prioritize listed AMCs but don't exclude others
+    const aPriority = PRIORITY_AMCS.findIndex(amc => a.includes(amc.split(' ')[0]));
+    const bPriority = PRIORITY_AMCS.findIndex(amc => b.includes(amc.split(' ')[0]));
     if (aPriority !== -1 && bPriority !== -1) return aPriority - bPriority;
-    // Priority funds come first
     if (aPriority !== -1) return -1;
     if (bPriority !== -1) return 1;
-    return 0;
+    return a.localeCompare(b);
   });
+  
+  // Take up to 20 funds per AMC to ensure diversity (600 / 30 AMCs ≈ 20)
+  const maxPerAMC = Math.ceil(MAX_FUNDS / Math.max(amcList.length, 25));
+  for (const amc of amcList) {
+    const amcFunds = fundsByAMC.get(amc)!;
+    sortedFunds.push(...amcFunds.slice(0, maxPerAMC));
+  }
+  
+  console.log(`Selected ${sortedFunds.length} funds for processing from ${amcList.length} AMCs`);
   
   // Process in batches
   for (let i = 0; i < Math.min(sortedFunds.length, MAX_FUNDS); i += BATCH_SIZE) {
