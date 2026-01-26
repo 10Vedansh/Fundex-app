@@ -180,16 +180,6 @@ export default function Onboarding() {
       
       {/* Left Side - Hero Section */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden z-10">
-
-        {/* Curved decorative shape */}
-        <div className="absolute right-0 top-0 bottom-0 w-32">
-          <svg viewBox="0 0 100 800" className="h-full w-full" preserveAspectRatio="none">
-            <path 
-              d="M100,0 L100,800 L0,800 Q80,400 0,0 Z" 
-              fill="hsl(var(--background) / 0.85)"
-            />
-          </svg>
-        </div>
         
         <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
           <div className="space-y-8">
