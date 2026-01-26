@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RefreshCw, LogOut, User, Settings, Sliders } from 'lucide-react';
+import { RefreshCw, LogOut, User, Settings, Sliders, Bell, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { FundexLogo } from '@/components/landing/FundexLogo';
@@ -14,6 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AccountModal } from './AccountModal';
 import { PreferencesModal } from './PreferencesModal';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface DashboardHeaderProps {
   onRefresh?: () => void;
@@ -44,24 +45,53 @@ export function DashboardHeader({ onRefresh, isLoading }: DashboardHeaderProps) 
   return (
     <>
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-8">
               {/* Logo - navigates to dashboard when authenticated */}
               <Link to="/dashboard" className="flex items-center">
-                <FundexLogo size="md" />
+                <FundexLogo size="lg" />
               </Link>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              {/* FAQ Button */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full">
+                      <HelpCircle className="h-5 w-5 text-muted-foreground" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Help & FAQ</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              {/* Notifications Button */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full relative">
+                      <Bell className="h-5 w-5 text-muted-foreground" />
+                      {/* Notification dot */}
+                      <span className="absolute top-2 right-2 h-2 w-2 bg-primary rounded-full" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Notifications</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                      <Avatar className="h-9 w-9">
+                    <Button variant="ghost" className="relative h-11 w-11 rounded-full">
+                      <Avatar className="h-11 w-11">
                         <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || 'User'} />
-                        <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                        <AvatarFallback className="bg-primary/10 text-primary text-base font-semibold">
                           {getInitials()}
                         </AvatarFallback>
                       </Avatar>

@@ -51,16 +51,16 @@ export function DashboardHeaderZone({
   }
 
   return (
-    <div className="relative mb-6">
+    <div className="relative mb-8">
       {/* Header zone with subtle gradient background */}
-      <div className="relative bg-gradient-to-b from-card/40 via-card/20 to-transparent rounded-xl px-5 py-6 border border-border/10">
+      <div className="relative bg-gradient-to-b from-card/40 via-card/20 to-transparent rounded-xl px-6 py-8 border border-border/10">
         {/* Greeting Section - Only on Overview */}
         {showGreeting && (
-          <div className="mb-5">
-            <h1 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight mb-1">
+          <div className="mb-6">
+            <h1 className="text-3xl md:text-4xl font-semibold text-foreground tracking-tight mb-2">
               {greeting}, {displayName}
             </h1>
-            <p className="text-muted-foreground text-sm md:text-base">
+            <p className="text-muted-foreground text-base md:text-lg">
               {subtext}
             </p>
           </div>
@@ -74,7 +74,7 @@ export function DashboardHeaderZone({
               placeholder="Search mutual funds by name or AMC..."
               value={globalSearch}
               onChange={(e) => onGlobalSearchChange(e.target.value)}
-              className="pl-12 bg-secondary/40 border-border/40 h-11 text-base focus:bg-secondary/60 focus:border-primary/30 transition-all"
+              className="pl-12 bg-secondary/40 border-border/40 h-12 text-base focus:bg-secondary/60 focus:border-primary/30 transition-all"
             />
             {globalSearch && globalFilteredFunds.length > 0 && (
               <Card className="absolute top-full left-0 right-0 mt-2 z-50 glass-card max-h-80 overflow-auto">
