@@ -1,13 +1,30 @@
-import marketBackground from '@/assets/market-background.png';
+import { useState, useEffect } from 'react';
 
 export function SubtleMarketBackground() {
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  useEffect(() => {
+    // Preload the optimized webp version from public folder
+    const img = new Image();
+    img.onload = () => setImageLoaded(true);
+    img.src = '/market-background.webp';
+  }, []);
+
   return (
     <>
-      {/* Main background image */}
+      {/* Base color fallback - shows immediately */}
       <div 
         className="fixed inset-0 z-0 pointer-events-none"
         style={{
-          backgroundImage: `url(${marketBackground})`,
+          background: 'linear-gradient(145deg, hsl(222, 47%, 8%) 0%, hsl(222, 47%, 12%) 100%)',
+        }}
+      />
+      
+      {/* Main background image - fades in when loaded */}
+      <div 
+        className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+        style={{
+          backgroundImage: `url(/market-background.webp)`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
