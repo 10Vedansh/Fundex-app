@@ -31,11 +31,11 @@ export function FundexLogo({ size = 'md', showText = true, className }: LogoProp
 
       {showText && (
         <span className={cn(
-          'font-bold tracking-wide',
+          'tracking-normal',
           textSizeClasses[size],
-          'bg-gradient-to-r from-primary via-accent-foreground to-primary bg-clip-text text-transparent'
+          'text-foreground'
         )}
-        style={{ fontFamily: "'Playfair Display', serif" }}
+        style={{ fontFamily: "'Sacramento', cursive" }}
         >
           50Stacks
         </span>
