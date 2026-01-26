@@ -50,7 +50,7 @@ export function DashboardHeader({ onRefresh, isLoading }: DashboardHeaderProps) 
             <div className="flex items-center gap-8">
               {/* Logo - navigates to dashboard when authenticated */}
               <Link to="/dashboard" className="flex items-center">
-                <FundexLogo size="md" className="!h-16" />
+                <FundexLogo size="md" className="!h-20" />
               </Link>
             </div>
             
