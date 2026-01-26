@@ -7,6 +7,7 @@ import { ArrowLeft, Check, Shield, Target, Clock, Wallet, TrendingUp, Loader2, S
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { FundexLogo } from '@/components/landing/FundexLogo';
+import authBackground from '@/assets/auth-background.png';
 
 interface Question {
   id: string;
@@ -165,22 +166,27 @@ export default function Onboarding() {
   const IconComponent = currentQuestion.icon;
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex relative">
+      {/* Full-page background image */}
+      <div 
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage: `url(${authBackground})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
+      />
+      
       {/* Left Side - Hero Section */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-primary/10">
-        {/* Decorative background elements */}
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-br from-primary/5 to-transparent rounded-full blur-2xl" />
-        </div>
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden z-10">
 
         {/* Curved decorative shape */}
         <div className="absolute right-0 top-0 bottom-0 w-32">
           <svg viewBox="0 0 100 800" className="h-full w-full" preserveAspectRatio="none">
             <path 
               d="M100,0 L100,800 L0,800 Q80,400 0,0 Z" 
-              fill="hsl(var(--background))"
+              fill="hsl(var(--background) / 0.85)"
             />
           </svg>
         </div>
@@ -248,7 +254,7 @@ export default function Onboarding() {
       </div>
 
       {/* Right Side - Question Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative z-10 bg-background/85 backdrop-blur-sm">
         {/* Header for mobile and desktop */}
         <div className="absolute top-6 left-6 right-6 flex items-center justify-between">
           <Button 
