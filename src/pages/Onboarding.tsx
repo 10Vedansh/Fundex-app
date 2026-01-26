@@ -254,7 +254,7 @@ export default function Onboarding() {
       </div>
 
       {/* Right Side - Question Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative z-10 bg-background/85 backdrop-blur-sm">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative z-10">
         {/* Header for mobile and desktop */}
         <div className="absolute top-6 left-6 right-6 flex items-center justify-between">
           <Button 
