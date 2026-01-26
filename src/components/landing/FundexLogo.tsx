@@ -8,9 +8,9 @@ interface LogoProps {
 
 export function FundexLogo({ size = 'md', className }: LogoProps) {
   const sizeClasses = {
-    sm: 'h-14',
-    md: 'h-20',
-    lg: 'h-28',
+    sm: 'h-24',
+    md: 'h-36',
+    lg: 'h-48',
   };
 
   return (
