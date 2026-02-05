@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -9,7 +9,6 @@ import { RefundPolicy } from '@/components/legal/RefundPolicy';
 import { GsapReveal } from '@/components/landing/GsapReveal';
 import { GlowCard } from '@/components/landing/GlowCard';
 import { MagneticButton } from '@/components/landing/MagneticButton';
-import { FloatingElements } from '@/components/landing/FloatingElements';
 import { FundexLogo } from '@/components/landing/FundexLogo';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -31,6 +30,9 @@ import {
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+// Lazy load the 3D background to prevent blocking
+const ThreeBackground = lazy(() => import('@/components/landing/ThreeBackground').then(m => ({ default: m.ThreeBackground })));
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -137,16 +139,17 @@ export default function Landing() {
   
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
-      {/* Background */}
-      <div className="fixed inset-0 z-0">
+      {/* 3D Background */}
+      <Suspense fallback={
         <div 
-          className="absolute inset-0"
+          className="fixed inset-0 z-0"
           style={{
             background: 'linear-gradient(145deg, hsl(222, 47%, 6%) 0%, hsl(222, 47%, 11%) 50%, hsl(222, 47%, 8%) 100%)',
           }}
         />
-        <FloatingElements />
-      </div>
+      }>
+        <ThreeBackground />
+      </Suspense>
 
       {/* Navigation */}
       <nav 
