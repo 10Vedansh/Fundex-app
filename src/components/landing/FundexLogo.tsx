@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import logoImage from '@/assets/50stacks-logo.png';
+import logoImage from '@/assets/CIFRAA-Logo.png';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
