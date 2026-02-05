@@ -1,345 +1,283 @@
 import { useRef, useMemo, Suspense } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Float, MeshDistortMaterial, Sphere, Box, Torus, Icosahedron } from '@react-three/drei';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { Sphere, GradientTexture } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Animated floating particles
-function Particles({ count = 200 }) {
-  const mesh = useRef<THREE.Points>(null);
-  
-  const particles = useMemo(() => {
-    const positions = new Float32Array(count * 3);
-    const sizes = new Float32Array(count);
+// Refined Financial Globe with grid lines
+function FinancialGlobe() {
+  const globeRef = useRef<THREE.Group>(null);
+  const innerGlobeRef = useRef<THREE.Mesh>(null);
+  const gridRef = useRef<THREE.LineSegments>(null);
+
+  // Create latitude/longitude grid geometry
+  const gridGeometry = useMemo(() => {
+    const geometry = new THREE.BufferGeometry();
+    const vertices: number[] = [];
+    const radius = 2.02;
     
-    for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 30;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 30;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 20 - 5;
-      sizes[i] = Math.random() * 2 + 0.5;
+    // Latitude lines
+    for (let lat = -80; lat <= 80; lat += 20) {
+      const phi = (90 - lat) * (Math.PI / 180);
+      const segments = 64;
+      
+      for (let i = 0; i <= segments; i++) {
+        const theta = (i / segments) * Math.PI * 2;
+        const x = radius * Math.sin(phi) * Math.cos(theta);
+        const y = radius * Math.cos(phi);
+        const z = radius * Math.sin(phi) * Math.sin(theta);
+        vertices.push(x, y, z);
+        
+        if (i < segments) {
+          const nextTheta = ((i + 1) / segments) * Math.PI * 2;
+          const nx = radius * Math.sin(phi) * Math.cos(nextTheta);
+          const ny = radius * Math.cos(phi);
+          const nz = radius * Math.sin(phi) * Math.sin(nextTheta);
+          vertices.push(nx, ny, nz);
+        }
+      }
     }
     
-    return { positions, sizes };
-  }, [count]);
+    // Longitude lines
+    for (let lon = 0; lon < 360; lon += 30) {
+      const theta = lon * (Math.PI / 180);
+      const segments = 64;
+      
+      for (let i = 0; i <= segments; i++) {
+        const phi = (i / segments) * Math.PI;
+        const x = radius * Math.sin(phi) * Math.cos(theta);
+        const y = radius * Math.cos(phi);
+        const z = radius * Math.sin(phi) * Math.sin(theta);
+        vertices.push(x, y, z);
+        
+        if (i < segments) {
+          const nextPhi = ((i + 1) / segments) * Math.PI;
+          const nx = radius * Math.sin(nextPhi) * Math.cos(theta);
+          const ny = radius * Math.cos(nextPhi);
+          const nz = radius * Math.sin(nextPhi) * Math.sin(theta);
+          vertices.push(nx, ny, nz);
+        }
+      }
+    }
+    
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    return geometry;
+  }, []);
 
+  // Slow, smooth rotation
   useFrame((state) => {
-    if (!mesh.current) return;
-    mesh.current.rotation.y = state.clock.elapsedTime * 0.02;
-    mesh.current.rotation.x = state.clock.elapsedTime * 0.01;
+    if (globeRef.current) {
+      // Very slow rotation - institutional and calm
+      globeRef.current.rotation.y = state.clock.elapsedTime * 0.03;
+      // Subtle tilt oscillation
+      globeRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.02) * 0.05 + 0.1;
+    }
   });
 
   return (
-    <points ref={mesh}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          count={particles.positions.length / 3}
-          array={particles.positions}
-          itemSize={3}
+    <group ref={globeRef} position={[0, 0, 0]}>
+      {/* Main globe sphere - dark with subtle reflection */}
+      <Sphere ref={innerGlobeRef} args={[2, 64, 64]}>
+        <meshPhysicalMaterial
+          color="#0a1628"
+          metalness={0.3}
+          roughness={0.7}
+          clearcoat={0.3}
+          clearcoatRoughness={0.4}
+          envMapIntensity={0.5}
+          transparent
+          opacity={0.95}
         />
-        <bufferAttribute
-          attach="attributes-size"
-          count={particles.sizes.length}
-          array={particles.sizes}
-          itemSize={1}
+      </Sphere>
+      
+      {/* Inner glow sphere */}
+      <Sphere args={[1.95, 32, 32]}>
+        <meshBasicMaterial
+          color="#1e3a5f"
+          transparent
+          opacity={0.1}
         />
-      </bufferGeometry>
-      <pointsMaterial
-        size={0.05}
+      </Sphere>
+      
+      {/* Grid lines */}
+      <lineSegments ref={gridRef} geometry={gridGeometry}>
+        <lineBasicMaterial
+          color="#3b82f6"
+          transparent
+          opacity={0.15}
+          linewidth={1}
+        />
+      </lineSegments>
+      
+      {/* Outer atmospheric glow */}
+      <Sphere args={[2.15, 32, 32]}>
+        <meshBasicMaterial
+          color="#3b82f6"
+          transparent
+          opacity={0.03}
+          side={THREE.BackSide}
+        />
+      </Sphere>
+      
+      {/* Secondary atmospheric layer */}
+      <Sphere args={[2.3, 32, 32]}>
+        <meshBasicMaterial
+          color="#1e40af"
+          transparent
+          opacity={0.02}
+          side={THREE.BackSide}
+        />
+      </Sphere>
+    </group>
+  );
+}
+
+// Subtle orbital ring
+function OrbitalRing() {
+  const ringRef = useRef<THREE.Mesh>(null);
+  
+  useFrame((state) => {
+    if (ringRef.current) {
+      ringRef.current.rotation.z = state.clock.elapsedTime * 0.01;
+    }
+  });
+
+  return (
+    <mesh ref={ringRef} rotation={[Math.PI / 2.5, 0, 0]}>
+      <torusGeometry args={[3.2, 0.008, 8, 128]} />
+      <meshBasicMaterial
         color="#3b82f6"
         transparent
-        opacity={0.6}
-        sizeAttenuation
-        blending={THREE.AdditiveBlending}
-      />
-    </points>
-  );
-}
-
-// Floating geometric shape
-function FloatingShape({ 
-  position, 
-  scale = 1, 
-  color = '#3b82f6',
-  speed = 1,
-  rotationIntensity = 0.5,
-  floatIntensity = 0.5,
-  shape = 'sphere'
-}: {
-  position: [number, number, number];
-  scale?: number;
-  color?: string;
-  speed?: number;
-  rotationIntensity?: number;
-  floatIntensity?: number;
-  shape?: 'sphere' | 'box' | 'torus' | 'icosahedron';
-}) {
-  const meshRef = useRef<THREE.Mesh>(null);
-
-  useFrame((state) => {
-    if (!meshRef.current) return;
-    meshRef.current.rotation.x = state.clock.elapsedTime * 0.1 * speed;
-    meshRef.current.rotation.y = state.clock.elapsedTime * 0.15 * speed;
-  });
-
-  const renderShape = () => {
-    const material = (
-      <MeshDistortMaterial
-        color={color}
-        transparent
-        opacity={0.15}
-        distort={0.3}
-        speed={2}
-        roughness={0.2}
-        metalness={0.8}
-      />
-    );
-
-    switch (shape) {
-      case 'torus':
-        return (
-          <Torus ref={meshRef} position={position} scale={scale} args={[1, 0.3, 16, 32]}>
-            {material}
-          </Torus>
-        );
-      case 'box':
-        return (
-          <Box ref={meshRef} position={position} scale={scale} args={[1, 1, 1]}>
-            {material}
-          </Box>
-        );
-      case 'icosahedron':
-        return (
-          <Icosahedron ref={meshRef} position={position} scale={scale} args={[1, 0]}>
-            {material}
-          </Icosahedron>
-        );
-      default:
-        return (
-          <Sphere ref={meshRef} position={position} scale={scale} args={[1, 32, 32]}>
-            {material}
-          </Sphere>
-        );
-    }
-  };
-
-  return (
-    <Float
-      speed={speed}
-      rotationIntensity={rotationIntensity}
-      floatIntensity={floatIntensity}
-    >
-      {renderShape()}
-    </Float>
-  );
-}
-
-// Grid plane with glow effect
-function GridFloor() {
-  const gridRef = useRef<THREE.Mesh>(null);
-  
-  useFrame((state) => {
-    if (!gridRef.current) return;
-    const material = gridRef.current.material as THREE.ShaderMaterial;
-    if (material.uniforms) {
-      material.uniforms.uTime.value = state.clock.elapsedTime;
-    }
-  });
-
-  const gridShader = useMemo(() => ({
-    uniforms: {
-      uTime: { value: 0 },
-      uColor: { value: new THREE.Color('#3b82f6') },
-    },
-    vertexShader: `
-      varying vec2 vUv;
-      void main() {
-        vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      uniform float uTime;
-      uniform vec3 uColor;
-      varying vec2 vUv;
-      
-      void main() {
-        vec2 grid = abs(fract(vUv * 20.0 - 0.5) - 0.5) / fwidth(vUv * 20.0);
-        float line = min(grid.x, grid.y);
-        float alpha = 1.0 - min(line, 1.0);
-        
-        // Add pulse effect
-        float pulse = sin(uTime * 0.5 + vUv.y * 10.0) * 0.5 + 0.5;
-        alpha *= 0.1 + pulse * 0.05;
-        
-        // Fade at edges
-        float fade = 1.0 - length(vUv - 0.5) * 1.5;
-        alpha *= max(fade, 0.0);
-        
-        gl_FragColor = vec4(uColor, alpha);
-      }
-    `,
-  }), []);
-
-  return (
-    <mesh 
-      ref={gridRef}
-      rotation={[-Math.PI / 2, 0, 0]} 
-      position={[0, -3, 0]}
-    >
-      <planeGeometry args={[40, 40, 1, 1]} />
-      <shaderMaterial
-        {...gridShader}
-        transparent
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
+        opacity={0.2}
       />
     </mesh>
   );
 }
 
-// Animated connection lines
-function ConnectionLines() {
-  const linesRef = useRef<THREE.LineSegments>(null);
+// Accent light points on the globe
+function DataPoints() {
+  const pointsRef = useRef<THREE.Points>(null);
   
-  const lineGeometry = useMemo(() => {
-    const points: number[] = [];
-    const connections = 15;
+  const positions = useMemo(() => {
+    const pos: number[] = [];
+    const count = 30;
+    const radius = 2.03;
     
-    for (let i = 0; i < connections; i++) {
-      const x1 = (Math.random() - 0.5) * 20;
-      const y1 = (Math.random() - 0.5) * 10;
-      const z1 = (Math.random() - 0.5) * 10 - 5;
+    for (let i = 0; i < count; i++) {
+      const phi = Math.acos(-1 + (2 * i) / count);
+      const theta = Math.sqrt(count * Math.PI) * phi;
       
-      const x2 = x1 + (Math.random() - 0.5) * 5;
-      const y2 = y1 + (Math.random() - 0.5) * 5;
-      const z2 = z1 + (Math.random() - 0.5) * 5;
-      
-      points.push(x1, y1, z1, x2, y2, z2);
+      pos.push(
+        radius * Math.cos(theta) * Math.sin(phi),
+        radius * Math.sin(theta) * Math.sin(phi),
+        radius * Math.cos(phi)
+      );
     }
     
-    return new Float32Array(points);
+    return new Float32Array(pos);
   }, []);
 
   useFrame((state) => {
-    if (!linesRef.current) return;
-    linesRef.current.rotation.y = state.clock.elapsedTime * 0.02;
+    if (pointsRef.current) {
+      pointsRef.current.rotation.y = state.clock.elapsedTime * 0.03;
+      pointsRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.02) * 0.05 + 0.1;
+    }
   });
 
   return (
-    <lineSegments ref={linesRef}>
+    <points ref={pointsRef}>
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"
-          count={lineGeometry.length / 3}
-          array={lineGeometry}
+          count={positions.length / 3}
+          array={positions}
           itemSize={3}
         />
       </bufferGeometry>
-      <lineBasicMaterial
-        color="#3b82f6"
+      <pointsMaterial
+        size={0.04}
+        color="#60a5fa"
         transparent
-        opacity={0.2}
-        blending={THREE.AdditiveBlending}
+        opacity={0.6}
+        sizeAttenuation
       />
-    </lineSegments>
+    </points>
   );
 }
 
-// Mouse-following light
-function MouseLight() {
-  const light = useRef<THREE.PointLight>(null);
-  const { viewport } = useThree();
+// Cinematic lighting setup
+function CinematicLighting() {
+  return (
+    <>
+      {/* Main key light - soft blue from top-right */}
+      <directionalLight
+        position={[5, 5, 3]}
+        intensity={0.4}
+        color="#93c5fd"
+      />
+      
+      {/* Fill light - subtle from left */}
+      <directionalLight
+        position={[-4, 2, 2]}
+        intensity={0.15}
+        color="#3b82f6"
+      />
+      
+      {/* Rim light - creates depth */}
+      <directionalLight
+        position={[0, -3, -5]}
+        intensity={0.1}
+        color="#1e40af"
+      />
+      
+      {/* Ambient - very subtle */}
+      <ambientLight intensity={0.05} color="#1e3a5f" />
+      
+      {/* Subtle point light for globe highlight */}
+      <pointLight
+        position={[3, 2, 4]}
+        intensity={0.3}
+        color="#60a5fa"
+        distance={10}
+      />
+    </>
+  );
+}
 
+// Main scene composition
+function Scene() {
+  const groupRef = useRef<THREE.Group>(null);
+  
+  // Gentle camera sway for parallax feel
   useFrame((state) => {
-    if (!light.current) return;
-    const x = (state.mouse.x * viewport.width) / 2;
-    const y = (state.mouse.y * viewport.height) / 2;
-    light.current.position.set(x, y, 5);
+    if (groupRef.current) {
+      groupRef.current.position.x = Math.sin(state.clock.elapsedTime * 0.1) * 0.1;
+      groupRef.current.position.y = Math.cos(state.clock.elapsedTime * 0.08) * 0.05;
+    }
   });
 
   return (
-    <pointLight
-      ref={light}
-      color="#3b82f6"
-      intensity={2}
-      distance={15}
-    />
-  );
-}
-
-// Main scene
-function Scene() {
-  return (
-    <>
-      <ambientLight intensity={0.1} />
-      <pointLight position={[10, 10, 10]} intensity={0.5} color="#3b82f6" />
-      <pointLight position={[-10, -10, -10]} intensity={0.3} color="#8b5cf6" />
-      <MouseLight />
-      
-      <Particles count={150} />
-      <ConnectionLines />
-      <GridFloor />
-      
-      {/* Floating shapes */}
-      <FloatingShape 
-        position={[-5, 2, -8]} 
-        scale={1.5} 
-        color="#3b82f6" 
-        speed={0.5}
-        shape="sphere"
-      />
-      <FloatingShape 
-        position={[6, -1, -10]} 
-        scale={1.2} 
-        color="#8b5cf6" 
-        speed={0.7}
-        shape="icosahedron"
-      />
-      <FloatingShape 
-        position={[-3, -2, -6]} 
-        scale={0.8} 
-        color="#06b6d4" 
-        speed={0.6}
-        shape="torus"
-      />
-      <FloatingShape 
-        position={[4, 3, -12]} 
-        scale={1} 
-        color="#3b82f6" 
-        speed={0.4}
-        shape="box"
-      />
-      <FloatingShape 
-        position={[-7, 0, -15]} 
-        scale={2} 
-        color="#6366f1" 
-        speed={0.3}
-        shape="sphere"
-      />
-      <FloatingShape 
-        position={[8, 2, -8]} 
-        scale={0.6} 
-        color="#8b5cf6" 
-        speed={0.8}
-        shape="icosahedron"
-      />
-    </>
+    <group ref={groupRef}>
+      <CinematicLighting />
+      <FinancialGlobe />
+      <OrbitalRing />
+      <DataPoints />
+    </group>
   );
 }
 
 export function ThreeBackground() {
   return (
     <div className="fixed inset-0 z-0">
-      {/* Base gradient fallback */}
+      {/* Deep dark base gradient */}
       <div 
         className="absolute inset-0"
         style={{
-          background: 'linear-gradient(145deg, hsl(222, 47%, 6%) 0%, hsl(222, 47%, 11%) 50%, hsl(222, 47%, 8%) 100%)',
+          background: 'radial-gradient(ellipse 80% 60% at 50% 40%, hsl(222, 47%, 8%) 0%, hsl(222, 47%, 5%) 50%, hsl(222, 47%, 3%) 100%)',
         }}
       />
       
       <Canvas
-        camera={{ position: [0, 0, 10], fov: 60 }}
+        camera={{ position: [0, 0, 7], fov: 45 }}
         dpr={[1, 2]}
         gl={{ 
           antialias: true, 
@@ -359,11 +297,27 @@ export function ThreeBackground() {
         </Suspense>
       </Canvas>
       
-      {/* Overlay gradients for depth */}
+      {/* Top fade for navbar area */}
+      <div 
+        className="absolute inset-x-0 top-0 h-32 pointer-events-none"
+        style={{
+          background: 'linear-gradient(to bottom, hsl(222, 47%, 4%) 0%, transparent 100%)',
+        }}
+      />
+      
+      {/* Center vignette for text readability */}
       <div 
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse at center, transparent 0%, hsl(222, 47%, 8% / 0.5) 100%)',
+          background: 'radial-gradient(ellipse 50% 50% at 50% 50%, transparent 0%, hsl(222, 47%, 4% / 0.3) 100%)',
+        }}
+      />
+      
+      {/* Bottom fade */}
+      <div 
+        className="absolute inset-x-0 bottom-0 h-48 pointer-events-none"
+        style={{
+          background: 'linear-gradient(to top, hsl(222, 47%, 5%) 0%, transparent 100%)',
         }}
       />
     </div>
