@@ -14,6 +14,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AccountModal } from './AccountModal';
 import { PreferencesModal } from './PreferencesModal';
+import { FAQModal } from './FAQModal';
+import { NotificationsPopover } from './NotificationsPopover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface DashboardHeaderProps {
@@ -26,6 +28,7 @@ export function DashboardHeader({ onRefresh, isLoading }: DashboardHeaderProps) 
   const navigate = useNavigate();
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isPreferencesModalOpen, setIsPreferencesModalOpen] = useState(false);
+  const [isFAQModalOpen, setIsFAQModalOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -59,7 +62,12 @@ export function DashboardHeader({ onRefresh, isLoading }: DashboardHeaderProps) 
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-11 w-11 rounded-full"
+                      onClick={() => setIsFAQModalOpen(true)}
+                    >
                       <HelpCircle className="h-5 w-5 text-muted-foreground" />
                     </Button>
                   </TooltipTrigger>
@@ -70,20 +78,22 @@ export function DashboardHeader({ onRefresh, isLoading }: DashboardHeaderProps) 
               </TooltipProvider>
 
               {/* Notifications Button */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full relative">
-                      <Bell className="h-5 w-5 text-muted-foreground" />
-                      {/* Notification dot */}
-                      <span className="absolute top-2 right-2 h-2 w-2 bg-primary rounded-full" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Notifications</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <NotificationsPopover>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full relative">
+                        <Bell className="h-5 w-5 text-muted-foreground" />
+                        {/* Notification dot */}
+                        <span className="absolute top-2 right-2 h-2 w-2 bg-primary rounded-full" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Notifications</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </NotificationsPopover>
 
               {user ? (
                 <DropdownMenu>
@@ -154,6 +164,10 @@ export function DashboardHeader({ onRefresh, isLoading }: DashboardHeaderProps) 
       <PreferencesModal 
         isOpen={isPreferencesModalOpen} 
         onClose={() => setIsPreferencesModalOpen(false)} 
+      />
+      <FAQModal
+        isOpen={isFAQModalOpen}
+        onClose={() => setIsFAQModalOpen(false)}
       />
     </>
   );

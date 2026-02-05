@@ -16,7 +16,7 @@ export function FundexLogo({ size = 'md', className }: LogoProps) {
   return (
     <img 
       src={logoImage} 
-      alt="50Stacks Logo" 
+      alt="CIFRAA Logo" 
       className={cn('object-contain', sizeClasses[size], className)}
     />
   );

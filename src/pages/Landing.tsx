@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -6,12 +6,33 @@ import { TermsAndConditions } from '@/components/legal/TermsAndConditions';
 import { PrivacyPolicy } from '@/components/legal/PrivacyPolicy';
 import { Disclaimer } from '@/components/legal/Disclaimer';
 import { RefundPolicy } from '@/components/legal/RefundPolicy';
-import { SubtleMarketBackground } from '@/components/landing/SubtleMarketBackground';
-import { OpacityReveal } from '@/components/landing/OpacityReveal';
-import { ProximityCard } from '@/components/landing/ProximityCard';
+import { GsapReveal } from '@/components/landing/GsapReveal';
+import { GlowCard } from '@/components/landing/GlowCard';
+import { MagneticButton } from '@/components/landing/MagneticButton';
+import { FloatingElements } from '@/components/landing/FloatingElements';
 import { FundexLogo } from '@/components/landing/FundexLogo';
-import { ArrowRight, BarChart2, Target, Bookmark, PieChart, Database, Shield, Lock } from 'lucide-react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { 
+  ArrowRight, 
+  ArrowUpRight,
+  BarChart2, 
+  Target, 
+  Bookmark, 
+  PieChart, 
+  Database, 
+  Shield, 
+  Lock,
+  Sparkles,
+  TrendingUp,
+  Zap,
+  LineChart,
+  Menu,
+  X
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+gsap.registerPlugin(ScrollTrigger);
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -20,6 +41,8 @@ export default function Landing() {
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const heroRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -29,26 +52,50 @@ export default function Landing() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Hero text animation
+  useEffect(() => {
+    if (!heroRef.current) return;
+    
+    const chars = heroRef.current.querySelectorAll('.hero-char');
+    gsap.fromTo(
+      chars,
+      { 
+        opacity: 0, 
+        y: 100,
+        rotateX: -90,
+      },
+      {
+        opacity: 1,
+        y: 0,
+        rotateX: 0,
+        duration: 0.8,
+        stagger: 0.02,
+        ease: 'power3.out',
+        delay: 0.3,
+      }
+    );
+  }, []);
+
   const faqs = [
     { 
-      q: 'What is 50Stacks?', 
-      a: '50Stacks is an educational platform that helps users explore and understand mutual fund data through clear metrics, visual comparisons, and personalized discovery tools.' 
+      q: 'What is CIFRAA?', 
+      a: 'CIFRAA is an educational platform that helps users explore and understand mutual fund data through clear metrics, visual comparisons, and personalized discovery tools.' 
     },
     { 
-      q: 'Is 50Stacks free to use?', 
-      a: 'Yes, 50Stacks offers free access to core features including fund analysis, comparisons, watchlist functionality, and portfolio tracking.' 
+      q: 'Is CIFRAA free to use?', 
+      a: 'Yes, CIFRAA offers free access to core features including fund analysis, comparisons, watchlist functionality, and portfolio tracking.' 
     },
     { 
-      q: 'Does 50Stacks provide investment advice?', 
-      a: 'No. 50Stacks provides educational insights and data analysis tools only. We do not offer investment advice or recommendations.' 
+      q: 'Does CIFRAA provide investment advice?', 
+      a: 'No. CIFRAA provides educational insights and data analysis tools only. We do not offer investment advice or recommendations.' 
     },
     { 
       q: 'How does personalization work?', 
-      a: 'During onboarding, you answer questions about your risk tolerance, timeline, and goals. 50Stacks filters funds that align with your profile—not as recommendations, but as relevant options to explore.' 
+      a: 'During onboarding, you answer questions about your risk tolerance, timeline, and goals. CIFRAA filters funds that align with your profile—not as recommendations, but as relevant options to explore.' 
     },
     { 
       q: 'Where does the data come from?', 
-      a: '50Stacks aggregates publicly available mutual fund data from AMFI and fund house disclosures. Data is refreshed daily after market close.' 
+      a: 'CIFRAA aggregates publicly available mutual fund data from AMFI and fund house disclosures. Data is refreshed daily after market close.' 
     },
     { 
       q: 'Is my data secure?', 
@@ -56,202 +103,265 @@ export default function Landing() {
     },
   ];
 
+  const features = [
+    {
+      icon: LineChart,
+      title: 'Advanced Analytics',
+      desc: 'Deep dive into NAVs, returns, expense ratios, and risk metrics with institutional-grade analysis tools.',
+    },
+    {
+      icon: Target,
+      title: 'Smart Discovery',
+      desc: 'AI-powered fund matching based on your unique risk profile, investment horizon, and financial goals.',
+    },
+    {
+      icon: Bookmark,
+      title: 'Portfolio Tracking',
+      desc: 'Monitor your watchlist in real-time. Track changes, set alerts, and never miss an opportunity.',
+    },
+    {
+      icon: PieChart,
+      title: 'Allocation Insights',
+      desc: 'Visualize sector exposure, diversification metrics, and portfolio balance at a glance.',
+    },
+  ];
+
+  const stats = [
+    { value: '5000+', label: 'Funds Analyzed' },
+    { value: '50K+', label: 'Data Points' },
+    { value: '99.9%', label: 'Uptime' },
+    { value: '0', label: 'Commissions' },
+  ];
+
+  const heroText = "CIFRAA";
+  
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Premium Financial Background */}
-      <SubtleMarketBackground />
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+      {/* Background */}
+      <div className="fixed inset-0 z-0">
+        <div 
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(145deg, hsl(222, 47%, 6%) 0%, hsl(222, 47%, 11%) 50%, hsl(222, 47%, 8%) 100%)',
+          }}
+        />
+        <FloatingElements />
+      </div>
 
       {/* Navigation */}
       <nav 
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+          "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
           scrolled 
-            ? "bg-background/95 backdrop-blur-md border-b border-border/50 py-3" 
-            : "bg-transparent py-5"
+            ? "bg-background/80 backdrop-blur-xl border-b border-border/30 py-3" 
+            : "bg-transparent py-6"
         )}
       >
-        <div className="max-w-5xl mx-auto px-6 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <button 
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="flex items-center"
+            className="flex items-center group"
           >
             <FundexLogo size="sm" className={cn(
-              "transition-all duration-300",
-              scrolled ? "!h-14" : "!h-16"
+              "transition-all duration-500",
+              scrolled ? "!h-12" : "!h-14"
             )} />
           </button>
           
-          <div className="hidden md:flex items-center gap-8">
-            <a 
-              href="#about"
-              onClick={(e) => { e.preventDefault(); document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' }); }}
-              className={cn(
-                "text-sm transition-colors duration-200",
-                scrolled ? "text-muted-foreground hover:text-foreground" : "text-foreground/70 hover:text-foreground"
-              )}
-            >
-              About
-            </a>
-            <a 
-              href="#features"
-              onClick={(e) => { e.preventDefault(); document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' }); }}
-              className={cn(
-                "text-sm transition-colors duration-200",
-                scrolled ? "text-muted-foreground hover:text-foreground" : "text-foreground/70 hover:text-foreground"
-              )}
-            >
-              Features
-            </a>
-            <a 
-              href="#founders"
-              onClick={(e) => { e.preventDefault(); document.getElementById('founders')?.scrollIntoView({ behavior: 'smooth' }); }}
-              className={cn(
-                "text-sm transition-colors duration-200",
-                scrolled ? "text-muted-foreground hover:text-foreground" : "text-foreground/70 hover:text-foreground"
-              )}
-            >
-              Founders
-            </a>
-            <a 
-              href="#faqs"
-              onClick={(e) => { e.preventDefault(); document.getElementById('faqs')?.scrollIntoView({ behavior: 'smooth' }); }}
-              className={cn(
-                "text-sm transition-colors duration-200",
-                scrolled ? "text-muted-foreground hover:text-foreground" : "text-foreground/70 hover:text-foreground"
-              )}
-            >
-              FAQs
-            </a>
+          {/* Desktop Nav */}
+          <div className="hidden md:flex items-center gap-10">
+            {['About', 'Features', 'Founders', 'FAQs'].map((item) => (
+              <a 
+                key={item}
+                href={`#${item.toLowerCase()}`}
+                onClick={(e) => { 
+                  e.preventDefault(); 
+                  document.getElementById(item.toLowerCase())?.scrollIntoView({ behavior: 'smooth' }); 
+                }}
+                className="relative text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-300 group"
+              >
+                {item}
+                <span className="absolute -bottom-1 left-0 w-0 h-px bg-primary transition-all duration-300 group-hover:w-full" />
+              </a>
+            ))}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <Button 
               variant="ghost" 
               onClick={() => navigate('/auth')} 
-              className={cn(
-                "hidden sm:inline-flex text-sm font-medium transition-all duration-300",
-                !scrolled && "text-foreground/80 hover:text-foreground hover:bg-white/5"
-              )}
+              className="hidden sm:inline-flex text-sm font-medium hover:bg-white/5"
             >
               Log in
             </Button>
-            <Button 
-              onClick={() => navigate('/auth')} 
-              className={cn(
-                "text-sm font-medium transition-all duration-300",
-                scrolled ? "" : "bg-primary/90 hover:bg-primary"
-              )}
+            <MagneticButton
+              onClick={() => navigate('/auth')}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2.5 rounded-full text-sm font-semibold"
             >
               Get Started
-            </Button>
+              <ArrowUpRight className="h-4 w-4 ml-2 inline-block" />
+            </MagneticButton>
+            
+            {/* Mobile menu toggle */}
+            <button 
+              className="md:hidden p-2"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden absolute top-full left-0 right-0 bg-background/95 backdrop-blur-xl border-b border-border/30 py-6 px-6">
+            <div className="flex flex-col gap-4">
+              {['About', 'Features', 'Founders', 'FAQs'].map((item) => (
+                <a 
+                  key={item}
+                  href={`#${item.toLowerCase()}`}
+                  onClick={(e) => { 
+                    e.preventDefault(); 
+                    document.getElementById(item.toLowerCase())?.scrollIntoView({ behavior: 'smooth' });
+                    setMobileMenuOpen(false);
+                  }}
+                  className="text-lg font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {item}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center pt-20 z-10">
-        <div className="max-w-5xl mx-auto px-6 py-24">
-          <div className="max-w-2xl">
-            <OpacityReveal>
-              <p className="text-sm text-muted-foreground mb-6 tracking-[0.2em] uppercase font-medium">
-                Mutual Fund Analytics Platform
-              </p>
-            </OpacityReveal>
-            
-            <OpacityReveal delay={50}>
-              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-semibold mb-8 leading-[1.1] tracking-tight text-foreground">
-                See what the numbers
-                <br />
-                <span className="text-muted-foreground">actually mean</span>
-              </h1>
-            </OpacityReveal>
-            
-            <OpacityReveal delay={100}>
-              <p className="text-lg text-muted-foreground max-w-lg mb-10 leading-relaxed">
-                50Stacks transforms mutual fund data into clarity. 
-                Compare performance, understand risk, make informed decisions.
-              </p>
-            </OpacityReveal>
-            
-            <OpacityReveal delay={150}>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Button 
-                  size="lg" 
-                  onClick={() => navigate('/auth')}
-                  className="text-sm px-6 py-5 font-medium"
+      <section className="relative min-h-screen flex items-center justify-center pt-20 z-10">
+        <div className="max-w-7xl mx-auto px-6 py-24 text-center">
+          {/* Badge */}
+          <GsapReveal delay={0}>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border/50 bg-secondary/30 backdrop-blur-sm mb-8">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-sm text-muted-foreground">Mutual Fund Analytics Platform</span>
+            </div>
+          </GsapReveal>
+          
+          {/* Main headline */}
+          <div ref={heroRef} className="mb-8" style={{ perspective: '1000px' }}>
+            <h1 className="text-7xl sm:text-8xl lg:text-[10rem] font-bold tracking-tighter leading-none">
+              {heroText.split('').map((char, i) => (
+                <span 
+                  key={i} 
+                  className="hero-char inline-block"
+                  style={{ 
+                    opacity: 0,
+                    background: 'linear-gradient(135deg, hsl(var(--foreground)) 0%, hsl(var(--muted-foreground)) 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
                 >
-                  Start analyzing
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-                <Button 
-                  size="lg" 
-                  variant="ghost" 
-                  onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="text-sm px-6 py-5 font-medium text-muted-foreground hover:text-foreground"
-                >
-                  Learn more
-                </Button>
-              </div>
-            </OpacityReveal>
+                  {char}
+                </span>
+              ))}
+            </h1>
           </div>
+
+          <GsapReveal delay={400}>
+            <p className="text-xl sm:text-2xl text-muted-foreground max-w-2xl mx-auto mb-12 leading-relaxed font-light">
+              Transform complex mutual fund data into
+              <span className="text-foreground font-medium"> actionable clarity</span>.
+              <br className="hidden sm:block" />
+              Make decisions with confidence.
+            </p>
+          </GsapReveal>
+          
+          <GsapReveal delay={600}>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <MagneticButton 
+                onClick={() => navigate('/auth')}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 rounded-full text-base font-semibold shadow-lg shadow-primary/25"
+              >
+                Start Analyzing Free
+                <ArrowRight className="h-5 w-5 ml-2 inline-block" />
+              </MagneticButton>
+              <Button 
+                size="lg" 
+                variant="ghost" 
+                onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}
+                className="text-muted-foreground hover:text-foreground px-8 py-4 rounded-full"
+              >
+                See how it works
+              </Button>
+            </div>
+          </GsapReveal>
+
+          {/* Stats row */}
+          <GsapReveal delay={800}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-24 max-w-3xl mx-auto">
+              {stats.map((stat, i) => (
+                <div key={i} className="text-center">
+                  <p className="text-3xl md:text-4xl font-bold text-foreground mb-1">{stat.value}</p>
+                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+          </GsapReveal>
         </div>
         
         {/* Scroll indicator */}
         <div className="absolute bottom-12 left-1/2 -translate-x-1/2">
-          <OpacityReveal delay={400}>
-            <div className="w-px h-12 bg-gradient-to-b from-transparent via-muted-foreground/30 to-transparent" />
-          </OpacityReveal>
+          <div className="w-6 h-10 rounded-full border-2 border-muted-foreground/30 flex justify-center pt-2">
+            <div className="w-1 h-2 bg-muted-foreground/50 rounded-full animate-bounce" />
+          </div>
         </div>
       </section>
 
       {/* About Section */}
-      <section id="about" className="relative py-32 z-10">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-16 items-start">
+      <section id="about" className="relative py-40 z-10">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-20 items-center">
             <div>
-              <OpacityReveal>
-                <p className="text-sm text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
+              <GsapReveal>
+                <p className="text-sm text-primary mb-4 tracking-[0.2em] uppercase font-semibold">
                   The Problem
                 </p>
-              </OpacityReveal>
-              <OpacityReveal delay={50}>
-                <h2 className="text-3xl md:text-4xl font-semibold mb-6 tracking-tight text-foreground leading-tight">
+              </GsapReveal>
+              <GsapReveal delay={100}>
+                <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-8 tracking-tight leading-tight">
                   Data everywhere.
                   <br />
                   <span className="text-muted-foreground">Understanding nowhere.</span>
                 </h2>
-              </OpacityReveal>
-              <OpacityReveal delay={100}>
-                <p className="text-base text-muted-foreground leading-relaxed mb-6">
+              </GsapReveal>
+              <GsapReveal delay={200}>
+                <p className="text-lg text-muted-foreground leading-relaxed mb-6">
                   Every fund shows returns. Few explain what they mean. NAVs, expense ratios, 
                   risk grades—numbers without context are just noise.
                 </p>
-              </OpacityReveal>
-              <OpacityReveal delay={150}>
+              </GsapReveal>
+              <GsapReveal delay={300}>
                 <p className="text-muted-foreground leading-relaxed">
-                  The problem is not access to information. It is the absence of interpretation.
+                  The problem is not access to information. 
+                  <span className="text-foreground font-medium"> It's the absence of interpretation.</span>
                 </p>
-              </OpacityReveal>
+              </GsapReveal>
             </div>
 
             <div className="space-y-4">
-              <OpacityReveal delay={100}>
-                <p className="text-xs text-muted-foreground mb-6 tracking-[0.1em] uppercase">
-                  What investors face
-                </p>
-              </OpacityReveal>
               {[
-                '5,000+ mutual fund schemes in India',
-                'Returns shown without risk context',
-                'Category confusion (Large-cap? Flexi-cap?)',
-                'No standard way to compare fairly'
+                { num: '01', text: '5,000+ mutual fund schemes in India' },
+                { num: '02', text: 'Returns shown without risk context' },
+                { num: '03', text: 'Category confusion everywhere' },
+                { num: '04', text: 'No standard comparison framework' },
               ].map((item, idx) => (
-                <OpacityReveal key={idx} delay={150 + idx * 50}>
-                  <div className="flex items-center gap-4 py-4 border-b border-border/30">
-                    <span className="text-sm text-muted-foreground/50 font-mono">{String(idx + 1).padStart(2, '0')}</span>
-                    <p className="text-base text-foreground/80">{item}</p>
-                  </div>
-                </OpacityReveal>
+                <GsapReveal key={idx} delay={150 + idx * 100}>
+                  <GlowCard className="p-6">
+                    <div className="flex items-center gap-6">
+                      <span className="text-4xl font-light text-primary/40 font-mono">{item.num}</span>
+                      <p className="text-lg text-foreground/90">{item.text}</p>
+                    </div>
+                  </GlowCard>
+                </GsapReveal>
               ))}
             </div>
           </div>
@@ -259,295 +369,267 @@ export default function Landing() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="relative py-32 z-10 bg-secondary/20">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="max-w-xl mb-16">
-            <OpacityReveal>
-              <p className="text-sm text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
+      <section id="features" className="relative py-40 z-10">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center max-w-3xl mx-auto mb-20">
+            <GsapReveal>
+              <p className="text-sm text-primary mb-4 tracking-[0.2em] uppercase font-semibold">
                 Features
               </p>
-            </OpacityReveal>
-            <OpacityReveal delay={50}>
-              <h2 className="text-3xl md:text-4xl font-semibold mb-4 tracking-tight text-foreground">
-                Tools that reveal, not recommend
+            </GsapReveal>
+            <GsapReveal delay={100}>
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight">
+                Built for serious investors
               </h2>
-            </OpacityReveal>
-            <OpacityReveal delay={100}>
-              <p className="text-base text-muted-foreground">
-                Analysis features built for understanding, not selling.
+            </GsapReveal>
+            <GsapReveal delay={200}>
+              <p className="text-lg text-muted-foreground">
+                Professional-grade analysis tools that reveal insights, not sell products.
               </p>
-            </OpacityReveal>
+            </GsapReveal>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
-            {[
-              {
-                icon: BarChart2,
-                title: 'Fund Analysis',
-                desc: 'Compare NAVs, returns, expense ratios, and risk metrics across consistent time periods. Context, not just data.',
-              },
-              {
-                icon: Target,
-                title: 'Personalized Discovery',
-                desc: 'Surface funds matching your risk tolerance, horizon, and goals. Preference-based filtering—not advice.',
-              },
-              {
-                icon: Bookmark,
-                title: 'Watchlist & Tracking',
-                desc: 'Save funds you are researching. Track changes. Organize analysis without losing context.',
-              },
-              {
-                icon: PieChart,
-                title: 'Portfolio Insights',
-                desc: 'Understand allocation, exposure, and diversification. Educational signals for clearer thinking.',
-              }
-            ].map((feature, idx) => (
-              <OpacityReveal key={idx} delay={idx * 75}>
-                <ProximityCard 
-                  className="p-6 rounded-lg border border-border/40 bg-card/30 h-full"
-                  intensity={0.015}
-                >
-                  <div className="h-11 w-11 rounded-md bg-secondary/80 flex items-center justify-center mb-4">
-                    <feature.icon className="h-5 w-5 text-foreground/70" />
+            {features.map((feature, idx) => (
+              <GsapReveal key={idx} delay={idx * 100}>
+                <GlowCard className="p-8 h-full">
+                  <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
+                    <feature.icon className="h-7 w-7 text-primary" />
                   </div>
-                  <h3 className="font-medium text-lg mb-2 text-foreground">{feature.title}</h3>
-                  <p className="text-base text-muted-foreground leading-relaxed">{feature.desc}</p>
-                </ProximityCard>
-              </OpacityReveal>
+                  <h3 className="text-2xl font-semibold mb-3">{feature.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">{feature.desc}</p>
+                </GlowCard>
+              </GsapReveal>
             ))}
           </div>
         </div>
       </section>
 
       {/* Trust Section */}
-      <section className="relative py-32 z-10">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div>
-              <OpacityReveal>
-                <p className="text-sm text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
-                  Transparency
-                </p>
-              </OpacityReveal>
-              <OpacityReveal delay={50}>
-                <h2 className="text-3xl md:text-4xl font-semibold mb-6 tracking-tight text-foreground">
-                  No hidden agendas.
-                  <br />
-                  <span className="text-muted-foreground">Just transparent data.</span>
-                </h2>
-              </OpacityReveal>
-              <OpacityReveal delay={100}>
-                <p className="text-base text-muted-foreground leading-relaxed">
-                  We source data from AMFI and official fund house disclosures. 
-                  No commissions, no fund promotions, no conflicts of interest. 
-                  What you see is what exists—unmanipulated.
-                </p>
-              </OpacityReveal>
-            </div>
-
-            <div className="space-y-4">
+      <section className="relative py-40 z-10">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="max-w-3xl mx-auto text-center">
+            <GsapReveal>
+              <p className="text-sm text-primary mb-4 tracking-[0.2em] uppercase font-semibold">
+                Transparency
+              </p>
+            </GsapReveal>
+            <GsapReveal delay={100}>
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-8 tracking-tight">
+                Zero conflicts of interest
+              </h2>
+            </GsapReveal>
+            <GsapReveal delay={200}>
+              <p className="text-lg text-muted-foreground leading-relaxed mb-12">
+                We source data from AMFI and official fund house disclosures. 
+                No commissions, no fund promotions, no hidden agendas. 
+                What you see is what exists—unmanipulated.
+              </p>
+            </GsapReveal>
+            
+            <div className="grid md:grid-cols-3 gap-6">
               {[
-                { icon: Database, text: 'Publicly sourced mutual fund data' },
-                { icon: Lock, text: 'No investment execution or money handling' },
-                { icon: Shield, text: 'No hidden fund partnerships or promotions' },
+                { icon: Database, text: 'Publicly sourced data' },
+                { icon: Lock, text: 'No money handling' },
+                { icon: Shield, text: 'No hidden partnerships' },
               ].map((item, idx) => (
-                <OpacityReveal key={idx} delay={100 + idx * 75}>
-                  <ProximityCard 
-                    className="flex items-center gap-4 p-4 rounded-lg border border-border/30 bg-card/20"
-                    intensity={0.01}
-                  >
-                    <div className="h-11 w-11 rounded-md bg-secondary/60 flex items-center justify-center flex-shrink-0">
-                      <item.icon className="h-5 w-5 text-foreground/60" />
+                <GsapReveal key={idx} delay={300 + idx * 100}>
+                  <GlowCard className="p-6">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="h-12 w-12 rounded-xl bg-secondary/50 flex items-center justify-center">
+                        <item.icon className="h-6 w-6 text-foreground/60" />
+                      </div>
+                      <p className="text-foreground/80 font-medium">{item.text}</p>
                     </div>
-                    <p className="text-base text-foreground/80">{item.text}</p>
-                  </ProximityCard>
-                </OpacityReveal>
+                  </GlowCard>
+                </GsapReveal>
               ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <section className="relative py-32 z-10 bg-secondary/20">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="max-w-xl mb-16">
-            <OpacityReveal>
-              <p className="text-sm text-primary/80 mb-4 tracking-[0.15em] uppercase font-medium">
+      {/* How It Works */}
+      <section className="relative py-40 z-10">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center max-w-3xl mx-auto mb-20">
+            <GsapReveal>
+              <p className="text-sm text-primary mb-4 tracking-[0.2em] uppercase font-semibold">
                 How It Works
               </p>
-            </OpacityReveal>
-            <OpacityReveal delay={50}>
-              <h2 className="text-3xl md:text-4xl font-semibold mb-4 tracking-tight text-foreground">
-                Your analysis. Your decisions.
+            </GsapReveal>
+            <GsapReveal delay={100}>
+              <h2 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">
+                Start in under 2 minutes
               </h2>
-            </OpacityReveal>
-            <OpacityReveal delay={100}>
-              <p className="text-base text-muted-foreground">
-                Simple onboarding. Meaningful output. You stay in control.
-              </p>
-            </OpacityReveal>
+            </GsapReveal>
           </div>
 
           <div className="grid md:grid-cols-4 gap-8">
             {[
-              { step: '01', title: 'Create account', desc: 'Quick signup with email' },
-              { step: '02', title: 'Set preferences', desc: 'Risk, goals, timeline' },
-              { step: '03', title: 'Explore funds', desc: 'Filtered to your profile' },
-              { step: '04', title: 'Track & analyze', desc: 'Build understanding' }
+              { step: '01', title: 'Create Account', desc: 'Quick signup with email or Google' },
+              { step: '02', title: 'Set Preferences', desc: 'Tell us your risk appetite & goals' },
+              { step: '03', title: 'Explore Funds', desc: 'See personalized fund matches' },
+              { step: '04', title: 'Track & Analyze', desc: 'Build your understanding' },
             ].map((item, idx) => (
-              <OpacityReveal key={idx} delay={idx * 75}>
-                <div>
-                  <p className="text-4xl font-light text-muted-foreground/25 mb-3 font-mono">{item.step}</p>
-                  <h3 className="font-medium text-foreground mb-1 text-base">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground">{item.desc}</p>
+              <GsapReveal key={idx} delay={idx * 100}>
+                <div className="relative">
+                  {idx < 3 && (
+                    <div className="hidden md:block absolute top-8 left-full w-full h-px bg-gradient-to-r from-border/50 to-transparent" />
+                  )}
+                  <p className="text-6xl font-light text-primary/20 mb-4 font-mono">{item.step}</p>
+                  <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
+                  <p className="text-muted-foreground">{item.desc}</p>
                 </div>
-              </OpacityReveal>
+              </GsapReveal>
             ))}
           </div>
         </div>
       </section>
 
       {/* Founders Section */}
-      <section id="founders" className="relative py-32 z-10">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="max-w-xl mx-auto text-center">
-            <OpacityReveal>
-              <p className="text-sm text-muted-foreground mb-4 tracking-[0.15em] uppercase font-medium">
+      <section id="founders" className="relative py-40 z-10">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="max-w-3xl mx-auto text-center">
+            <GsapReveal>
+              <p className="text-sm text-primary mb-4 tracking-[0.2em] uppercase font-semibold">
                 The Team
               </p>
-            </OpacityReveal>
-            <OpacityReveal delay={50}>
-              <h2 className="text-3xl font-semibold mb-4 tracking-tight text-foreground">
+            </GsapReveal>
+            <GsapReveal delay={100}>
+              <h2 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">
                 Built by engineers who invest
               </h2>
-            </OpacityReveal>
-            <OpacityReveal delay={100}>
-              <p className="text-base text-muted-foreground mb-8">
+            </GsapReveal>
+            <GsapReveal delay={200}>
+              <p className="text-lg text-muted-foreground mb-12">
                 Three computer science engineers frustrated by the gap between 
                 great financial data and tools to understand it.
               </p>
-            </OpacityReveal>
-            <OpacityReveal delay={150}>
-              <Button 
+            </GsapReveal>
+            <GsapReveal delay={300}>
+              <MagneticButton 
                 onClick={() => navigate('/founders')} 
-                variant="outline" 
-                className="font-medium text-sm border-border/50"
+                className="border border-border/50 hover:border-primary/50 bg-transparent text-foreground px-8 py-3 rounded-full font-medium transition-colors"
               >
                 Meet the founders
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </OpacityReveal>
+                <ArrowRight className="h-4 w-4 ml-2 inline-block" />
+              </MagneticButton>
+            </GsapReveal>
           </div>
         </div>
       </section>
 
       {/* FAQ Section */}
-      <section id="faqs" className="relative py-32 z-10 bg-secondary/20">
-        <div className="max-w-2xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <OpacityReveal>
-              <p className="text-sm text-muted-foreground mb-4 tracking-[0.15em] uppercase font-medium">
+      <section id="faqs" className="relative py-40 z-10">
+        <div className="max-w-3xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <GsapReveal>
+              <p className="text-sm text-primary mb-4 tracking-[0.2em] uppercase font-semibold">
                 FAQ
               </p>
-            </OpacityReveal>
-            <OpacityReveal delay={50}>
-              <h2 className="text-3xl font-semibold tracking-tight text-foreground">
+            </GsapReveal>
+            <GsapReveal delay={100}>
+              <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
                 Common questions
               </h2>
-            </OpacityReveal>
+            </GsapReveal>
           </div>
 
-          <Accordion type="single" collapsible className="space-y-2">
+          <Accordion type="single" collapsible className="space-y-3">
             {faqs.map((faq, idx) => (
-              <OpacityReveal key={idx} delay={75 + idx * 50}>
+              <GsapReveal key={idx} delay={150 + idx * 75}>
                 <AccordionItem 
                   value={`item-${idx}`} 
-                  className="border border-border/30 rounded-lg px-5 bg-card/20 data-[state=open]:bg-card/40 transition-colors duration-200"
+                  className="border border-border/30 rounded-xl px-6 bg-card/20 backdrop-blur-sm data-[state=open]:bg-card/40 data-[state=open]:border-primary/30 transition-all duration-300"
                 >
-                  <AccordionTrigger className="text-left hover:no-underline py-4 text-base font-medium text-foreground">
+                  <AccordionTrigger className="text-left hover:no-underline py-5 text-lg font-medium">
                     {faq.q}
                   </AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground pb-4 text-base leading-relaxed">
+                  <AccordionContent className="text-muted-foreground pb-5 text-base leading-relaxed">
                     {faq.a}
                   </AccordionContent>
                 </AccordionItem>
-              </OpacityReveal>
+              </GsapReveal>
             ))}
           </Accordion>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="relative py-32 z-10">
-        <div className="max-w-5xl mx-auto px-6 text-center">
-          <OpacityReveal>
-            <h2 className="text-3xl sm:text-4xl font-semibold mb-4 tracking-tight text-foreground">
-              Ready to understand your investments?
-            </h2>
-          </OpacityReveal>
-          <OpacityReveal delay={50}>
-            <p className="text-base text-muted-foreground mb-8 max-w-md mx-auto">
-              Join investors using 50Stacks for clear, contextual analysis.
-            </p>
-          </OpacityReveal>
-          <OpacityReveal delay={100}>
-            <Button 
-              size="lg" 
-              onClick={() => navigate('/auth')}
-              className="text-sm px-6 py-5 font-medium"
-            >
-              Create free account
-              <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-          </OpacityReveal>
+      <section className="relative py-40 z-10">
+        <div className="max-w-7xl mx-auto px-6">
+          <GlowCard className="p-16 md:p-24 text-center">
+            <GsapReveal>
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight">
+                Ready to invest smarter?
+              </h2>
+            </GsapReveal>
+            <GsapReveal delay={100}>
+              <p className="text-lg text-muted-foreground mb-10 max-w-xl mx-auto">
+                Join thousands of investors using CIFRAA for clear, contextual mutual fund analysis.
+              </p>
+            </GsapReveal>
+            <GsapReveal delay={200}>
+              <MagneticButton 
+                onClick={() => navigate('/auth')}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground px-10 py-4 rounded-full text-base font-semibold shadow-lg shadow-primary/25"
+              >
+                Create Free Account
+                <ArrowRight className="h-5 w-5 ml-2 inline-block" />
+              </MagneticButton>
+            </GsapReveal>
+          </GlowCard>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-border/30 py-12 bg-background/80">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-8">
-            <div className="flex items-center">
-              <FundexLogo size="sm" className="!h-8" />
+      <footer className="relative z-10 border-t border-border/20 py-16">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row justify-between items-start gap-12 mb-12">
+            <div>
+              <FundexLogo size="sm" className="!h-10 mb-4" />
+              <p className="text-sm text-muted-foreground max-w-xs">
+                Making mutual fund analysis accessible and understandable for everyone.
+              </p>
             </div>
             
-            <div className="flex flex-wrap gap-6 text-xs">
+            <div className="flex flex-wrap gap-8 text-sm">
               <button
                 onClick={() => setTermsOpen(true)}
-                className="text-muted-foreground hover:text-foreground transition-colors duration-200"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 Terms
               </button>
               <button
                 onClick={() => setPrivacyOpen(true)}
-                className="text-muted-foreground hover:text-foreground transition-colors duration-200"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 Privacy
               </button>
               <button
                 onClick={() => setDisclaimerOpen(true)}
-                className="text-muted-foreground hover:text-foreground transition-colors duration-200"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 Disclaimer
               </button>
               <button
                 onClick={() => setRefundOpen(true)}
-                className="text-muted-foreground hover:text-foreground transition-colors duration-200"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 Refund
               </button>
             </div>
           </div>
 
-          <div className="pt-6 border-t border-border/20">
-            <p className="text-[11px] text-muted-foreground/70 max-w-2xl leading-relaxed">
-              <strong className="text-muted-foreground">Disclaimer:</strong> Mutual fund investments are subject to market risks. 
+          <div className="pt-8 border-t border-border/10">
+            <p className="text-xs text-muted-foreground/60 max-w-3xl leading-relaxed mb-4">
+              <strong className="text-muted-foreground/80">Disclaimer:</strong> Mutual fund investments are subject to market risks. 
               Read all scheme-related documents carefully. Past performance is not indicative of future returns. 
-              50Stacks is NOT a SEBI-registered Investment Advisor. We do not provide investment advice.
+              CIFRAA is NOT a SEBI-registered Investment Advisor. We do not provide investment advice.
             </p>
-            <p className="text-[11px] text-muted-foreground/50 mt-4">
-              © {new Date().getFullYear()} 50Stacks
+            <p className="text-xs text-muted-foreground/40">
+              © {new Date().getFullYear()} CIFRAA. All rights reserved.
             </p>
           </div>
         </div>

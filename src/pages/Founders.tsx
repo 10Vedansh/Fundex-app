@@ -15,7 +15,7 @@ const founders = [
     role: 'Co-Founder & CMO',
     image: shivanshImage,
     imagePosition: 'center 10%',
-    bio: 'Computer Science Engineer with a flair for strategic marketing and brand building. Shivansh drives the go-to-market strategy and growth initiatives at 50Stacks, blending technical understanding with creative storytelling. His mission is to make 50Stacks the trusted name in mutual fund analytics across India.',
+    bio: 'Computer Science Engineer with a flair for strategic marketing and brand building. Shivansh drives the go-to-market strategy and growth initiatives at CIFRAA, blending technical understanding with creative storytelling. His mission is to make CIFRAA the trusted name in mutual fund analytics across India.',
     skills: ['Growth Marketing', 'Brand Strategy', 'GTM Planning', 'User Acquisition'],
     icon: <Megaphone className="h-5 w-5" />
   },
@@ -24,7 +24,7 @@ const founders = [
     role: 'Founder & CEO',
     image: dhruvImage,
     imagePosition: 'center 0%',
-    bio: 'Computer Science Engineer with a passion for building scalable fintech solutions. Dhruv leads the technical vision and product strategy at 50Stacks, combining deep expertise in full-stack development with a keen understanding of financial markets. His mission is to democratize mutual fund analysis through innovative technology.',
+    bio: 'Computer Science Engineer with a passion for building scalable fintech solutions. Dhruv leads the technical vision and product strategy at CIFRAA, combining deep expertise in full-stack development with a keen understanding of financial markets. His mission is to democratize mutual fund analysis through innovative technology.',
     skills: ['Full-Stack Development', 'System Architecture', 'Product Strategy', 'Fintech'],
     icon: <Rocket className="h-5 w-5" />
   },
@@ -33,7 +33,7 @@ const founders = [
     role: 'Co-Founder & CFO',
     image: vedanshImage,
     imagePosition: 'center 20%',
-    bio: 'Computer Science Engineer with expertise in data engineering and financial analytics. Vedansh oversees the financial operations and data infrastructure at 50Stacks, ensuring robust analytical capabilities. His background in algorithms and data structures powers the intelligent insights engine.',
+    bio: 'Computer Science Engineer with expertise in data engineering and financial analytics. Vedansh oversees the financial operations and data infrastructure at CIFRAA, ensuring robust analytical capabilities. His background in algorithms and data structures powers the intelligent insights engine.',
     skills: ['Data Engineering', 'Financial Analytics', 'Backend Systems', 'Algorithms'],
     icon: <Database className="h-5 w-5" />
   }
@@ -71,13 +71,13 @@ export default function Founders() {
         <div className="container mx-auto px-4 text-center">
           <Badge variant="outline" className="mb-4 bg-primary/10 text-primary border-primary/30">
             <Brain className="h-3 w-3 mr-1" />
-            The Team Behind 50Stacks
+            The Team Behind CIFRAA
           </Badge>
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Know The Founders
           </h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Two Computer Science engineers united by a vision to transform how India analyzes and understands mutual funds.
+            Three Computer Science engineers united by a vision to transform how India analyzes and understands mutual funds.
           </p>
         </div>
       </section>
@@ -162,13 +162,12 @@ export default function Founders() {
             ))}
           </div>
 
-          {/* Mission Statement */}
           <div className="mt-16 max-w-3xl mx-auto text-center">
             <Card className="glass-card border-primary/30 bg-primary/5">
               <CardContent className="p-8">
                 <h3 className="text-xl font-semibold mb-3">Our Mission</h3>
                 <p className="text-muted-foreground">
-                  At 50Stacks, we believe every investor deserves access to clear, unbiased mutual fund analysis. 
+                  At CIFRAA, we believe every investor deserves access to clear, unbiased mutual fund analysis. 
                   We're building technology that cuts through the noise, helping you make informed decisions 
                   with confidence and clarity.
                 </p>
@@ -182,7 +181,7 @@ export default function Founders() {
       <footer className="border-t border-border/40 py-6">
         <div className="container mx-auto px-4 text-center">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} 50Stacks – All rights reserved
+            © {new Date().getFullYear()} CIFRAA – All rights reserved
           </p>
         </div>
       </footer>

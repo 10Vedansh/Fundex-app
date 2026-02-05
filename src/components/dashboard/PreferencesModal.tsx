@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Loader2, Shield, Target, TrendingUp, Clock, Wallet, GraduationCap } from 'lucide-react';
+import { Loader2, Shield, Target, TrendingUp, Clock, Wallet, GraduationCap, IndianRupee } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PreferencesModalProps {
@@ -37,6 +37,12 @@ const experienceOptions = [
   { value: 'experienced', label: 'Experienced', desc: 'Regular investor' },
 ];
 
+const investmentAmountOptions = [
+  { value: 'small', label: 'Under ₹50K', desc: 'Starting small' },
+  { value: 'medium', label: '₹50K - ₹5L', desc: 'Moderate investment' },
+  { value: 'large', label: '₹5L+', desc: 'Significant portfolio' },
+];
+
 export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
   const { profile, updateProfile, refreshProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -45,6 +51,7 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
     investment_goal: '',
     investment_horizon: '',
     experience_level: '',
+    investment_amount: '',
   });
 
   useEffect(() => {
@@ -54,6 +61,7 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
         investment_goal: profile.investment_goal || '',
         investment_horizon: profile.investment_horizon || '',
         experience_level: profile.experience_level || '',
+        investment_amount: profile.investment_amount || '',
       });
     }
   }, [profile]);
@@ -202,6 +210,25 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
                   key={opt.value}
                   selected={preferences.experience_level === opt.value}
                   onClick={() => setPreferences(prev => ({ ...prev, experience_level: opt.value }))}
+                  label={opt.label}
+                  desc={opt.desc}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Investment Amount */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <IndianRupee className="h-4 w-4 text-primary" />
+              Investment Amount
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {investmentAmountOptions.map(opt => (
+                <OptionCard
+                  key={opt.value}
+                  selected={preferences.investment_amount === opt.value}
+                  onClick={() => setPreferences(prev => ({ ...prev, investment_amount: opt.value }))}
                   label={opt.label}
                   desc={opt.desc}
                 />
