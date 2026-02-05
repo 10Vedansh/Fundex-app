@@ -40,7 +40,7 @@ export function Footer() {
 
             {/* Copyright */}
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} 50Stacks – All rights reserved
+              © {new Date().getFullYear()} CIFRAA – All rights reserved
             </p>
           </div>
 
@@ -49,7 +49,7 @@ export function Footer() {
             <p className="text-xs text-muted-foreground text-center max-w-4xl mx-auto">
               <strong>Disclaimer:</strong> Mutual fund investments are subject to market risks. 
               Read all scheme-related documents carefully before investing. Past performance is not 
-              indicative of future returns. 50Stacks is an educational platform and is NOT a 
+              indicative of future returns. CIFRAA is an educational platform and is NOT a 
               SEBI-registered Investment Advisor. We do not provide any investment advice or recommendations.
             </p>
           </div>
