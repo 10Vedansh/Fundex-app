@@ -2,7 +2,9 @@ import { useRef, useMemo, Suspense, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Sphere, Text } from '@react-three/drei';
 import * as THREE from 'three';
-import { continents } from './continentData';
+import { feature } from 'topojson-client';
+// @ts-ignore – world-atlas ships raw JSON, no type defs
+import landTopology from 'world-atlas/land-110m.json';
 
 // ─── Shader Strings ───────────────────────────────────────────────
 
@@ -67,10 +69,14 @@ function ContinentBorders() {
     const vertices: number[] = [];
     const radius = 2.02;
 
-    continents.forEach((outline) => {
-      for (let i = 0; i < outline.length - 1; i++) {
-        const [lat1, lon1] = outline[i];
-        const [lat2, lon2] = outline[i + 1];
+    // Convert real-world coastline data to 3D line segments
+    const land = feature(landTopology as any, (landTopology as any).objects.land);
+    const geom = (land as any).geometry;
+
+    const processRing = (ring: number[][]) => {
+      for (let i = 0; i < ring.length - 1; i++) {
+        const [lon1, lat1] = ring[i]; // GeoJSON is [lon, lat]
+        const [lon2, lat2] = ring[i + 1];
 
         const colat1 = (90 - lat1) * DEG2RAD;
         const theta1 = lon1 * DEG2RAD;
@@ -88,7 +94,19 @@ function ContinentBorders() {
           radius * Math.sin(colat2) * Math.sin(theta2)
         );
       }
-    });
+    };
+
+    if (geom.type === 'MultiPolygon') {
+      for (const polygon of geom.coordinates) {
+        for (const ring of polygon) {
+          processRing(ring);
+        }
+      }
+    } else if (geom.type === 'Polygon') {
+      for (const ring of geom.coordinates) {
+        processRing(ring);
+      }
+    }
 
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
