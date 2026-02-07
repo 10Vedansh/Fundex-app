@@ -70,8 +70,15 @@ function ContinentBorders() {
     const radius = 2.02;
 
     // Convert real-world coastline data to 3D line segments
-    const land = feature(landTopology as any, (landTopology as any).objects.land);
-    const geom = (land as any).geometry;
+    const topo = landTopology as any;
+    const landObject = topo?.objects?.land;
+    if (!landObject) {
+      console.warn('world-atlas land topology not found, skipping borders');
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute([], 3));
+      return geo;
+    }
+    const land = feature(topo, landObject) as any;
 
     const processRing = (ring: number[][]) => {
       for (let i = 0; i < ring.length - 1; i++) {
@@ -96,16 +103,27 @@ function ContinentBorders() {
       }
     };
 
-    if (geom.type === 'MultiPolygon') {
-      for (const polygon of geom.coordinates) {
-        for (const ring of polygon) {
+    const processGeometry = (geom: any) => {
+      if (geom.type === 'MultiPolygon') {
+        for (const polygon of geom.coordinates) {
+          for (const ring of polygon) {
+            processRing(ring);
+          }
+        }
+      } else if (geom.type === 'Polygon') {
+        for (const ring of geom.coordinates) {
           processRing(ring);
         }
       }
-    } else if (geom.type === 'Polygon') {
-      for (const ring of geom.coordinates) {
-        processRing(ring);
+    };
+
+    // feature() returns a FeatureCollection when given a GeometryCollection
+    if (land.type === 'FeatureCollection') {
+      for (const feat of land.features) {
+        processGeometry(feat.geometry);
       }
+    } else if (land.geometry) {
+      processGeometry(land.geometry);
     }
 
     const geo = new THREE.BufferGeometry();
