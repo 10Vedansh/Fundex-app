@@ -206,8 +206,6 @@ function EarthGlobe() {
           roughness={0.7}
           clearcoat={0.3}
           clearcoatRoughness={0.4}
-          transparent
-          opacity={0.5}
         />
       </Sphere>
 
