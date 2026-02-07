@@ -22,7 +22,7 @@ import {
   Database, 
   Shield, 
   Lock,
-  Sparkles,
+  
   TrendingUp,
   Zap,
   LineChart,
@@ -242,13 +242,6 @@ export default function Landing() {
       <section className="relative min-h-screen flex items-center justify-center pt-20 z-10">
         <div className="max-w-7xl mx-auto px-6 py-24 text-center">
           {/* Badge */}
-          <GsapReveal delay={0}>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border/50 bg-secondary/30 backdrop-blur-sm mb-8">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <span className="text-sm text-muted-foreground">Mutual Fund Analytics Platform</span>
-            </div>
-          </GsapReveal>
-          
           {/* Main headline */}
           <div ref={heroRef} className="mb-8" style={{ perspective: '1000px' }}>
             <h1 className="text-7xl sm:text-8xl lg:text-[10rem] font-bold tracking-tighter leading-none">
