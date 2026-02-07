@@ -141,7 +141,7 @@ function ContinentBorders() {
         ref={shaderRef}
         transparent
         depthWrite={false}
-        depthTest={false}
+        depthTest={true}
         uniforms={uniforms}
         vertexShader={borderVertexShader}
         fragmentShader={borderFragmentShader}
@@ -206,6 +206,7 @@ function EarthGlobe() {
           roughness={0.7}
           clearcoat={0.3}
           clearcoatRoughness={0.4}
+          depthWrite={true}
         />
       </Sphere>
 
