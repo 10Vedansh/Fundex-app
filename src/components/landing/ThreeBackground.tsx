@@ -1,10 +1,11 @@
-import { useRef, useMemo, Suspense, useState, useEffect } from 'react';
+import { useRef, useMemo, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Sphere, Text } from '@react-three/drei';
+import { Sphere } from '@react-three/drei';
 import * as THREE from 'three';
 import { feature } from 'topojson-client';
 // @ts-ignore – world-atlas ships raw JSON, no type defs
 import landTopology from 'world-atlas/land-110m.json';
+import { SymbolGrid } from './SymbolGrid';
 
 // ─── Shader Strings ───────────────────────────────────────────────
 
@@ -22,7 +23,7 @@ const borderFragmentShader = `
   varying float vLocalY;
 
   void main() {
-    float radius = 2.05;
+    float radius = 2.02;
     float normalizedY = (vLocalY + radius) / (2.0 * radius);
     float distFromTop = 1.0 - normalizedY;
 
@@ -35,7 +36,7 @@ const borderFragmentShader = `
       * step(0.001, uIgnitionProgress)
       * (1.0 - step(1.0, uIgnitionProgress));
 
-    float alpha = revealed * 0.45 + frontGlow * 0.8;
+    float alpha = revealed * 0.65 + frontGlow * 0.9;
     if (alpha < 0.01) discard;
 
     vec3 finalColor = mix(uColor, uColor + vec3(0.3, 0.3, 0.4), frontGlow);
@@ -45,19 +46,7 @@ const borderFragmentShader = `
 
 // ─── Constants ────────────────────────────────────────────────────
 
-const currencies = ['$', '€', '£', '¥', '₹', '₿'];
 const DEG2RAD = Math.PI / 180;
-
-const symbolConfigs = [
-  { position: [-5, 3, -1] as [number, number, number], startIndex: 0, seed: 0 },
-  { position: [5.5, -2, -2] as [number, number, number], startIndex: 1, seed: 1 },
-  { position: [-4, -3.5, -1.5] as [number, number, number], startIndex: 2, seed: 2 },
-  { position: [4.5, 3.5, -1.5] as [number, number, number], startIndex: 3, seed: 3 },
-  { position: [-5.5, 0.5, -1] as [number, number, number], startIndex: 4, seed: 4 },
-  { position: [3.5, -4, -1] as [number, number, number], startIndex: 5, seed: 5 },
-  { position: [-2, 4.5, -2] as [number, number, number], startIndex: 0, seed: 6 },
-  { position: [6, 1, -1.5] as [number, number, number], startIndex: 3, seed: 7 },
-];
 
 // ─── Continent Borders with Ignition ──────────────────────────────
 
@@ -152,6 +141,7 @@ function ContinentBorders() {
         ref={shaderRef}
         transparent
         depthWrite={false}
+        depthTest={false}
         uniforms={uniforms}
         vertexShader={borderVertexShader}
         fragmentShader={borderFragmentShader}
@@ -217,7 +207,7 @@ function EarthGlobe() {
           clearcoat={0.3}
           clearcoatRoughness={0.4}
           transparent
-          opacity={0.95}
+          opacity={0.5}
         />
       </Sphere>
 
@@ -234,10 +224,13 @@ function EarthGlobe() {
 
       {/* Outer atmospheric glow */}
       <Sphere args={[2.15, 32, 32]}>
-        <meshBasicMaterial color="#3b82f6" transparent opacity={0.03} side={THREE.BackSide} />
+        <meshBasicMaterial color="#3b82f6" transparent opacity={0.07} side={THREE.BackSide} />
       </Sphere>
       <Sphere args={[2.3, 32, 32]}>
-        <meshBasicMaterial color="#1e40af" transparent opacity={0.02} side={THREE.BackSide} />
+        <meshBasicMaterial color="#1e40af" transparent opacity={0.05} side={THREE.BackSide} />
+      </Sphere>
+      <Sphere args={[2.5, 32, 32]}>
+        <meshBasicMaterial color="#1e3a5f" transparent opacity={0.03} side={THREE.BackSide} />
       </Sphere>
     </group>
   );
@@ -262,65 +255,6 @@ function OrbitalRing() {
   );
 }
 
-// ─── Floating Currency Symbol ─────────────────────────────────────
-
-function FloatingCurrency({
-  initialPosition,
-  startIndex,
-  seed,
-}: {
-  initialPosition: [number, number, number];
-  startIndex: number;
-  seed: number;
-}) {
-  const groupRef = useRef<THREE.Group>(null);
-  const [symbolIndex, setSymbolIndex] = useState(startIndex);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSymbolIndex((prev) => (prev + 1) % currencies.length);
-    }, 3500 + seed * 700);
-    return () => clearInterval(interval);
-  }, [seed]);
-
-  useFrame((state) => {
-    if (!groupRef.current) return;
-    const t = state.clock.elapsedTime + seed * 10;
-    groupRef.current.position.x = initialPosition[0] + Math.sin(t * 0.12) * 0.8;
-    groupRef.current.position.y = initialPosition[1] + Math.cos(t * 0.09) * 0.5;
-    groupRef.current.rotation.y = Math.sin(t * 0.07) * 0.3;
-    groupRef.current.rotation.z = Math.cos(t * 0.05) * 0.1;
-  });
-
-  return (
-    <group ref={groupRef} position={initialPosition}>
-      <Text
-        fontSize={1.2}
-        color="#3b82f6"
-        fillOpacity={0.07}
-        anchorX="center"
-        anchorY="middle"
-      >
-        {currencies[symbolIndex]}
-      </Text>
-    </group>
-  );
-}
-
-function CurrencyField() {
-  return (
-    <group>
-      {symbolConfigs.map((config, i) => (
-        <FloatingCurrency
-          key={i}
-          initialPosition={config.position}
-          startIndex={config.startIndex}
-          seed={config.seed}
-        />
-      ))}
-    </group>
-  );
-}
 
 // ─── Cinematic Lighting ───────────────────────────────────────────
 
@@ -353,7 +287,6 @@ function Scene() {
       <CinematicLighting />
       <EarthGlobe />
       <OrbitalRing />
-      <CurrencyField />
     </group>
   );
 }
@@ -371,6 +304,9 @@ export function ThreeBackground() {
             'radial-gradient(ellipse 80% 60% at 50% 40%, hsl(222, 47%, 8%) 0%, hsl(222, 47%, 5%) 50%, hsl(222, 47%, 3%) 100%)',
         }}
       />
+
+      {/* Background symbol grid pattern */}
+      <SymbolGrid />
 
       <Canvas
         camera={{ position: [0, 0, 7], fov: 45 }}
