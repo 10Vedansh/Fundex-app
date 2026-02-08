@@ -82,12 +82,12 @@ function ContinentBorders() {
         vertices.push(
           radius * Math.sin(colat1) * Math.cos(theta1),
           radius * Math.cos(colat1),
-          radius * Math.sin(colat1) * Math.sin(theta1)
+          -radius * Math.sin(colat1) * Math.sin(theta1)
         );
         vertices.push(
           radius * Math.sin(colat2) * Math.cos(theta2),
           radius * Math.cos(colat2),
-          radius * Math.sin(colat2) * Math.sin(theta2)
+          -radius * Math.sin(colat2) * Math.sin(theta2)
         );
       }
     };
