@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Check, Shield, Target, Clock, Wallet, TrendingUp, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { FundexLogo } from '@/components/landing/FundexLogo';
-import authBackground from '@/assets/auth-background.png';
+import { AuthBackground } from '@/components/auth/AuthBackground';
 
 interface Question {
   id: string;
@@ -166,17 +165,9 @@ export default function Onboarding() {
   const IconComponent = currentQuestion.icon;
 
   return (
-    <div className="min-h-screen bg-background flex relative">
-      {/* Full-page background image */}
-      <div 
-        className="absolute inset-0 z-0"
-        style={{
-          backgroundImage: `url(${authBackground})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }}
-      />
+    <div className="min-h-screen bg-background flex relative overflow-hidden">
+      {/* Premium fintech background - shared with Auth */}
+      <AuthBackground />
       
       {/* Left Side - Hero Section */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden z-10">
@@ -197,11 +188,11 @@ export default function Onboarding() {
               {questions.map((q, idx) => (
                 <div 
                   key={q.id} 
-                  className={`flex items-center gap-4 transition-all duration-300 ${
+                  className={`flex items-center gap-4 p-3 rounded-xl transition-all duration-300 ${
                     idx === currentStep 
-                      ? 'opacity-100' 
+                      ? 'bg-primary/10 border border-primary/30' 
                       : idx < currentStep 
-                        ? 'opacity-60' 
+                        ? 'bg-secondary/20 opacity-70' 
                         : 'opacity-30'
                   }`}
                 >
@@ -209,8 +200,8 @@ export default function Onboarding() {
                     idx < currentStep 
                       ? 'bg-primary text-primary-foreground' 
                       : idx === currentStep 
-                        ? 'bg-primary/20 text-primary border-2 border-primary' 
-                        : 'bg-secondary text-muted-foreground'
+                        ? 'bg-primary/20 text-primary' 
+                        : 'bg-secondary/50 text-muted-foreground'
                   }`}>
                     {idx < currentStep ? (
                       <Check className="h-5 w-5" />
@@ -228,8 +219,8 @@ export default function Onboarding() {
             </div>
 
             {/* Fun fact or tip */}
-            <div className="pt-8 flex items-start gap-3 max-w-sm">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <div className="pt-8 flex items-start gap-3 max-w-sm p-4 rounded-xl bg-secondary/20 backdrop-blur-sm border border-border/20">
+              <div className="h-10 w-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
                 <Sparkles className="h-5 w-5 text-primary" />
               </div>
               <div>
@@ -261,28 +252,40 @@ export default function Onboarding() {
         </div>
 
         <div className="w-full max-w-lg mt-16 lg:mt-0">
-          {/* Progress bar */}
+          {/* Elegant progress bar */}
           <div className="mb-8">
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-muted-foreground">Step {currentStep + 1} of {questions.length}</span>
-              <span className="text-muted-foreground">{Math.round(progress)}% complete</span>
+            <div className="flex items-center justify-between text-sm mb-3">
+              <span className="text-muted-foreground font-medium">Step {currentStep + 1} of {questions.length}</span>
+              <span className="text-primary font-medium">{Math.round(progress)}%</span>
             </div>
-            <Progress value={progress} className="h-2" />
+            <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-secondary/50">
+              <div 
+                className="h-full rounded-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+              <div 
+                className="absolute inset-0 h-full rounded-full opacity-50"
+                style={{ 
+                  width: `${progress}%`,
+                  background: 'linear-gradient(90deg, transparent, hsla(217, 91%, 60%, 0.3), transparent)',
+                }}
+              />
+            </div>
           </div>
 
           {/* Question Card */}
           <Card 
-            className={`border-border/50 shadow-lg transition-all duration-300 ${
+            className={`auth-card auth-card-glow transition-all duration-300 ${
               isTransitioning ? 'opacity-80 scale-[0.98]' : 'opacity-100 scale-100'
             }`}
           >
             <CardHeader className="text-center pb-4">
               <div className="flex justify-center mb-4 lg:hidden">
-                <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <div className="h-14 w-14 rounded-2xl bg-primary/15 flex items-center justify-center">
                   <IconComponent className="h-7 w-7 text-primary" />
                 </div>
               </div>
-              <CardTitle className="text-xl lg:text-2xl">{currentQuestion.question}</CardTitle>
+              <CardTitle className="text-xl lg:text-2xl tracking-tight">{currentQuestion.question}</CardTitle>
               <CardDescription className="text-base">
                 {currentQuestion.description}
               </CardDescription>
@@ -294,10 +297,10 @@ export default function Onboarding() {
                   key={option.value}
                   onClick={() => handleSelect(option.value)}
                   disabled={isSaving}
-                  className={`w-full p-4 rounded-xl border-2 text-left transition-all duration-200 ${
+                  className={`w-full p-4 rounded-xl border text-left transition-all duration-200 ${
                     answers[currentQuestion.id] === option.value
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border/50 bg-secondary/20 hover:border-primary/50 hover:bg-secondary/40'
+                      ? 'onboarding-option-selected'
+                      : 'onboarding-option'
                   } ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                 >
                   <div className="flex items-center justify-between">
@@ -306,7 +309,7 @@ export default function Onboarding() {
                       <p className="text-sm text-muted-foreground">{option.description}</p>
                     </div>
                     {answers[currentQuestion.id] === option.value && (
-                      <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                      <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center shrink-0 ml-4">
                         <Check className="h-4 w-4 text-primary-foreground" />
                       </div>
                     )}
