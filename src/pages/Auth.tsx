@@ -15,8 +15,8 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { ArrowLeft, Mail, Lock, User, Loader2, TrendingUp, Shield, Target } from 'lucide-react';
-import authBackground from '@/assets/auth-background.png';
 import { FundexLogo } from '@/components/landing/FundexLogo';
+import { AuthBackground } from '@/components/auth/AuthBackground';
 import { useAuth } from '@/hooks/useAuth';
 import { z } from 'zod';
 
@@ -215,17 +215,9 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex relative">
-      {/* Full-page background image */}
-      <div 
-        className="absolute inset-0 z-0"
-        style={{
-          backgroundImage: `url(${authBackground})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }}
-      />
+    <div className="min-h-screen bg-background flex relative overflow-hidden">
+      {/* Premium fintech background */}
+      <AuthBackground />
       
       {/* Left Side - Hero Section */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden z-10">
@@ -251,9 +243,9 @@ export default function Auth() {
             </div>
 
             {/* Feature highlights */}
-            <div className="space-y-4 pt-8">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+            <div className="space-y-5 pt-8">
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-secondary/20 backdrop-blur-sm border border-border/20">
+                <div className="h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center">
                   <TrendingUp className="h-6 w-6 text-primary" />
                 </div>
                 <div>
@@ -261,8 +253,8 @@ export default function Auth() {
                   <p className="text-sm text-muted-foreground">AI-powered fund suggestions</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-secondary/20 backdrop-blur-sm border border-border/20">
+                <div className="h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center">
                   <Shield className="h-6 w-6 text-primary" />
                 </div>
                 <div>
@@ -270,8 +262,8 @@ export default function Auth() {
                   <p className="text-sm text-muted-foreground">Matches your risk appetite</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-secondary/20 backdrop-blur-sm border border-border/20">
+                <div className="h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center">
                   <Target className="h-6 w-6 text-primary" />
                 </div>
                 <div>
@@ -289,13 +281,13 @@ export default function Auth() {
 
         <div className="w-full max-w-md mt-16 lg:mt-0">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold">Welcome to CIFRAA</h2>
-            <p className="text-muted-foreground mt-1">
+            <h2 className="text-2xl font-bold tracking-tight">Welcome to CIFRAA</h2>
+            <p className="text-muted-foreground mt-2 text-sm">
               Sign in to access your personalized dashboard
             </p>
           </div>
 
-          <Card className="border-border/50 shadow-lg">
+          <Card className="auth-card auth-card-glow">
             <CardContent className="pt-6 space-y-6">
               {/* Google OAuth Button */}
               <Button 
