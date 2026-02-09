@@ -263,7 +263,7 @@ const Index = () => {
               onFundClick={(fund) => {
                 handleFundClick(fund);
               }}
-              showSearch={activeTab !== 'sectors'}
+              showSearch={activeTab !== 'sectors' && activeTab !== 'allfunds'}
               showInfoText={activeTab === 'overview'}
               showGreeting={activeTab === 'overview'}
             />
