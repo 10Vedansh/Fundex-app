@@ -12,6 +12,7 @@ import { SectorSearchDropdown } from '@/components/dashboard/SectorSearchDropdow
 import { FundComparisonCard } from '@/components/dashboard/FundComparisonCard';
 import { PortfolioFundModal } from '@/components/dashboard/PortfolioFundModal';
 import { DashboardLoadingState } from '@/components/dashboard/DashboardLoadingState';
+import { AllFundsTab } from '@/components/dashboard/AllFundsTab';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -299,6 +300,17 @@ const Index = () => {
                     </Card>
                   )}
                 </div>
+              )}
+
+              {/* All Funds Tab */}
+              {activeTab === 'allfunds' && (
+                <AllFundsTab
+                  funds={funds}
+                  isLoading={isLoading}
+                  onFundClick={handleFundClick}
+                  isInWatchlist={isInWatchlist}
+                  onBookmarkToggle={toggleWatchlist}
+                />
               )}
 
               {/* Sectors Tab */}
