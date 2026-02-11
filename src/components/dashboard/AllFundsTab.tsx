@@ -6,11 +6,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import {
   Search,
-  ChevronDown,
-  ChevronRight,
   ChevronUp,
+  ChevronDown,
   ArrowUpDown,
   Bookmark,
+  ArrowLeft,
+  TrendingUp,
+  Shield,
+  DollarSign,
+  BarChart3,
+  Receipt,
 } from 'lucide-react';
 import {
   Table,
@@ -24,6 +29,29 @@ import {
 // ── Category / Sub-category taxonomy ──────────────────────────
 const ASSET_CLASSES = ['Equity', 'Debt', 'Commodities', 'Hybrid'] as const;
 type AssetClass = (typeof ASSET_CLASSES)[number];
+
+const ASSET_CLASS_META: Record<AssetClass, { icon: React.ReactNode; description: string; color: string }> = {
+  Equity: {
+    icon: <TrendingUp className="h-6 w-6" />,
+    description: 'Invest in stocks for long-term growth',
+    color: 'from-blue-500/20 to-blue-600/5 border-blue-500/30 hover:border-blue-500/50',
+  },
+  Debt: {
+    icon: <Shield className="h-6 w-6" />,
+    description: 'Stable returns with lower risk',
+    color: 'from-emerald-500/20 to-emerald-600/5 border-emerald-500/30 hover:border-emerald-500/50',
+  },
+  Commodities: {
+    icon: <DollarSign className="h-6 w-6" />,
+    description: 'Gold, silver & commodity funds',
+    color: 'from-amber-500/20 to-amber-600/5 border-amber-500/30 hover:border-amber-500/50',
+  },
+  Hybrid: {
+    icon: <BarChart3 className="h-6 w-6" />,
+    description: 'Balanced mix of equity & debt',
+    color: 'from-purple-500/20 to-purple-600/5 border-purple-500/30 hover:border-purple-500/50',
+  },
+};
 
 const SUB_CATEGORIES: Record<AssetClass, string[]> = {
   Equity: ['All', 'Large Cap', 'Mid Cap', 'Small Cap', 'Flexi Cap', 'Multi Cap', 'ELSS', 'Sectoral / Thematic', 'Index Funds', 'International Equity'],
@@ -47,56 +75,66 @@ function mapFundToAssetClass(fund: MutualFund): AssetClass | null {
   }
 }
 
-// Expandable column group definitions
-type ColumnGroup = 'returns' | 'risk' | 'nav' | 'fees';
+// ── Section tab definitions ──────────────────────────
+type SectionTab = 'overview' | 'returns' | 'risk' | 'nav' | 'fees';
 
-interface ColumnGroupDef {
-  id: ColumnGroup;
+interface SectionDef {
+  id: SectionTab;
   label: string;
-  emoji: string;
-  columns: { key: string; label: string; render: (f: MutualFund) => string }[];
+  columns: { key: string; label: string; align?: string; render: (f: MutualFund) => string }[];
 }
 
-const COLUMN_GROUPS: ColumnGroupDef[] = [
+const SECTIONS: SectionDef[] = [
+  {
+    id: 'overview',
+    label: 'Overview',
+    columns: [
+      { key: 'amc', label: 'AMC', render: (f) => f.amc },
+      { key: 'category', label: 'Category', render: (f) => f.category },
+      { key: 'expenseRatio', label: 'Expense', align: 'right', render: (f) => `${f.expenseRatio.toFixed(2)}%` },
+      { key: 'aum', label: 'AUM (Cr)', align: 'right', render: (f) => `₹${f.aum.toLocaleString()}` },
+      { key: 'riskLevel', label: 'Risk', align: 'center', render: (f) => f.riskLevel },
+      { key: 'cagr1Y', label: '1Y Return', align: 'right', render: (f) => `${f.cagr1Y > 0 ? '+' : ''}${f.cagr1Y.toFixed(1)}%` },
+      { key: 'cagr3Y', label: '3Y CAGR', align: 'right', render: (f) => `${f.cagr3Y > 0 ? '+' : ''}${f.cagr3Y.toFixed(1)}%` },
+      { key: 'cagr5Y', label: '5Y CAGR', align: 'right', render: (f) => `${f.cagr5Y > 0 ? '+' : ''}${f.cagr5Y.toFixed(1)}%` },
+    ],
+  },
   {
     id: 'returns',
     label: 'Returns',
-    emoji: '📈',
     columns: [
-      { key: '1y', label: '1Y', render: (f) => `${f.cagr1Y.toFixed(1)}%` },
-      { key: '3y', label: '3Y CAGR', render: (f) => `${f.cagr3Y.toFixed(1)}%` },
-      { key: '5y', label: '5Y CAGR', render: (f) => `${f.cagr5Y.toFixed(1)}%` },
-      { key: 'alpha', label: 'Alpha', render: (f) => f.alpha.toFixed(2) },
+      { key: 'cagr1Y', label: '1Y Return', align: 'right', render: (f) => `${f.cagr1Y > 0 ? '+' : ''}${f.cagr1Y.toFixed(1)}%` },
+      { key: 'cagr3Y', label: '3Y CAGR', align: 'right', render: (f) => `${f.cagr3Y > 0 ? '+' : ''}${f.cagr3Y.toFixed(1)}%` },
+      { key: 'cagr5Y', label: '5Y CAGR', align: 'right', render: (f) => `${f.cagr5Y > 0 ? '+' : ''}${f.cagr5Y.toFixed(1)}%` },
+      { key: 'alpha', label: 'Alpha', align: 'right', render: (f) => f.alpha.toFixed(2) },
       { key: 'benchmark', label: 'Benchmark', render: (f) => f.benchmark },
     ],
   },
   {
     id: 'risk',
     label: 'Risk',
-    emoji: '🧠',
     columns: [
-      { key: 'riskLevel', label: 'Risk Level', render: (f) => f.riskLevel },
-      { key: 'volatility', label: 'Volatility', render: (f) => `${f.volatility.toFixed(1)}%` },
-      { key: 'beta', label: 'Beta', render: (f) => f.beta.toFixed(2) },
-      { key: 'sharpe', label: 'Sharpe', render: (f) => f.sharpeRatio.toFixed(2) },
+      { key: 'riskLevel', label: 'Risk Level', align: 'center', render: (f) => f.riskLevel },
+      { key: 'volatility', label: 'Volatility', align: 'right', render: (f) => `${f.volatility.toFixed(1)}%` },
+      { key: 'beta', label: 'Beta', align: 'right', render: (f) => f.beta.toFixed(2) },
+      { key: 'sharpe', label: 'Sharpe', align: 'right', render: (f) => f.sharpeRatio.toFixed(2) },
     ],
   },
   {
     id: 'nav',
     label: 'NAV',
-    emoji: '💰',
     columns: [
-      { key: 'nav', label: 'Current NAV', render: (f) => `₹${f.nav.toFixed(2)}` },
+      { key: 'nav', label: 'Current NAV', align: 'right', render: (f) => `₹${f.nav.toFixed(2)}` },
+      { key: 'aum', label: 'AUM (Cr)', align: 'right', render: (f) => `₹${f.aum.toLocaleString()}` },
     ],
   },
   {
     id: 'fees',
     label: 'Fees & Details',
-    emoji: '🧾',
     columns: [
-      { key: 'expense', label: 'Expense Ratio', render: (f) => `${f.expenseRatio.toFixed(2)}%` },
+      { key: 'expense', label: 'Expense Ratio', align: 'right', render: (f) => `${f.expenseRatio.toFixed(2)}%` },
       { key: 'exitLoad', label: 'Exit Load', render: (f) => f.exitLoad },
-      { key: 'minInv', label: 'Min Investment', render: (f) => `₹${f.minInvestment.toLocaleString()}` },
+      { key: 'minInv', label: 'Min Investment', align: 'right', render: (f) => `₹${f.minInvestment.toLocaleString()}` },
     ],
   },
 ];
@@ -118,25 +156,22 @@ export function AllFundsTab({
   isInWatchlist,
   onBookmarkToggle,
 }: AllFundsTabProps) {
-  const [assetClass, setAssetClass] = useState<AssetClass>('Equity');
+  const [selectedAssetClass, setSelectedAssetClass] = useState<AssetClass | null>(null);
   const [subCategory, setSubCategory] = useState('All');
+  const [activeSection, setActiveSection] = useState<SectionTab>('overview');
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('cagr1Y');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [expandedGroups, setExpandedGroups] = useState<Set<ColumnGroup>>(new Set());
 
-  const handleAssetClassChange = (ac: AssetClass) => {
-    setAssetClass(ac);
+  const handleAssetClassSelect = (ac: AssetClass) => {
+    setSelectedAssetClass(ac);
     setSubCategory('All');
+    setActiveSection('overview');
   };
 
-  const toggleGroup = (g: ColumnGroup) => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(g)) next.delete(g);
-      else next.add(g);
-      return next;
-    });
+  const handleBack = () => {
+    setSelectedAssetClass(null);
+    setSearch('');
   };
 
   const handleSort = (key: SortKey) => {
@@ -156,8 +191,11 @@ export function AllFundsTab({
     );
   };
 
+  const currentSection = SECTIONS.find((s) => s.id === activeSection)!;
+
   const filtered = useMemo(() => {
-    let list = funds.filter((f) => mapFundToAssetClass(f) === assetClass);
+    if (!selectedAssetClass) return [];
+    let list = funds.filter((f) => mapFundToAssetClass(f) === selectedAssetClass);
 
     if (search) {
       const q = search.toLowerCase();
@@ -186,41 +224,93 @@ export function AllFundsTab({
     });
 
     return list;
-  }, [funds, assetClass, search, sortKey, sortDir]);
+  }, [funds, selectedAssetClass, search, sortKey, sortDir]);
 
   const returnColor = (val: number) => (val >= 0 ? 'text-success' : 'text-destructive');
 
-  // Primary columns count for colspan calculation
-  const primaryColCount = 10; // bookmark + name + amc + expense + aum + risk + 1y + 3y + 5y
-  const expandedColCount = COLUMN_GROUPS.reduce(
-    (sum, g) => sum + (expandedGroups.has(g.id) ? g.columns.length : 0),
-    0
-  );
-  const totalCols = primaryColCount + expandedColCount;
+  const renderCellValue = (fund: MutualFund, col: SectionDef['columns'][number]) => {
+    const value = col.render(fund);
+    // Color return values
+    if (['cagr1Y', 'cagr3Y', 'cagr5Y'].includes(col.key)) {
+      const num = col.key === 'cagr1Y' ? fund.cagr1Y : col.key === 'cagr3Y' ? fund.cagr3Y : fund.cagr5Y;
+      return <span className={cn('font-medium', returnColor(num))}>{value}</span>;
+    }
+    if (col.key === 'riskLevel') {
+      return (
+        <Badge
+          variant="outline"
+          className={cn(
+            'text-xs font-medium border-0',
+            fund.riskLevel === 'Low' && 'bg-success/15 text-success',
+            fund.riskLevel === 'Moderate' && 'bg-warning/15 text-warning',
+            fund.riskLevel === 'High' && 'bg-destructive/15 text-destructive'
+          )}
+        >
+          {fund.riskLevel}
+        </Badge>
+      );
+    }
+    return <span className="text-muted-foreground">{value}</span>;
+  };
 
+  // ── Asset class selection cards ──
+  if (!selectedAssetClass) {
+    return (
+      <div className="animate-fade-in space-y-4">
+        <h2 className="text-lg font-semibold text-foreground">Explore All Funds</h2>
+        <p className="text-sm text-muted-foreground">Select an asset class to browse mutual funds</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+          {ASSET_CLASSES.map((ac) => {
+            const meta = ASSET_CLASS_META[ac];
+            const count = funds.filter((f) => mapFundToAssetClass(f) === ac).length;
+            return (
+              <button
+                key={ac}
+                onClick={() => handleAssetClassSelect(ac)}
+                className={cn(
+                  'relative p-6 rounded-xl border bg-gradient-to-br transition-all duration-300 text-left group',
+                  'hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]',
+                  meta.color
+                )}
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="text-primary mb-2">{meta.icon}</div>
+                    <h3 className="text-xl font-bold text-foreground">{ac}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">{meta.description}</p>
+                  </div>
+                  <span className="text-2xl font-bold text-muted-foreground/50">{count}</span>
+                </div>
+                <div className="mt-4 text-xs text-muted-foreground">
+                  {SUB_CATEGORIES[ac].length - 1} sub-categories →
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Table view for selected asset class ──
   return (
     <div className="animate-fade-in space-y-0">
-      {/* ── Asset class tabs — full width row ── */}
-      <div className="grid grid-cols-4 gap-0 rounded-t-xl overflow-hidden border border-border/40 border-b-0">
-        {ASSET_CLASSES.map((ac) => (
-          <button
-            key={ac}
-            onClick={() => handleAssetClassChange(ac)}
-            className={cn(
-              'py-3.5 text-sm font-semibold transition-all text-center',
-              assetClass === ac
-                ? 'bg-primary/15 text-primary border-b-2 border-b-primary'
-                : 'bg-secondary/30 text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
-            )}
-          >
-            {ac}
-          </button>
-        ))}
+      {/* Back button + asset class title */}
+      <div className="flex items-center gap-3 mb-4">
+        <button
+          onClick={handleBack}
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </button>
+        <h2 className="text-lg font-semibold text-foreground">{selectedAssetClass} Funds</h2>
+        <span className="text-xs text-muted-foreground">({filtered.length} funds)</span>
       </div>
 
-      {/* ── Sub-category pills ── */}
-      <div className="flex gap-2 flex-wrap px-4 py-3 bg-card/40 border-x border-border/40">
-        {SUB_CATEGORIES[assetClass].map((sc) => (
+      {/* Sub-category pills */}
+      <div className="flex gap-2 flex-wrap mb-3">
+        {SUB_CATEGORIES[selectedAssetClass].map((sc) => (
           <button
             key={sc}
             onClick={() => setSubCategory(sc)}
@@ -236,22 +326,36 @@ export function AllFundsTab({
         ))}
       </div>
 
-      {/* ── Full-width search bar ── */}
-      <div className="relative border-x border-border/40 bg-card/30">
-        <div className="px-4 py-3">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by fund name or AMC..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-11 bg-secondary/40 border-border/40 h-11 text-sm w-full"
-            />
-          </div>
-        </div>
+      {/* Search bar */}
+      <div className="relative mb-3">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search by fund name or AMC..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-11 bg-secondary/40 border-border/40 h-11 text-sm w-full"
+        />
       </div>
 
-      {/* ── Table with integrated group headers ── */}
+      {/* Section tabs (Overview / Returns / Risk / NAV / Fees) */}
+      <div className="flex gap-1 flex-wrap mb-0 border-b border-border/40 pb-0">
+        {SECTIONS.map((sec) => (
+          <button
+            key={sec.id}
+            onClick={() => setActiveSection(sec.id)}
+            className={cn(
+              'px-4 py-2.5 text-xs font-medium transition-all border-b-2 -mb-[1px]',
+              activeSection === sec.id
+                ? 'text-primary border-b-primary bg-primary/5'
+                : 'text-muted-foreground border-b-transparent hover:text-foreground hover:bg-secondary/30'
+            )}
+          >
+            {sec.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Table */}
       {isLoading ? (
         <Card className="glass-card rounded-t-none border-t-0">
           <CardContent className="py-12 text-center text-muted-foreground">Loading funds...</CardContent>
@@ -267,82 +371,34 @@ export function AllFundsTab({
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                {/* ── Group toggle row integrated into table ── */}
-                <TableRow className="bg-secondary/20 hover:bg-secondary/20 border-b border-border/30">
-                  <TableHead colSpan={totalCols} className="py-2 px-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground font-normal">
-                        {filtered.length} fund{filtered.length !== 1 ? 's' : ''} found
-                      </span>
-                      <div className="flex gap-1.5">
-                        {COLUMN_GROUPS.map((g) => (
-                          <button
-                            key={g.id}
-                            onClick={() => toggleGroup(g.id)}
-                            className={cn(
-                              'flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all border',
-                              expandedGroups.has(g.id)
-                                ? 'bg-primary/10 text-primary border-primary/30'
-                                : 'bg-secondary/40 text-muted-foreground border-border/20 hover:bg-secondary/70'
-                            )}
-                          >
-                            <span>{g.emoji}</span>
-                            {expandedGroups.has(g.id) ? (
-                              <ChevronDown className="h-2.5 w-2.5" />
-                            ) : (
-                              <ChevronRight className="h-2.5 w-2.5" />
-                            )}
-                            <span className="hidden sm:inline">{g.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </TableHead>
-                </TableRow>
-
-                {/* ── Column headers ── */}
                 <TableRow className="bg-secondary/40 hover:bg-secondary/40">
                   <TableHead className="w-8 sticky left-0 bg-secondary/80 z-10" />
                   <TableHead
-                    className="sticky left-8 bg-secondary/80 z-10 min-w-[240px] cursor-pointer select-none"
+                    className="sticky left-8 bg-secondary/80 z-10 min-w-[220px] cursor-pointer select-none"
                     onClick={() => handleSort('name')}
                   >
                     <span className="flex items-center gap-1">Fund Name <SortIcon col="name" /></span>
                   </TableHead>
-                  <TableHead className="cursor-pointer select-none min-w-[140px]" onClick={() => handleSort('amc')}>
-                    <span className="flex items-center gap-1">AMC <SortIcon col="amc" /></span>
-                  </TableHead>
-                  <TableHead className="cursor-pointer select-none text-right" onClick={() => handleSort('expenseRatio')}>
-                    <span className="flex items-center gap-1 justify-end">Expense <SortIcon col="expenseRatio" /></span>
-                  </TableHead>
-                  <TableHead className="cursor-pointer select-none text-right" onClick={() => handleSort('aum')}>
-                    <span className="flex items-center gap-1 justify-end">AUM (Cr) <SortIcon col="aum" /></span>
-                  </TableHead>
-                  <TableHead className="text-center">Risk</TableHead>
-                  <TableHead className="cursor-pointer select-none text-right" onClick={() => handleSort('cagr1Y')}>
-                    <span className="flex items-center gap-1 justify-end">1Y <SortIcon col="cagr1Y" /></span>
-                  </TableHead>
-                  <TableHead className="cursor-pointer select-none text-right" onClick={() => handleSort('cagr3Y')}>
-                    <span className="flex items-center gap-1 justify-end">3Y <SortIcon col="cagr3Y" /></span>
-                  </TableHead>
-                  <TableHead className="cursor-pointer select-none text-right" onClick={() => handleSort('cagr5Y')}>
-                    <span className="flex items-center gap-1 justify-end">5Y <SortIcon col="cagr5Y" /></span>
-                  </TableHead>
-
-                  {/* Expanded group headers */}
-                  {COLUMN_GROUPS.filter((g) => expandedGroups.has(g.id)).map((g) =>
-                    g.columns.map((col, i) => (
+                  {currentSection.columns.map((col) => {
+                    const sortable = ['amc', 'expenseRatio', 'aum', 'riskLevel', 'cagr1Y', 'cagr3Y', 'cagr5Y'].includes(col.key);
+                    return (
                       <TableHead
-                        key={`${g.id}-${col.key}`}
+                        key={col.key}
                         className={cn(
-                          'text-right whitespace-nowrap',
-                          i === 0 && 'border-l border-border/30'
+                          'whitespace-nowrap',
+                          col.align === 'right' && 'text-right',
+                          col.align === 'center' && 'text-center',
+                          sortable && 'cursor-pointer select-none'
                         )}
+                        onClick={sortable ? () => handleSort(col.key as SortKey) : undefined}
                       >
-                        <span className="text-xs">{col.label}</span>
+                        <span className={cn('flex items-center gap-1', col.align === 'right' && 'justify-end', col.align === 'center' && 'justify-center')}>
+                          {col.label}
+                          {sortable && <SortIcon col={col.key as SortKey} />}
+                        </span>
                       </TableHead>
-                    ))
-                  )}
+                    );
+                  })}
                 </TableRow>
               </TableHeader>
 
@@ -363,53 +419,21 @@ export function AllFundsTab({
                         />
                       </button>
                     </TableCell>
-
-                    <TableCell className="sticky left-8 bg-card/90 z-10 font-medium text-sm max-w-[260px]">
+                    <TableCell className="sticky left-8 bg-card/90 z-10 font-medium text-sm max-w-[240px]">
                       <span className="line-clamp-2">{fund.name}</span>
                     </TableCell>
-
-                    <TableCell className="text-sm text-muted-foreground">{fund.amc}</TableCell>
-                    <TableCell className="text-right text-sm">{fund.expenseRatio.toFixed(2)}%</TableCell>
-                    <TableCell className="text-right text-sm">₹{fund.aum.toLocaleString()}</TableCell>
-
-                    <TableCell className="text-center">
-                      <Badge
-                        variant="outline"
+                    {currentSection.columns.map((col) => (
+                      <TableCell
+                        key={col.key}
                         className={cn(
-                          'text-xs font-medium border-0',
-                          fund.riskLevel === 'Low' && 'bg-success/15 text-success',
-                          fund.riskLevel === 'Moderate' && 'bg-warning/15 text-warning',
-                          fund.riskLevel === 'High' && 'bg-destructive/15 text-destructive'
+                          'text-sm whitespace-nowrap',
+                          col.align === 'right' && 'text-right',
+                          col.align === 'center' && 'text-center'
                         )}
                       >
-                        {fund.riskLevel}
-                      </Badge>
-                    </TableCell>
-
-                    <TableCell className={cn('text-right text-sm font-medium', returnColor(fund.cagr1Y))}>
-                      {fund.cagr1Y > 0 ? '+' : ''}{fund.cagr1Y.toFixed(1)}%
-                    </TableCell>
-                    <TableCell className={cn('text-right text-sm font-medium', returnColor(fund.cagr3Y))}>
-                      {fund.cagr3Y > 0 ? '+' : ''}{fund.cagr3Y.toFixed(1)}%
-                    </TableCell>
-                    <TableCell className={cn('text-right text-sm font-medium', returnColor(fund.cagr5Y))}>
-                      {fund.cagr5Y > 0 ? '+' : ''}{fund.cagr5Y.toFixed(1)}%
-                    </TableCell>
-
-                    {/* Expanded group data */}
-                    {COLUMN_GROUPS.filter((g) => expandedGroups.has(g.id)).map((g) =>
-                      g.columns.map((col, i) => (
-                        <TableCell
-                          key={`${g.id}-${col.key}`}
-                          className={cn(
-                            'text-right text-sm text-muted-foreground whitespace-nowrap',
-                            i === 0 && 'border-l border-border/30'
-                          )}
-                        >
-                          {col.render(fund)}
-                        </TableCell>
-                      ))
-                    )}
+                        {renderCellValue(fund, col)}
+                      </TableCell>
+                    ))}
                   </TableRow>
                 ))}
               </TableBody>

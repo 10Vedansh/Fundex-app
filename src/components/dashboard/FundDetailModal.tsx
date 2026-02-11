@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MutualFund, FundSectorData } from '@/types/mutualFund';
 import { SectorAllocationChart } from './SectorAllocationChart';
 import { ReturnAnalysisChart } from './ReturnAnalysisChart';
+import { SIPCalculator } from './SIPCalculator';
+import { FundNewsSection } from './FundNewsSection';
 import { TrendingUp, TrendingDown, Shield, Zap, Target, AlertTriangle, Users, Ban, Plus } from 'lucide-react';
 
 interface FundDetailModalProps {
@@ -208,6 +210,12 @@ export function FundDetailModal({ fund, sectorData, isOpen, onClose, onAddToPort
               </CardContent>
             </Card>
           </div>
+
+          {/* SIP Calculator */}
+          <SIPCalculator fund={fund} />
+
+          {/* Related News */}
+          <FundNewsSection fund={fund} />
 
           {/* Disclaimer */}
           <div className="p-3 rounded-lg bg-warning/10 border border-warning/30">
