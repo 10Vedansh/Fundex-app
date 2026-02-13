@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.fetch-fund-data]
 verify_jwt = false
+
+[functions.process-workbook]
+verify_jwt = false
