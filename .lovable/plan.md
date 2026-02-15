@@ -1,5 +1,3 @@
-
-
 # Fix Mirror-Imaged World Map
 
 ## Problem
@@ -32,10 +30,7 @@ to:
 
 This applies to both vertex calculations (for point 1 and point 2 of each line segment).
 
-## What This Fixes
-
 - Americas will appear on the left side of the globe (West)
 - Europe/Africa will appear in the center
 - Asia/Australia will appear on the right side (East)
 - The globe will match real-world geography when viewed from the front
-
