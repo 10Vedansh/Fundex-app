@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { recommendFunds, UserPreferences } from '@/utils/recommendationEngine';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeaderZone } from '@/components/dashboard/DashboardHeaderZone';
@@ -100,38 +101,20 @@ const Index = () => {
     return null;
   }, [profile]);
 
-  // Filter funds based on user profile for personalization
+  // Filter funds using recommendation engine
   const personalizedFunds = useMemo(() => {
-    if (!profile) return [];
+    if (!profile || funds.length === 0) return [];
     
-    let result = [...funds];
-    
-    // Filter by risk tolerance
-    if (profile.risk_tolerance === 'conservative') {
-      result = result.filter(f => f.riskLevel === 'Low' || f.category === 'Debt' || f.category === 'Liquid');
-    } else if (profile.risk_tolerance === 'aggressive') {
-      result = result.filter(f => f.riskLevel === 'High' || f.riskLevel === 'Moderate');
-    }
+    const prefs: UserPreferences = {
+      riskTolerance: profile.risk_tolerance || 'moderate',
+      investmentGoal: profile.investment_goal || 'wealth_creation',
+      investmentHorizon: profile.investment_horizon || 'long',
+      experienceLevel: profile.experience_level || 'beginner',
+      investmentAmount: profile.investment_amount || '50k-5lakhs',
+    };
 
-    // Filter by investment goal
-    if (profile.investment_goal === 'income') {
-      result = result.filter(f => f.category === 'Debt' || f.category === 'Hybrid');
-    } else if (profile.investment_goal === 'preservation') {
-      result = result.filter(f => f.category === 'Debt' || f.category === 'Liquid');
-    } else if (profile.investment_goal === 'tax') {
-      result = result.filter(f => f.category === 'Equity');
-    }
-
-    // Filter by investment horizon
-    if (profile.investment_horizon === 'short') {
-      result = result.filter(f => f.category === 'Liquid' || f.category === 'Debt');
-    } else if (profile.investment_horizon === 'medium') {
-      result = result.filter(f => f.category !== 'Liquid');
-    }
-
-    // Sort by Sharpe ratio and limit to 9 funds
-    result.sort((a, b) => b.sharpeRatio - a.sharpeRatio);
-    return result.slice(0, 9);
+    const recommended = recommendFunds(funds, prefs);
+    return recommended.length > 0 ? recommended.slice(0, 9) : funds.slice(0, 9);
   }, [funds, profile]);
 
   // Global search results

@@ -129,10 +129,9 @@ export default function Landing() {
   ];
 
   const stats = [
-    { value: '5000+', label: 'Funds Analyzed' },
-    { value: '50K+', label: 'Data Points' },
+    { value: '2200+', label: 'Funds Analyzed' },
+    { value: '25K+', label: 'Data Points' },
     { value: '99.9%', label: 'Uptime' },
-    { value: '0', label: 'Commissions' },
   ];
 
   const heroText = "CIFRAA";
@@ -173,20 +172,24 @@ export default function Landing() {
           
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-10">
-            {['About', 'Features', 'Founders', 'FAQs'].map((item) => (
-              <a 
-                key={item}
-                href={`#${item.toLowerCase()}`}
-                onClick={(e) => { 
-                  e.preventDefault(); 
-                  document.getElementById(item.toLowerCase())?.scrollIntoView({ behavior: 'smooth' }); 
-                }}
-                className="relative text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-300 group"
-              >
-                {item}
-                <span className="absolute -bottom-1 left-0 w-0 h-px bg-primary transition-all duration-300 group-hover:w-full" />
-              </a>
-            ))}
+            {['About', 'Features', 'Founders', 'News', 'FAQs'].map((item) => (
+                <a 
+                  key={item}
+                  href={item === 'News' ? '/news' : `#${item.toLowerCase()}`}
+                  onClick={(e) => { 
+                    e.preventDefault();
+                    if (item === 'News') {
+                      navigate('/news');
+                    } else {
+                      document.getElementById(item.toLowerCase())?.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                  className="relative text-sm font-medium text-muted-foreground hover:text-foreground transition-colors duration-300 group"
+                >
+                  {item}
+                  <span className="absolute -bottom-1 left-0 w-0 h-px bg-primary transition-all duration-300 group-hover:w-full" />
+                </a>
+              ))}
           </div>
 
           <div className="flex items-center gap-4">
@@ -219,19 +222,23 @@ export default function Landing() {
         {mobileMenuOpen && (
           <div className="md:hidden absolute top-full left-0 right-0 bg-background/95 backdrop-blur-xl border-b border-border/30 py-6 px-6">
             <div className="flex flex-col gap-4">
-              {['About', 'Features', 'Founders', 'FAQs'].map((item) => (
-                <a 
-                  key={item}
-                  href={`#${item.toLowerCase()}`}
-                  onClick={(e) => { 
-                    e.preventDefault(); 
-                    document.getElementById(item.toLowerCase())?.scrollIntoView({ behavior: 'smooth' });
-                    setMobileMenuOpen(false);
-                  }}
-                  className="text-lg font-medium text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {item}
-                </a>
+              {['About', 'Features', 'Founders', 'News', 'FAQs'].map((item) => (
+                  <a 
+                    key={item}
+                    href={item === 'News' ? '/news' : `#${item.toLowerCase()}`}
+                    onClick={(e) => { 
+                      e.preventDefault(); 
+                      if (item === 'News') {
+                        navigate('/news');
+                      } else {
+                        document.getElementById(item.toLowerCase())?.scrollIntoView({ behavior: 'smooth' });
+                      }
+                      setMobileMenuOpen(false);
+                    }}
+                    className="text-lg font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {item}
+                  </a>
               ))}
             </div>
           </div>
@@ -293,7 +300,7 @@ export default function Landing() {
 
           {/* Stats row */}
           <GsapReveal delay={800}>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-24 max-w-3xl mx-auto">
+            <div className="grid grid-cols-3 gap-8 mt-24 max-w-3xl mx-auto">
               {stats.map((stat, i) => (
                 <div key={i} className="text-center">
                   <p className="text-3xl md:text-4xl font-bold text-foreground mb-1">{stat.value}</p>
@@ -509,6 +516,38 @@ export default function Landing() {
                 className="border border-border/50 hover:border-primary/50 bg-transparent text-foreground px-8 py-3 rounded-full font-medium transition-colors"
               >
                 Meet the founders
+                <ArrowRight className="h-4 w-4 ml-2 inline-block" />
+              </MagneticButton>
+            </GsapReveal>
+          </div>
+        </div>
+      </section>
+
+      {/* News Section - Redirect */}
+      <section id="news" className="relative py-40 z-10">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="max-w-3xl mx-auto text-center">
+            <GsapReveal>
+              <p className="text-sm text-primary mb-4 tracking-[0.2em] uppercase font-semibold">
+                Stay Informed
+              </p>
+            </GsapReveal>
+            <GsapReveal delay={100}>
+              <h2 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">
+                Market news & insights
+              </h2>
+            </GsapReveal>
+            <GsapReveal delay={200}>
+              <p className="text-lg text-muted-foreground mb-12">
+                Stay updated with the latest mutual fund news, market trends, and expert analysis — all in one place.
+              </p>
+            </GsapReveal>
+            <GsapReveal delay={300}>
+              <MagneticButton 
+                onClick={() => navigate('/news')} 
+                className="border border-border/50 hover:border-primary/50 bg-transparent text-foreground px-8 py-3 rounded-full font-medium transition-colors"
+              >
+                Read Latest News
                 <ArrowRight className="h-4 w-4 ml-2 inline-block" />
               </MagneticButton>
             </GsapReveal>
