@@ -3,6 +3,7 @@ import { MutualFund, AssetClass, CATEGORY_LABELS } from '@/types/mutualFund';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   Search,
@@ -15,6 +16,7 @@ import {
   Shield,
   DollarSign,
   BarChart3,
+  ChevronRight,
 } from 'lucide-react';
 import {
   Table,
@@ -52,10 +54,10 @@ const ASSET_CLASS_META: Record<AssetClass, { icon: React.ReactNode; description:
 };
 
 const SUB_CATEGORIES: Record<AssetClass, string[]> = {
-  Equity: ['All', 'Large Cap', 'Mid Cap', 'Small Cap', 'Flexi Cap', 'Multi Cap', 'ELSS', 'Sectoral / Thematic', 'Index Funds', 'International'],
-  Debt: ['All', 'Liquid', 'Ultra Short Duration', 'Short Duration', 'Medium Duration', 'Long Duration', 'Corporate Bond', 'Credit Risk', 'Gilt', 'Dynamic Bond'],
-  Commodities: ['All', 'Gold Funds', 'Silver Funds'],
-  Hybrid: ['All', 'Aggressive Hybrid', 'Conservative Hybrid', 'Balanced Advantage', 'Arbitrage', 'Multi Asset Allocation'],
+  Equity: ['Large Cap', 'Mid Cap', 'Small Cap', 'Flexi Cap', 'Multi Cap', 'ELSS', 'Sectoral / Thematic', 'Index Funds', 'International'],
+  Debt: ['Liquid', 'Ultra Short Duration', 'Short Duration', 'Medium Duration', 'Long Duration', 'Corporate Bond', 'Credit Risk', 'Gilt', 'Dynamic Bond'],
+  Commodities: ['Gold Funds', 'Silver Funds'],
+  Hybrid: ['Aggressive Hybrid', 'Conservative Hybrid', 'Balanced Advantage', 'Arbitrage', 'Multi Asset Allocation'],
 };
 
 // Map workbook category codes to asset classes
@@ -69,12 +71,10 @@ function getAssetClass(fund: MutualFund): AssetClass {
   return 'Equity';
 }
 
-// Map category code to sub-category for filtering
 function getSubCategory(fund: MutualFund): string {
   const cat = fund.category || '';
   const label = CATEGORY_LABELS[cat];
   if (label) return label;
-  // Fallback mapping
   const lower = cat.toLowerCase();
   if (lower.includes('lc') || lower.includes('large')) return 'Large Cap';
   if (lower.includes('mc') || lower.includes('mid')) return 'Mid Cap';
@@ -119,70 +119,65 @@ const SECTIONS: SectionDef[] = [
     id: 'overview',
     label: 'Overview',
     columns: [
-      { key: 'amc', label: 'AMC', render: (f) => f.amc },
-      { key: 'category', label: 'Category', render: (f) => CATEGORY_LABELS[f.category] || f.category },
       { key: 'expenseRatio', label: 'Expense', align: 'right', render: (f) => fmt(f.expenseRatio, '%') },
       { key: 'aum', label: 'AUM (Cr)', align: 'right', render: (f) => fmtCr(f.aum) },
       { key: 'riskLevel', label: 'Risk', align: 'center', render: (f) => f.riskLevel },
-      { key: 'cagr1Y', label: '1Y Return', align: 'right', render: (f) => fmt(f.ret1Y ?? f.cagr1Y, '%') },
-      { key: 'cagr3Y', label: '3Y CAGR', align: 'right', render: (f) => fmt(f.ret3Y ?? f.cagr3Y, '%') },
-      { key: 'cagr5Y', label: '5Y CAGR', align: 'right', render: (f) => fmt(f.ret5Y ?? f.cagr5Y, '%') },
+      { key: 'cagr1Y', label: '1Y', align: 'right', render: (f) => fmt(f.ret1Y ?? f.cagr1Y, '%') },
+      { key: 'cagr3Y', label: '3Y', align: 'right', render: (f) => fmt(f.ret3Y ?? f.cagr3Y, '%') },
+      { key: 'cagr5Y', label: '5Y', align: 'right', render: (f) => fmt(f.ret5Y ?? f.cagr5Y, '%') },
     ],
   },
   {
     id: 'returns',
     label: 'Returns',
     columns: [
-      { key: 'ret1W', label: '1W', align: 'right', render: (f) => fmt(f.ret1W, '%') },
       { key: 'ret1M', label: '1M', align: 'right', render: (f) => fmt(f.ret1M, '%') },
       { key: 'ret3M', label: '3M', align: 'right', render: (f) => fmt(f.ret3M, '%') },
       { key: 'ret6M', label: '6M', align: 'right', render: (f) => fmt(f.ret6M, '%') },
       { key: 'cagr1Y', label: '1Y', align: 'right', render: (f) => fmt(f.ret1Y ?? f.cagr1Y, '%') },
       { key: 'cagr3Y', label: '3Y', align: 'right', render: (f) => fmt(f.ret3Y ?? f.cagr3Y, '%') },
       { key: 'cagr5Y', label: '5Y', align: 'right', render: (f) => fmt(f.ret5Y ?? f.cagr5Y, '%') },
-      { key: 'ret10Y', label: '10Y', align: 'right', render: (f) => fmt(f.ret10Y, '%') },
-      { key: 'alpha', label: 'Alpha', align: 'right', render: (f) => fmt(f.alpha) },
     ],
   },
   {
     id: 'risk',
     label: 'Risk',
     columns: [
-      { key: 'riskLevel', label: 'Risk Level', align: 'center', render: (f) => f.riskLevel },
+      { key: 'riskLevel', label: 'Risk', align: 'center', render: (f) => f.riskLevel },
       { key: 'stdDev', label: 'Std Dev', align: 'right', render: (f) => fmt(f.stdDev ?? f.volatility) },
       { key: 'beta', label: 'Beta', align: 'right', render: (f) => fmt(f.beta) },
       { key: 'sharpe', label: 'Sharpe', align: 'right', render: (f) => fmt(f.sharpeRatio) },
       { key: 'sortino', label: 'Sortino', align: 'right', render: (f) => fmt(f.sortinoRatio) },
       { key: 'alpha', label: 'Alpha', align: 'right', render: (f) => fmt(f.alpha) },
-      { key: 'infoRatio', label: 'Info Ratio', align: 'right', render: (f) => fmt(f.infoRatio) },
     ],
   },
   {
     id: 'nav',
     label: 'NAV',
     columns: [
-      { key: 'nav', label: 'Latest NAV', align: 'right', render: (f) => `₹${(f.latestNav ?? f.nav).toFixed(2)}` },
-      { key: 'previousNav', label: 'Previous NAV', align: 'right', render: (f) => f.previousNav != null ? `₹${f.previousNav.toFixed(2)}` : '--' },
+      { key: 'nav', label: 'NAV', align: 'right', render: (f) => `₹${(f.latestNav ?? f.nav).toFixed(2)}` },
+      { key: 'previousNav', label: 'Prev NAV', align: 'right', render: (f) => f.previousNav != null ? `₹${f.previousNav.toFixed(2)}` : '--' },
       { key: 'high52W', label: '52W High', align: 'right', render: (f) => f.high52W != null ? `₹${f.high52W.toFixed(2)}` : '--' },
       { key: 'low52W', label: '52W Low', align: 'right', render: (f) => f.low52W != null ? `₹${f.low52W.toFixed(2)}` : '--' },
-      { key: 'aum', label: 'AUM (Cr)', align: 'right', render: (f) => fmtCr(f.aum) },
+      { key: 'aum', label: 'AUM', align: 'right', render: (f) => fmtCr(f.aum) },
     ],
   },
   {
     id: 'fees',
-    label: 'Fees & Details',
+    label: 'Fees',
     columns: [
-      { key: 'expense', label: 'Expense Ratio', align: 'right', render: (f) => fmt(f.expenseRatio, '%') },
+      { key: 'expense', label: 'Expense', align: 'right', render: (f) => fmt(f.expenseRatio, '%') },
       { key: 'exitLoad', label: 'Exit Load', render: (f) => f.exitLoad || 'Nil' },
-      { key: 'minInv', label: 'Min Investment', align: 'right', render: (f) => fmtCr(f.minInvestment) },
-      { key: 'turnover', label: 'Turnover', align: 'right', render: (f) => f.turnover != null ? `${f.turnover}%` : '--' },
-      { key: 'fundManager', label: 'Fund Manager', render: (f) => f.fundManager || '--' },
-      { key: 'launch', label: 'Launch', render: (f) => f.launch || '--' },
+      { key: 'minInv', label: 'Min Inv', align: 'right', render: (f) => fmtCr(f.minInvestment) },
+      { key: 'fundManager', label: 'Manager', render: (f) => f.fundManager || '--' },
     ],
   },
 ];
 
 type SortKey = 'name' | 'amc' | 'expenseRatio' | 'aum' | 'riskLevel' | 'cagr1Y' | 'cagr3Y' | 'cagr5Y';
+
+const INITIAL_VISIBLE = 15;
+const LOAD_MORE_COUNT = 20;
 
 interface AllFundsTabProps {
   funds: MutualFund[];
@@ -200,21 +195,35 @@ export function AllFundsTab({
   onBookmarkToggle,
 }: AllFundsTabProps) {
   const [selectedAssetClass, setSelectedAssetClass] = useState<AssetClass | null>(null);
-  const [subCategory, setSubCategory] = useState('All');
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<SectionTab>('overview');
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('cagr1Y');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
 
   const handleAssetClassSelect = (ac: AssetClass) => {
     setSelectedAssetClass(ac);
-    setSubCategory('All');
+    setSelectedSubCategory(null);
     setActiveSection('overview');
+    setVisibleCount(INITIAL_VISIBLE);
+  };
+
+  const handleSubCategorySelect = (sc: string) => {
+    setSelectedSubCategory(sc);
+    setSearch('');
+    setVisibleCount(INITIAL_VISIBLE);
   };
 
   const handleBack = () => {
-    setSelectedAssetClass(null);
-    setSearch('');
+    if (selectedSubCategory) {
+      setSelectedSubCategory(null);
+      setSearch('');
+      setVisibleCount(INITIAL_VISIBLE);
+    } else {
+      setSelectedAssetClass(null);
+      setSearch('');
+    }
   };
 
   const handleSort = (key: SortKey) => {
@@ -243,14 +252,21 @@ export function AllFundsTab({
     return counts;
   }, [funds]);
 
-  const filtered = useMemo(() => {
-    if (!selectedAssetClass) return [];
-    let list = funds.filter((f) => getAssetClass(f) === selectedAssetClass);
-
-    // Apply sub-category filter
-    if (subCategory !== 'All') {
-      list = list.filter((f) => matchesSubCategory(f, subCategory));
+  // Count funds per sub-category within selected asset class
+  const subCategoryCounts = useMemo(() => {
+    if (!selectedAssetClass) return {};
+    const acFunds = funds.filter((f) => getAssetClass(f) === selectedAssetClass);
+    const counts: Record<string, number> = {};
+    for (const sc of SUB_CATEGORIES[selectedAssetClass]) {
+      counts[sc] = acFunds.filter((f) => matchesSubCategory(f, sc)).length;
     }
+    return counts;
+  }, [funds, selectedAssetClass]);
+
+  const filtered = useMemo(() => {
+    if (!selectedAssetClass || !selectedSubCategory) return [];
+    let list = funds.filter((f) => getAssetClass(f) === selectedAssetClass);
+    list = list.filter((f) => matchesSubCategory(f, selectedSubCategory));
 
     if (search) {
       const q = search.toLowerCase();
@@ -280,7 +296,10 @@ export function AllFundsTab({
     });
 
     return list;
-  }, [funds, selectedAssetClass, subCategory, search, sortKey, sortDir]);
+  }, [funds, selectedAssetClass, selectedSubCategory, search, sortKey, sortDir]);
+
+  const visibleFunds = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
 
   const returnColor = (val: number | null | undefined) => {
     if (val == null) return 'text-muted-foreground';
@@ -289,7 +308,7 @@ export function AllFundsTab({
 
   const renderCellValue = (fund: MutualFund, col: SectionDef['columns'][number]) => {
     const value = col.render(fund);
-    if (['cagr1Y', 'cagr3Y', 'cagr5Y', 'ret1W', 'ret1M', 'ret3M', 'ret6M', 'ret10Y', 'alpha'].includes(col.key)) {
+    if (['cagr1Y', 'cagr3Y', 'cagr5Y', 'ret1M', 'ret3M', 'ret6M', 'ret10Y', 'alpha'].includes(col.key)) {
       const num = col.key === 'cagr1Y' ? (fund.ret1Y ?? fund.cagr1Y) :
         col.key === 'cagr3Y' ? (fund.ret3Y ?? fund.cagr3Y) :
         col.key === 'cagr5Y' ? (fund.ret5Y ?? fund.cagr5Y) :
@@ -312,7 +331,7 @@ export function AllFundsTab({
     return <span className="text-muted-foreground">{value}</span>;
   };
 
-  // ── Asset class selection cards ──
+  // ── Level 1: Asset class selection cards ──
   if (!selectedAssetClass) {
     return (
       <div className="animate-fade-in space-y-4">
@@ -341,7 +360,7 @@ export function AllFundsTab({
                   <span className="text-2xl font-bold text-muted-foreground/50">{count}</span>
                 </div>
                 <div className="mt-4 text-xs text-muted-foreground">
-                  {SUB_CATEGORIES[ac].length - 1} sub-categories →
+                  {SUB_CATEGORIES[ac].length} sub-categories →
                 </div>
               </button>
             );
@@ -351,33 +370,54 @@ export function AllFundsTab({
     );
   }
 
-  // ── Table view ──
+  // ── Level 2: Sub-category cards ──
+  if (!selectedSubCategory) {
+    return (
+      <div className="animate-fade-in space-y-4">
+        <div className="flex items-center gap-3 mb-2">
+          <button onClick={handleBack} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="h-4 w-4" /> Back
+          </button>
+          <h2 className="text-lg font-semibold text-foreground">{selectedAssetClass} — Choose Category</h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {SUB_CATEGORIES[selectedAssetClass].map((sc) => {
+            const count = subCategoryCounts[sc] || 0;
+            return (
+              <button
+                key={sc}
+                onClick={() => handleSubCategorySelect(sc)}
+                className={cn(
+                  'p-5 rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm transition-all duration-200 text-left group',
+                  'hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:scale-[0.98]',
+                  count === 0 && 'opacity-50 cursor-not-allowed'
+                )}
+                disabled={count === 0}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground">{sc}</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">{count} funds</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Level 3: Table view ──
   return (
     <div className="animate-fade-in space-y-0">
       <div className="flex items-center gap-3 mb-4">
         <button onClick={handleBack} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" /> Back
         </button>
-        <h2 className="text-lg font-semibold text-foreground">{selectedAssetClass} Funds</h2>
+        <h2 className="text-lg font-semibold text-foreground">{selectedSubCategory}</h2>
         <span className="text-xs text-muted-foreground">({filtered.length} funds)</span>
-      </div>
-
-      {/* Sub-category pills */}
-      <div className="flex gap-2 flex-wrap mb-3">
-        {SUB_CATEGORIES[selectedAssetClass].map((sc) => (
-          <button
-            key={sc}
-            onClick={() => setSubCategory(sc)}
-            className={cn(
-              'px-3 py-1.5 rounded-full text-xs font-medium transition-all',
-              subCategory === sc
-                ? 'bg-primary/10 text-primary border border-primary/20'
-                : 'bg-secondary/30 text-muted-foreground hover:bg-secondary/60 border border-transparent'
-            )}
-          >
-            {sc}
-          </button>
-        ))}
       </div>
 
       {/* Search */}
@@ -420,70 +460,82 @@ export function AllFundsTab({
         </Card>
       ) : (
         <div className="rounded-b-xl border border-border/40 border-t-0 overflow-hidden bg-card/60 backdrop-blur-sm">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-secondary/40 hover:bg-secondary/40">
-                  <TableHead className="w-8 sticky left-0 bg-secondary/80 z-10" />
-                  <TableHead
-                    className="sticky left-8 bg-secondary/80 z-10 min-w-[220px] cursor-pointer select-none"
-                    onClick={() => handleSort('name')}
-                  >
-                    <span className="flex items-center gap-1">Fund Name <SortIcon col="name" /></span>
-                  </TableHead>
-                  {currentSection.columns.map((col) => {
-                    const sortable = ['amc', 'expenseRatio', 'aum', 'riskLevel', 'cagr1Y', 'cagr3Y', 'cagr5Y'].includes(col.key);
-                    return (
-                      <TableHead
-                        key={col.key}
-                        className={cn(
-                          'whitespace-nowrap',
-                          col.align === 'right' && 'text-right',
-                          col.align === 'center' && 'text-center',
-                          sortable && 'cursor-pointer select-none'
-                        )}
-                        onClick={sortable ? () => handleSort(col.key as SortKey) : undefined}
-                      >
-                        <span className={cn('flex items-center gap-1', col.align === 'right' && 'justify-end', col.align === 'center' && 'justify-center')}>
-                          {col.label}
-                          {sortable && <SortIcon col={col.key as SortKey} />}
-                        </span>
-                      </TableHead>
-                    );
-                  })}
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-secondary/40 hover:bg-secondary/40">
+                <TableHead className="w-8" />
+                <TableHead
+                  className="min-w-[180px] max-w-[240px] cursor-pointer select-none"
+                  onClick={() => handleSort('name')}
+                >
+                  <span className="flex items-center gap-1">Fund <SortIcon col="name" /></span>
+                </TableHead>
+                {currentSection.columns.map((col) => {
+                  const sortable = ['amc', 'expenseRatio', 'aum', 'riskLevel', 'cagr1Y', 'cagr3Y', 'cagr5Y'].includes(col.key);
+                  return (
+                    <TableHead
+                      key={col.key}
+                      className={cn(
+                        'whitespace-nowrap text-xs',
+                        col.align === 'right' && 'text-right',
+                        col.align === 'center' && 'text-center',
+                        sortable && 'cursor-pointer select-none'
+                      )}
+                      onClick={sortable ? () => handleSort(col.key as SortKey) : undefined}
+                    >
+                      <span className={cn('flex items-center gap-1', col.align === 'right' && 'justify-end', col.align === 'center' && 'justify-center')}>
+                        {col.label}
+                        {sortable && <SortIcon col={col.key as SortKey} />}
+                      </span>
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visibleFunds.map((fund) => (
+                <TableRow key={fund.id} className="cursor-pointer hover:bg-primary/5 transition-colors" onClick={() => onFundClick(fund)}>
+                  <TableCell className="px-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onBookmarkToggle(fund); }}
+                      className="p-1 hover:bg-secondary/50 rounded"
+                    >
+                      <Bookmark className={cn('h-4 w-4', isInWatchlist(fund.id) ? 'fill-primary text-primary' : 'text-muted-foreground')} />
+                    </button>
+                  </TableCell>
+                  <TableCell className="font-medium text-xs max-w-[240px]">
+                    <span className="line-clamp-2">{fund.name}</span>
+                  </TableCell>
+                  {currentSection.columns.map((col) => (
+                    <TableCell
+                      key={col.key}
+                      className={cn(
+                        'text-xs whitespace-nowrap',
+                        col.align === 'right' && 'text-right',
+                        col.align === 'center' && 'text-center'
+                      )}
+                    >
+                      {renderCellValue(fund, col)}
+                    </TableCell>
+                  ))}
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((fund) => (
-                  <TableRow key={fund.id} className="cursor-pointer hover:bg-primary/5 transition-colors" onClick={() => onFundClick(fund)}>
-                    <TableCell className="sticky left-0 bg-card/90 z-10 px-2">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onBookmarkToggle(fund); }}
-                        className="p-1 hover:bg-secondary/50 rounded"
-                      >
-                        <Bookmark className={cn('h-4 w-4', isInWatchlist(fund.id) ? 'fill-primary text-primary' : 'text-muted-foreground')} />
-                      </button>
-                    </TableCell>
-                    <TableCell className="sticky left-8 bg-card/90 z-10 font-medium text-sm max-w-[240px]">
-                      <span className="line-clamp-2">{fund.name}</span>
-                    </TableCell>
-                    {currentSection.columns.map((col) => (
-                      <TableCell
-                        key={col.key}
-                        className={cn(
-                          'text-sm whitespace-nowrap',
-                          col.align === 'right' && 'text-right',
-                          col.align === 'center' && 'text-center'
-                        )}
-                      >
-                        {renderCellValue(fund, col)}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+              ))}
+            </TableBody>
+          </Table>
+
+          {/* Load More */}
+          {hasMore && (
+            <div className="p-4 text-center border-t border-border/30">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setVisibleCount((c) => c + LOAD_MORE_COUNT)}
+                className="text-xs"
+              >
+                Show More ({filtered.length - visibleCount} remaining)
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

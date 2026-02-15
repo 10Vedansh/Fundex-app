@@ -4,74 +4,113 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { MutualFund } from '@/types/mutualFund';
-import { Calculator, TrendingUp, IndianRupee } from 'lucide-react';
+import { Calculator, IndianRupee } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SIPCalculatorProps {
   fund: MutualFund;
 }
 
+type CalcMode = 'sip' | 'lumpsum';
+
 export function SIPCalculator({ fund }: SIPCalculatorProps) {
+  const [mode, setMode] = useState<CalcMode>('sip');
   const [monthlyAmount, setMonthlyAmount] = useState(5000);
+  const [lumpSumAmount, setLumpSumAmount] = useState(100000);
   const [years, setYears] = useState(5);
 
   const results = useMemo(() => {
-    const monthlyRate = fund.cagr3Y / 100 / 12;
-    const months = years * 12;
-    const totalInvested = monthlyAmount * months;
+    const rate = fund.cagr3Y / 100;
 
-    let futureValue: number;
-    if (monthlyRate === 0) {
-      futureValue = totalInvested;
+    if (mode === 'sip') {
+      const monthlyRate = rate / 12;
+      const months = years * 12;
+      const totalInvested = monthlyAmount * months;
+      let futureValue: number;
+      if (monthlyRate === 0) {
+        futureValue = totalInvested;
+      } else {
+        futureValue =
+          monthlyAmount *
+          ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate) *
+          (1 + monthlyRate);
+      }
+      const wealthGained = futureValue - totalInvested;
+      return { totalInvested, futureValue, wealthGained };
     } else {
-      futureValue =
-        monthlyAmount *
-        ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate) *
-        (1 + monthlyRate);
+      const totalInvested = lumpSumAmount;
+      const futureValue = lumpSumAmount * Math.pow(1 + rate, years);
+      const wealthGained = futureValue - totalInvested;
+      return { totalInvested, futureValue, wealthGained };
     }
-
-    const wealthGained = futureValue - totalInvested;
-
-    return { totalInvested, futureValue, wealthGained };
-  }, [monthlyAmount, years, fund.cagr3Y]);
+  }, [monthlyAmount, lumpSumAmount, years, fund.cagr3Y, mode]);
 
   return (
     <Card className="glass-card border-border/30">
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Calculator className="h-4 w-4 text-primary" />
-          SIP Calculator
+          Investment Calculator
           <span className="text-xs text-muted-foreground font-normal ml-auto">
             Based on 3Y CAGR: {fund.cagr3Y.toFixed(1)}%
           </span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
-        {/* Monthly amount */}
+        {/* Mode Toggle */}
+        <div className="flex justify-center">
+          <div className="inline-flex rounded-full bg-secondary/50 p-1">
+            <button
+              onClick={() => setMode('sip')}
+              className={cn(
+                'px-5 py-1.5 rounded-full text-xs font-semibold transition-all',
+                mode === 'sip' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              SIP
+            </button>
+            <button
+              onClick={() => setMode('lumpsum')}
+              className={cn(
+                'px-5 py-1.5 rounded-full text-xs font-semibold transition-all',
+                mode === 'lumpsum' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              Lump Sum
+            </button>
+          </div>
+        </div>
+
+        {/* Amount input */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label className="text-xs text-muted-foreground">Monthly SIP Amount</Label>
+            <Label className="text-xs text-muted-foreground">
+              {mode === 'sip' ? 'Monthly SIP Amount' : 'One-Time Investment'}
+            </Label>
             <div className="flex items-center gap-1 bg-secondary/50 rounded-md px-2 py-1">
               <IndianRupee className="h-3 w-3 text-muted-foreground" />
               <Input
                 type="number"
-                value={monthlyAmount}
-                onChange={(e) => setMonthlyAmount(Math.max(500, Number(e.target.value)))}
-                className="w-20 h-6 text-xs border-0 bg-transparent p-0 text-right font-semibold"
+                value={mode === 'sip' ? monthlyAmount : lumpSumAmount}
+                onChange={(e) => {
+                  const val = Math.max(mode === 'sip' ? 500 : 1000, Number(e.target.value));
+                  mode === 'sip' ? setMonthlyAmount(val) : setLumpSumAmount(val);
+                }}
+                className="w-24 h-6 text-xs border-0 bg-transparent p-0 text-right font-semibold"
               />
             </div>
           </div>
           <Slider
-            value={[monthlyAmount]}
-            onValueChange={([v]) => setMonthlyAmount(v)}
-            min={500}
-            max={100000}
-            step={500}
+            value={[mode === 'sip' ? monthlyAmount : lumpSumAmount]}
+            onValueChange={([v]) => mode === 'sip' ? setMonthlyAmount(v) : setLumpSumAmount(v)}
+            min={mode === 'sip' ? 500 : 1000}
+            max={mode === 'sip' ? 100000 : 5000000}
+            step={mode === 'sip' ? 500 : 5000}
             className="w-full"
           />
           <div className="flex justify-between text-[10px] text-muted-foreground">
-            <span>₹500</span>
-            <span>₹1,00,000</span>
+            <span>{mode === 'sip' ? '₹500' : '₹1,000'}</span>
+            <span>{mode === 'sip' ? '₹1,00,000' : '₹50,00,000'}</span>
           </div>
         </div>
 
