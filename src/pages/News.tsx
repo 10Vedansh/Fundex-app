@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,36 +17,68 @@ interface NewsArticle {
   imageUrl?: string;
 }
 
+const NEWS_QUERIES = [
+  'mutual funds India',
+  'stock market India investing',
+  'SEBI mutual fund regulation',
+  'SIP investment India',
+  'Indian equity market',
+];
+
 export default function News() {
   const navigate = useNavigate();
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [queryIndex, setQueryIndex] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   useEffect(() => {
-    fetchNews();
+    fetchNews('mutual funds India');
   }, []);
 
-  const fetchNews = async () => {
-    setIsLoading(true);
+  const fetchNews = async (query: string, append = false) => {
+    if (!append) setIsLoading(true);
+    else setLoadingMore(true);
     setError(null);
     try {
       const { data, error: fnError } = await supabase.functions.invoke('fetch-news', {
-        body: { query: 'mutual funds India' },
+        body: { query },
       });
 
       if (fnError) throw fnError;
       if (data?.articles) {
-        setArticles(data.articles);
+        if (append) {
+          setArticles(prev => {
+            // Deduplicate by title
+            const existing = new Set(prev.map(a => a.title));
+            const newArticles = data.articles.filter((a: NewsArticle) => !existing.has(a.title));
+            return [...prev, ...newArticles];
+          });
+        } else {
+          setArticles(data.articles);
+        }
       }
     } catch (err: any) {
       console.error('Failed to fetch news:', err);
-      setError('Unable to load news. Please try again later.');
+      if (!append) setError('Unable to load news. Please try again later.');
     } finally {
       setIsLoading(false);
+      setLoadingMore(false);
     }
   };
+
+  const loadMore = useCallback(() => {
+    const nextIdx = queryIndex + 1;
+    if (nextIdx >= NEWS_QUERIES.length) {
+      setHasMore(false);
+      return;
+    }
+    setQueryIndex(nextIdx);
+    fetchNews(NEWS_QUERIES[nextIdx], true);
+  }, [queryIndex]);
 
   const filteredArticles = search
     ? articles.filter(a =>
@@ -92,7 +124,7 @@ export default function News() {
             <CardContent className="py-12 text-center">
               <Newspaper className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
               <p className="text-muted-foreground mb-4">{error}</p>
-              <Button onClick={fetchNews} variant="outline">Retry</Button>
+              <Button onClick={() => fetchNews('mutual funds India')} variant="outline">Retry</Button>
             </CardContent>
           </Card>
         ) : filteredArticles.length === 0 ? (
@@ -102,49 +134,72 @@ export default function News() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredArticles.map((article, idx) => (
-              <a
-                key={idx}
-                href={article.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group"
-              >
-                <Card className="glass-card h-full border-border/30 hover:border-primary/40 transition-all duration-300 overflow-hidden">
-                  {article.imageUrl && (
-                    <div className="h-40 overflow-hidden">
-                      <img
-                        src={article.imageUrl}
-                        alt={article.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                      />
-                    </div>
-                  )}
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20">
-                        {article.source}
-                      </Badge>
-                      <span className="text-[10px] text-muted-foreground">
-                        {new Date(article.publishedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredArticles.map((article, idx) => (
+                <a
+                  key={idx}
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group"
+                >
+                  <Card className="glass-card h-full border-border/30 hover:border-primary/40 transition-all duration-300 overflow-hidden">
+                    {article.imageUrl && (
+                      <div className="h-40 overflow-hidden">
+                        <img
+                          src={article.imageUrl}
+                          alt={article.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      </div>
+                    )}
+                    <CardContent className="p-5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/20">
+                          {article.source}
+                        </Badge>
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(article.publishedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                      </div>
+                      <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+                        {article.title}
+                      </h3>
+                      <p className="text-xs text-muted-foreground line-clamp-3 mb-3">
+                        {article.description}
+                      </p>
+                      <span className="text-xs text-primary flex items-center gap-1">
+                        Read more <ExternalLink className="h-3 w-3" />
                       </span>
-                    </div>
-                    <h3 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-                      {article.title}
-                    </h3>
-                    <p className="text-xs text-muted-foreground line-clamp-3 mb-3">
-                      {article.description}
-                    </p>
-                    <span className="text-xs text-primary flex items-center gap-1">
-                      Read more <ExternalLink className="h-3 w-3" />
-                    </span>
-                  </CardContent>
-                </Card>
-              </a>
-            ))}
-          </div>
+                    </CardContent>
+                  </Card>
+                </a>
+              ))}
+            </div>
+
+            {/* Load More */}
+            {!search && hasMore && (
+              <div className="flex justify-center mt-10">
+                <Button
+                  variant="outline"
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="px-8"
+                >
+                  {loadingMore ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Loading more...
+                    </>
+                  ) : (
+                    'Load More News'
+                  )}
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>

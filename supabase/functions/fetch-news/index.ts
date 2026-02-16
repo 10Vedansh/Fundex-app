@@ -9,44 +9,34 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { query = 'mutual funds India' } = await req.json().catch(() => ({}));
+    const { query = 'mutual funds India', page = 1 } = await req.json().catch(() => ({}));
 
-    const NEWS_API_KEY = Deno.env.get('NEWS_API_KEY');
-    if (!NEWS_API_KEY) {
-      // Fallback: use GNews free API (no key needed for limited use)
-      const gnewsUrl = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=en&country=in&max=30&apikey=${Deno.env.get('GNEWS_API_KEY') || ''}`;
-      
-      // If no API key at all, return curated static articles
-      if (!Deno.env.get('GNEWS_API_KEY')) {
-        return new Response(
-          JSON.stringify({
-            articles: getStaticArticles(),
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    const GNEWS_API_KEY = Deno.env.get('GNEWS_API_KEY');
 
-      const resp = await fetch(gnewsUrl);
-      const data = await resp.json();
-
-      const articles = (data.articles || []).map((a: any) => ({
-        title: a.title,
-        description: a.description,
-        url: a.url,
-        source: a.source?.name || 'Unknown',
-        publishedAt: a.publishedAt,
-        imageUrl: a.image,
-      }));
-
+    if (!GNEWS_API_KEY) {
+      console.log('No GNEWS_API_KEY configured, returning static articles');
       return new Response(
-        JSON.stringify({ articles }),
+        JSON.stringify({ articles: getStaticArticles() }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // NewsAPI.org
-    const newsUrl = `https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&language=en&sortBy=publishedAt&pageSize=30&apiKey=${NEWS_API_KEY}`;
-    const resp = await fetch(newsUrl);
+    // GNews API – max 100 articles per day on free tier
+    const gnewsUrl = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=en&country=in&max=10&page=${page}&apikey=${GNEWS_API_KEY}`;
+    
+    console.log(`Fetching news from GNews: query="${query}", page=${page}`);
+    const resp = await fetch(gnewsUrl);
+    
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.error('GNews API error:', resp.status, errText);
+      // Fallback to static on API error
+      return new Response(
+        JSON.stringify({ articles: getStaticArticles() }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const data = await resp.json();
 
     const articles = (data.articles || []).map((a: any) => ({
@@ -55,11 +45,13 @@ Deno.serve(async (req) => {
       url: a.url,
       source: a.source?.name || 'Unknown',
       publishedAt: a.publishedAt,
-      imageUrl: a.urlToImage,
+      imageUrl: a.image,
     }));
 
+    console.log(`Fetched ${articles.length} articles from GNews`);
+
     return new Response(
-      JSON.stringify({ articles }),
+      JSON.stringify({ articles, totalArticles: data.totalArticles || articles.length }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
