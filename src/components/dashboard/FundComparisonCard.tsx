@@ -28,52 +28,56 @@ export const FundComparisonCard = ({ fundA, fundB }: FundComparisonCardProps) =>
     return a < b ? 'A' : 'B';
   };
 
+  const safe = (v: number | undefined | null) => (v != null && !isNaN(v)) ? v : 0;
+  const fmt1 = (v: number | undefined | null) => `${safe(v).toFixed(1)}%`;
+  const fmt2 = (v: number | undefined | null) => safe(v).toFixed(2);
+
   const metrics: ComparisonMetric[] = [
     {
       label: '1Y Returns',
-      valueA: `${fundA.cagr1Y.toFixed(1)}%`,
-      valueB: `${fundB.cagr1Y.toFixed(1)}%`,
-      winner: getWinner(fundA.cagr1Y, fundB.cagr1Y, true),
+      valueA: fmt1(fundA.cagr1Y),
+      valueB: fmt1(fundB.cagr1Y),
+      winner: getWinner(safe(fundA.cagr1Y), safe(fundB.cagr1Y), true),
       icon: <TrendingUp className="h-4 w-4" />,
       higherIsBetter: true,
     },
     {
       label: '3Y Returns',
-      valueA: `${fundA.cagr3Y.toFixed(1)}%`,
-      valueB: `${fundB.cagr3Y.toFixed(1)}%`,
-      winner: getWinner(fundA.cagr3Y, fundB.cagr3Y, true),
+      valueA: fmt1(fundA.cagr3Y),
+      valueB: fmt1(fundB.cagr3Y),
+      winner: getWinner(safe(fundA.cagr3Y), safe(fundB.cagr3Y), true),
       icon: <TrendingUp className="h-4 w-4" />,
       higherIsBetter: true,
     },
     {
       label: 'Expense Ratio',
-      valueA: `${fundA.expenseRatio.toFixed(2)}%`,
-      valueB: `${fundB.expenseRatio.toFixed(2)}%`,
-      winner: getWinner(fundA.expenseRatio, fundB.expenseRatio, false),
+      valueA: `${fmt2(fundA.expenseRatio)}%`,
+      valueB: `${fmt2(fundB.expenseRatio)}%`,
+      winner: getWinner(safe(fundA.expenseRatio), safe(fundB.expenseRatio), false),
       icon: <Percent className="h-4 w-4" />,
       higherIsBetter: false,
     },
     {
       label: 'Sharpe Ratio',
-      valueA: fundA.sharpeRatio.toFixed(2),
-      valueB: fundB.sharpeRatio.toFixed(2),
-      winner: getWinner(fundA.sharpeRatio, fundB.sharpeRatio, true),
+      valueA: fmt2(fundA.sharpeRatio),
+      valueB: fmt2(fundB.sharpeRatio),
+      winner: getWinner(safe(fundA.sharpeRatio), safe(fundB.sharpeRatio), true),
       icon: <Scale className="h-4 w-4" />,
       higherIsBetter: true,
     },
     {
       label: 'AUM (Cr)',
-      valueA: `₹${fundA.aum.toLocaleString()}`,
-      valueB: `₹${fundB.aum.toLocaleString()}`,
-      winner: getWinner(fundA.aum, fundB.aum, true),
+      valueA: `₹${safe(fundA.aum).toLocaleString()}`,
+      valueB: `₹${safe(fundB.aum).toLocaleString()}`,
+      winner: getWinner(safe(fundA.aum), safe(fundB.aum), true),
       icon: <BarChart3 className="h-4 w-4" />,
       higherIsBetter: true,
     },
     {
       label: 'Volatility',
-      valueA: `${fundA.volatility.toFixed(1)}%`,
-      valueB: `${fundB.volatility.toFixed(1)}%`,
-      winner: getWinner(fundA.volatility, fundB.volatility, false),
+      valueA: fmt1(fundA.volatility),
+      valueB: fmt1(fundB.volatility),
+      winner: getWinner(safe(fundA.volatility), safe(fundB.volatility), false),
       icon: <Shield className="h-4 w-4" />,
       higherIsBetter: false,
     },

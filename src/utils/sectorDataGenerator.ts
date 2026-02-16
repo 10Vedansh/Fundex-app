@@ -42,12 +42,13 @@ function generateSectorAllocations(fund: MutualFund): SectorAllocation[] {
   let numSectors: number;
   
   // Determine sectors based on fund category
-  if (fund.category === 'Debt' || fund.category === 'Liquid') {
+  const cat = (fund.category || '').toUpperCase();
+  if (cat.startsWith('DT-') || cat === 'DEBT' || cat === 'LIQUID') {
     availableSectors = [...debtSectors];
-    numSectors = 4 + Math.floor(random() * 4); // 4-7 sectors
-  } else if (fund.category === 'Hybrid') {
+    numSectors = 4 + Math.floor(random() * 4);
+  } else if (cat.startsWith('HY-') || cat === 'HYBRID') {
     availableSectors = [...hybridSectors];
-    numSectors = 5 + Math.floor(random() * 4); // 5-8 sectors
+    numSectors = 5 + Math.floor(random() * 4);
   } else {
     availableSectors = [...equitySectors];
     numSectors = 6 + Math.floor(random() * 6); // 6-11 sectors
