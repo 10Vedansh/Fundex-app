@@ -3,11 +3,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MutualFund, FundSectorData } from '@/types/mutualFund';
-import { SectorAllocationChart } from './SectorAllocationChart';
 import { ReturnAnalysisChart } from './ReturnAnalysisChart';
 import { SIPCalculator } from './SIPCalculator';
 import { FundNewsSection } from './FundNewsSection';
-import { TrendingUp, TrendingDown, Shield, Zap, Target, AlertTriangle, Users, Ban, Plus } from 'lucide-react';
+import { HoldingsTable } from './HoldingsTable';
+import { HoldingAnalysisCharts } from './HoldingAnalysisCharts';
+import { TermTooltip } from './TermTooltip';
+import { generateInvestmentGuidance } from '@/utils/investmentGuidance';
+import { TrendingUp, TrendingDown, Shield, Zap, Target, AlertTriangle, ThumbsUp, ThumbsDown, Plus } from 'lucide-react';
 
 interface FundDetailModalProps {
   fund: MutualFund | null;
@@ -15,6 +18,7 @@ interface FundDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddToPortfolio?: (fund: MutualFund) => void;
+  userRiskProfile?: string;
 }
 
 function getRiskIcon(riskLevel: string) {
@@ -35,72 +39,24 @@ function getRiskColor(riskLevel: string) {
   }
 }
 
-function generateInvestorGuidance(fund: MutualFund) {
-  const shouldInvest: string[] = [];
-  const shouldAvoid: string[] = [];
-
-  // Based on risk level
-  if (fund.riskLevel === 'Low') {
-    shouldInvest.push('Conservative investors seeking capital preservation');
-    shouldInvest.push('Retirees looking for stable income');
-    shouldAvoid.push('Aggressive investors seeking high growth');
-  } else if (fund.riskLevel === 'High') {
-    shouldInvest.push('Aggressive investors with long-term horizon');
-    shouldInvest.push('Young professionals with high risk appetite');
-    shouldAvoid.push('Risk-averse investors nearing retirement');
-    shouldAvoid.push('Those needing funds within 3 years');
-  } else {
-    shouldInvest.push('Balanced investors seeking moderate growth');
-    shouldInvest.push('Those with 5+ year investment horizon');
-  }
-
-  // Based on category
-  if (fund.category === 'Equity') {
-    shouldInvest.push('Investors seeking inflation-beating returns');
-    shouldAvoid.push('Those uncomfortable with market volatility');
-  } else if (fund.category === 'Debt') {
-    shouldInvest.push('Investors prioritizing capital safety');
-    shouldAvoid.push('Those seeking aggressive wealth creation');
-  } else if (fund.category === 'Liquid') {
-    shouldInvest.push('Those needing high liquidity for emergencies');
-    shouldAvoid.push('Long-term wealth creation goals');
-  }
-
-  // Based on expense ratio
-  if (fund.expenseRatio < 0.5) {
-    shouldInvest.push('Cost-conscious investors');
-  } else if (fund.expenseRatio > 1.5) {
-    shouldAvoid.push('Those sensitive to fund costs');
-  }
-
-  return { shouldInvest: shouldInvest.slice(0, 4), shouldAvoid: shouldAvoid.slice(0, 3) };
-}
-
-export function FundDetailModal({ fund, sectorData, isOpen, onClose, onAddToPortfolio }: FundDetailModalProps) {
+export function FundDetailModal({ fund, sectorData, isOpen, onClose, onAddToPortfolio, userRiskProfile }: FundDetailModalProps) {
   if (!fund) return null;
 
-  const guidance = generateInvestorGuidance(fund);
+  const guidance = generateInvestmentGuidance(fund, userRiskProfile);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto glass-card border-border/50 p-0">
         <DialogHeader className="p-6 pb-4 border-b border-border/30">
           <div className="flex flex-wrap items-center gap-3 justify-between">
-            {/* Add to Portfolio button on LEFT */}
             <div className="flex items-center gap-2">
               {onAddToPortfolio && (
-                <Button 
-                  size="sm" 
-                  onClick={() => onAddToPortfolio(fund)}
-                  className="gap-2"
-                >
+                <Button size="sm" onClick={() => onAddToPortfolio(fund)} className="gap-2">
                   <Plus className="h-4 w-4" />
                   Add to Portfolio
                 </Button>
               )}
             </div>
-            
-            {/* Badges on RIGHT */}
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className={getRiskColor(fund.riskLevel)}>
                 {getRiskIcon(fund.riskLevel)}
@@ -121,70 +77,42 @@ export function FundDetailModal({ fund, sectorData, isOpen, onClose, onAddToPort
         </DialogHeader>
 
         <div className="p-6 space-y-6">
-          {/* Key Metrics Grid */}
+          {/* Key Metrics Grid with tooltips */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <MetricCard 
-              label="1Y CAGR" 
-              value={`${fund.cagr1Y.toFixed(1)}%`} 
-              positive={fund.cagr1Y > 0}
-            />
-            <MetricCard 
-              label="3Y CAGR" 
-              value={`${fund.cagr3Y.toFixed(1)}%`} 
-              positive={fund.cagr3Y > 0}
-            />
-            <MetricCard 
-              label="5Y CAGR" 
-              value={`${fund.cagr5Y.toFixed(1)}%`} 
-              positive={fund.cagr5Y > 0}
-            />
-            <MetricCard 
-              label="NAV" 
-              value={`₹${fund.nav.toFixed(2)}`} 
-            />
-            <MetricCard 
-              label="Volatility" 
-              value={`${fund.volatility.toFixed(1)}%`} 
-            />
-            <MetricCard 
-              label="Sharpe Ratio" 
-              value={fund.sharpeRatio.toFixed(2)} 
-            />
-            <MetricCard 
-              label="Expense Ratio" 
-              value={`${fund.expenseRatio.toFixed(2)}%`} 
-            />
-            <MetricCard 
-              label="AUM" 
-              value={`₹${(fund.aum / 1000).toFixed(1)}K Cr`} 
-            />
+            <MetricCard label="1Y CAGR" term="1Y CAGR" value={`${fund.cagr1Y.toFixed(1)}%`} positive={fund.cagr1Y > 0} />
+            <MetricCard label="3Y CAGR" term="3Y CAGR" value={`${fund.cagr3Y.toFixed(1)}%`} positive={fund.cagr3Y > 0} />
+            <MetricCard label="5Y CAGR" term="5Y CAGR" value={`${fund.cagr5Y.toFixed(1)}%`} positive={fund.cagr5Y > 0} />
+            <MetricCard label="NAV" term="NAV" value={`₹${fund.nav.toFixed(2)}`} />
+            <MetricCard label="Volatility" term="Volatility" value={`${fund.volatility.toFixed(1)}%`} />
+            <MetricCard label="Sharpe Ratio" term="Sharpe Ratio" value={fund.sharpeRatio.toFixed(2)} />
+            <MetricCard label="Expense Ratio" term="Expense Ratio" value={`${fund.expenseRatio.toFixed(2)}%`} />
+            <MetricCard label="AUM" term="AUM" value={`₹${(fund.aum / 1000).toFixed(1)}K Cr`} />
           </div>
 
-          {/* Return Analysis Chart - Replaces Risk vs Return */}
+          {/* NAV Performance Chart with timeframe selector */}
           <ReturnAnalysisChart fund={fund} />
 
-          {/* Sector Allocation */}
-          {sectorData && (
-            <div className="grid grid-cols-1">
-              <SectorAllocationChart sectorData={sectorData} />
-            </div>
-          )}
+          {/* Holdings Table */}
+          <HoldingsTable fund={fund} />
 
-          {/* Who Should Invest / Avoid */}
+          {/* Holding Analysis - Asset Split & Sector Split side by side */}
+          <HoldingAnalysisCharts fund={fund} />
+
+          {/* Why Should You Invest / Avoid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="glass-card border-success/30 bg-success/5">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2 text-success">
-                  <Users className="h-4 w-4" />
-                  Who Should Invest
+                  <ThumbsUp className="h-4 w-4" />
+                  Why Should You Invest
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2">
-                  {guidance.shouldInvest.map((item, idx) => (
+                <ul className="space-y-2.5">
+                  {guidance.whyInvest.map((item, idx) => (
                     <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
-                      <span className="text-success mt-1">•</span>
-                      {item}
+                      <span className="text-success mt-0.5 font-bold">✓</span>
+                      <span>{item}</span>
                     </li>
                   ))}
                 </ul>
@@ -194,16 +122,16 @@ export function FundDetailModal({ fund, sectorData, isOpen, onClose, onAddToPort
             <Card className="glass-card border-destructive/30 bg-destructive/5">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2 text-destructive">
-                  <Ban className="h-4 w-4" />
-                  Who Should Avoid
+                  <ThumbsDown className="h-4 w-4" />
+                  Why Should You Avoid
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2">
-                  {guidance.shouldAvoid.map((item, idx) => (
+                <ul className="space-y-2.5">
+                  {guidance.whyAvoid.map((item, idx) => (
                     <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
-                      <span className="text-destructive mt-1">•</span>
-                      {item}
+                      <span className="text-destructive mt-0.5 font-bold">✗</span>
+                      <span>{item}</span>
                     </li>
                   ))}
                 </ul>
@@ -230,10 +158,13 @@ export function FundDetailModal({ fund, sectorData, isOpen, onClose, onAddToPort
   );
 }
 
-function MetricCard({ label, value, positive }: { label: string; value: string; positive?: boolean }) {
+function MetricCard({ label, value, positive, term }: { label: string; value: string; positive?: boolean; term?: string }) {
   return (
-    <div className="p-3 rounded-lg bg-secondary/30 border border-border/30">
-      <p className="text-xs text-muted-foreground mb-1">{label}</p>
+    <div className="p-3 rounded-lg bg-secondary/30 border border-border/30 relative">
+      <div className="flex items-center gap-1">
+        <p className="text-xs text-muted-foreground mb-1">{label}</p>
+        {term && <TermTooltip term={term} className="mb-1" />}
+      </div>
       <p className={`text-lg font-semibold ${
         positive !== undefined 
           ? positive ? 'text-success' : 'text-destructive'

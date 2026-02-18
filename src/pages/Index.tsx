@@ -187,18 +187,38 @@ const Index = () => {
   // Generate educational insights for portfolio
   const getPortfolioInsight = (item: PortfolioItem): { type: 'continue' | 'review' | 'reduce'; message: string } => {
     const fund = funds.find(f => f.id === item.fund_id);
-    if (!fund) return { type: 'review', message: 'Fund data not available' };
+    if (!fund) return { type: 'review', message: 'Fund data not available for analysis' };
 
-    if (fund.sharpeRatio >= 1.5 && fund.cagr1Y > 15) {
-      return { type: 'continue', message: 'Strong risk-adjusted returns. Consider continuing.' };
+    const cat = fund.category || '';
+    const isEquity = cat.startsWith('EQ-') || cat === 'Equity';
+    const isDebt = cat.startsWith('DT-') || cat === 'Debt';
+
+    // Multi-factor smart analysis
+    if (fund.sharpeRatio >= 1.5 && fund.cagr1Y > 15 && fund.expenseRatio < 1.5) {
+      return { type: 'continue', message: `Strong risk-adjusted performance with Sharpe ${fund.sharpeRatio.toFixed(2)} and ${fund.cagr1Y.toFixed(1)}% 1Y return. Low expense ratio keeps costs efficient. Consider continuing SIP or holding.` };
     }
-    if (fund.sharpeRatio < 0.8 || fund.cagr1Y < 5) {
-      return { type: 'review', message: 'Below average performance. Consider reviewing.' };
+    if (fund.cagr1Y > 25 && fund.volatility > 20) {
+      return { type: 'review', message: `High returns (${fund.cagr1Y.toFixed(1)}%) but elevated volatility (${fund.volatility.toFixed(1)}%). The fund may be in a momentum phase. Review if it aligns with your risk capacity and rebalance if overweight.` };
     }
-    if (fund.expenseRatio > 2) {
-      return { type: 'reduce', message: 'High expense ratio. Consider reducing exposure.' };
+    if (fund.sharpeRatio < 0.5 && fund.cagr1Y < 5 && isEquity) {
+      return { type: 'reduce', message: `Underperforming with ${fund.cagr1Y.toFixed(1)}% return and weak Sharpe ratio (${fund.sharpeRatio.toFixed(2)}) for an equity fund. Consider switching to a better-rated fund in the same category.` };
     }
-    return { type: 'continue', message: 'Performance in line with expectations.' };
+    if (fund.expenseRatio > 2.0) {
+      return { type: 'review', message: `High expense ratio of ${fund.expenseRatio.toFixed(2)}% is eroding returns. Over 10 years, this could cost ₹${Math.round(((item.invested_amount || 50000) * 0.02) * 10 / 1000)}K+ in fees. Consider a direct plan or lower-cost alternative.` };
+    }
+    if (isDebt && fund.cagr1Y > 7) {
+      return { type: 'continue', message: `Solid ${fund.cagr1Y.toFixed(1)}% return for a debt fund with low volatility (${fund.volatility.toFixed(1)}%). Good for capital preservation and regular income goals.` };
+    }
+    if (fund.beta !== undefined && fund.beta > 1.3 && isEquity) {
+      return { type: 'review', message: `High beta (${fund.beta.toFixed(2)}) means this fund amplifies market swings. In a 10% correction, expect ~${(10 * fund.beta).toFixed(0)}% fall. Suitable only if your horizon is 5+ years.` };
+    }
+    if (fund.cagr3Y > 12 && fund.cagr5Y > 10) {
+      return { type: 'continue', message: `Consistent multi-year performer: ${fund.cagr3Y.toFixed(1)}% (3Y) and ${fund.cagr5Y.toFixed(1)}% (5Y) CAGR. Long-term compounding is working in your favor.` };
+    }
+    if (fund.cagr1Y < 0) {
+      return { type: 'review', message: `Currently in negative territory (${fund.cagr1Y.toFixed(1)}%). Evaluate if the downturn is market-wide or fund-specific. If the fund's 3Y track record is strong, consider averaging down via SIP.` };
+    }
+    return { type: 'continue', message: `Performance within expectations for a ${fund.category} fund. Sharpe: ${fund.sharpeRatio.toFixed(2)}, Expense: ${fund.expenseRatio.toFixed(2)}%. Continue monitoring quarterly.` };
   };
 
   if (authLoading) {
@@ -503,6 +523,7 @@ const Index = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onAddToPortfolio={handleAddToPortfolio}
+        userRiskProfile={profile?.risk_tolerance || undefined}
       />
 
       {/* Add to Portfolio Dialog */}

@@ -30,6 +30,7 @@ import {
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { faqs as sharedFaqs } from '@/data/faqData';
 
 // Lazy load the 3D background to prevent blocking
 const ThreeBackground = lazy(() => import('@/components/landing/ThreeBackground').then(m => ({ default: m.ThreeBackground })));
@@ -78,32 +79,7 @@ export default function Landing() {
     );
   }, []);
 
-  const faqs = [
-    { 
-      q: 'What is CIFRAA?', 
-      a: 'CIFRAA is an educational platform that helps users explore and understand mutual fund data through clear metrics, visual comparisons, and personalized discovery tools.' 
-    },
-    { 
-      q: 'Is CIFRAA free to use?', 
-      a: 'Yes, CIFRAA offers free access to core features including fund analysis, comparisons, watchlist functionality, and portfolio tracking.' 
-    },
-    { 
-      q: 'Does CIFRAA provide investment advice?', 
-      a: 'No. CIFRAA provides educational insights and data analysis tools only. We do not offer investment advice or recommendations.' 
-    },
-    { 
-      q: 'How does personalization work?', 
-      a: 'During onboarding, you answer questions about your risk tolerance, timeline, and goals. CIFRAA filters funds that align with your profile—not as recommendations, but as relevant options to explore.' 
-    },
-    { 
-      q: 'Where does the data come from?', 
-      a: 'CIFRAA aggregates publicly available mutual fund data from AMFI and fund house disclosures. Data is refreshed daily after market close.' 
-    },
-    { 
-      q: 'Is my data secure?', 
-      a: 'Yes. We use industry-standard encryption. Your information is stored securely and never shared with third parties.' 
-    },
-  ];
+  const faqs = sharedFaqs;
 
   const features = [
     {
@@ -581,7 +557,7 @@ export default function Landing() {
                   <AccordionTrigger className="text-left hover:no-underline py-5 text-lg font-medium">
                     {faq.q}
                   </AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground pb-5 text-base leading-relaxed">
+                <AccordionContent className="text-muted-foreground pb-5 text-base leading-relaxed whitespace-pre-line">
                     {faq.a}
                   </AccordionContent>
                 </AccordionItem>
