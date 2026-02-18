@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { MutualFund } from '@/types/mutualFund';
 import { TrendingUp, TrendingDown, BarChart3, Percent, Bookmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { TermTooltip } from './TermTooltip';
 
 interface FundCardProps {
   fund: MutualFund;
@@ -58,7 +59,6 @@ export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle
       )}
       onClick={onClick}
     >
-      {/* Bookmark Button - integrated inside card */}
       <Button
         size="sm"
         variant="ghost"
@@ -103,6 +103,7 @@ export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle
                 <TrendingDown className="h-4 w-4 text-destructive" />
               )}
               <span>1Y CAGR</span>
+              <TermTooltip term="1Y CAGR" />
             </div>
             <p className={cn(
               "text-xl font-bold",
@@ -117,6 +118,7 @@ export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <BarChart3 className="h-4 w-4" />
               <span>Volatility</span>
+              <TermTooltip term="Volatility" />
             </div>
             <p className="text-xl font-bold text-foreground">
               {fund.volatility.toFixed(1)}%
@@ -127,6 +129,7 @@ export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <span>Sharpe</span>
+              <TermTooltip term="Sharpe" />
             </div>
             <p className="text-xl font-bold text-foreground">
               {fund.sharpeRatio.toFixed(2)}
@@ -138,6 +141,7 @@ export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle
             <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <Percent className="h-4 w-4" />
               <span>Expense</span>
+              <TermTooltip term="Expense" />
             </div>
             <p className="text-xl font-bold text-foreground">
               {fund.expenseRatio.toFixed(2)}%
@@ -147,8 +151,8 @@ export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle
 
         {/* Bottom Stats */}
         <div className="mt-5 pt-4 border-t border-border/50 flex justify-between text-sm text-muted-foreground">
-          <span>NAV: ₹{fund.nav.toFixed(2)}</span>
-          <span>AUM: ₹{fund.aum.toLocaleString()}Cr</span>
+          <span className="flex items-center gap-1">NAV: ₹{fund.nav.toFixed(2)} <TermTooltip term="NAV" /></span>
+          <span className="flex items-center gap-1">AUM: ₹{fund.aum.toLocaleString()}Cr <TermTooltip term="AUM" /></span>
         </div>
       </CardContent>
     </Card>
