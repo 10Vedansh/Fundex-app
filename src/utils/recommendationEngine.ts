@@ -504,15 +504,15 @@ export function recommendFunds(funds: MutualFund[], prefs: UserPreferences): Sco
     }
   }
 
-  // Step 4: Fill remaining slots from top scores (target 8)
-  if (finalPortfolio.length < 8) {
+  // Step 4: Fill remaining slots from top scores (target 9)
+  if (finalPortfolio.length < 9) {
     const groupCount: Record<string, number> = {};
     finalPortfolio.forEach(f => {
       groupCount[f.group] = (groupCount[f.group] || 0) + 1;
     });
 
     for (const fund of scored) {
-      if (finalPortfolio.length >= 8) break;
+      if (finalPortfolio.length >= 9) break;
       if (finalPortfolio.some(f => f.id === fund.id)) continue;
       if (isDuplicateExposure(fund.name, usedNames)) continue;
       if (isThematicOverloaded(fund.name, usedThemes)) continue;
@@ -529,5 +529,5 @@ export function recommendFunds(funds: MutualFund[], prefs: UserPreferences): Sco
     }
   }
 
-  return finalPortfolio.slice(0, 8);
+  return finalPortfolio.slice(0, 9);
 }

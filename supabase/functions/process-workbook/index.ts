@@ -7,37 +7,37 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Column mappings for each sheet type
+// Updated column mappings matching the new Excel structure
 const EQUITY_COLS = [
-  'name', 'category', 'launch', 'netAssets', 'marketCap',
+  'name', 'beta', 'alpha', 'category', 'launch', 'netAssets', 'marketCap',
   'ret1W', 'ret1M', 'ret3M', 'ret6M', 'ret1Y', 'ret3Y', 'ret5Y', 'ret10Y',
   'latestNav', 'previousNav', 'high52W', 'low52W',
-  'expenseRatio', 'turnover', 'stdDev', 'sharpeRatio', 'sortinoRatio', 'beta', 'alpha',
+  'expenseRatio', 'turnover', 'stdDev', 'sharpeRatio', 'sortinoRatio',
   'minInvestment', 'exitLoad', 'fundManager',
 ];
 
 const DEBT_COLS = [
-  'name', 'category', 'launch', 'netAssets', 'avgCreditQuality', 'avgMaturity', 'ytm',
+  'name', 'stdDev', 'beta', 'sharpeRatio', 'sortinoRatio', 'alpha',
+  'category', 'launch', 'netAssets', 'avgCreditQuality', 'avgMaturity', 'ytm',
   'ret1W', 'ret1M', 'ret3M', 'ret6M', 'ret1Y', 'ret3Y', 'ret5Y', 'ret10Y',
   'latestNav', 'previousNav', 'high52W', 'low52W',
-  'expenseRatio', 'turnover', 'stdDev', 'sharpeRatio', 'sortinoRatio', 'beta', 'alpha',
-  'infoRatio', 'rSquared', 'minInvestment', 'exitLoad', 'fundManager',
+  'expenseRatio', 'minInvestment', 'exitLoad', 'fundManager',
 ];
 
 const HYBRID_COLS = [
-  'name', 'category', 'launch', 'netAssets', 'avgCreditQuality', 'avgMaturity', 'ytm', 'marketCap',
+  'name', 'stdDev', 'sharpeRatio', 'sortinoRatio', 'beta', 'alpha',
+  'category', 'launch', 'netAssets', 'avgCreditQuality', 'avgMaturity', 'ytm', 'marketCap',
   'ret1W', 'ret1M', 'ret3M', 'ret6M', 'ret1Y', 'ret3Y', 'ret5Y', 'ret10Y',
   'latestNav', 'previousNav', 'high52W', 'low52W',
-  'expenseRatio', 'turnover', 'stdDev', 'sharpeRatio', 'sortinoRatio', 'beta', 'alpha',
-  'infoRatio', 'rSquared', 'minInvestment', 'exitLoad', 'fundManager',
+  'expenseRatio', 'minInvestment', 'exitLoad', 'fundManager',
 ];
 
 const COMMODITY_COLS = [
   'name', 'category', 'launch', 'netAssets',
-  'ret1W', 'ret1M', 'ret3M', 'ret1Y', 'ret5Y', 'ret10Y',
+  'ret1W', 'ret1M', 'ret3M', 'ret6M', 'ret1Y', 'ret3Y', 'ret5Y', 'ret10Y',
   'latestNav', 'previousNav', 'high52W', 'low52W',
   'expenseRatio', 'turnover', 'stdDev', 'sharpeRatio', 'sortinoRatio', 'beta', 'alpha',
-  'infoRatio', 'rSquared', 'minInvestment', 'exitLoad', 'fundManager',
+  'minInvestment', 'exitLoad', 'fundManager',
 ];
 
 const SHEET_CONFIG = [
@@ -50,6 +50,7 @@ const SHEET_CONFIG = [
 function parseNumber(val: unknown): number | null {
   if (val === null || val === undefined || val === '' || val === '--' || val === '-' || val === 'N/A') return null;
   const str = String(val).replace(/,/g, '').trim();
+  if (str === '`') return null; // handle backtick
   const num = parseFloat(str);
   return isNaN(num) ? null : num;
 }
@@ -71,7 +72,6 @@ function getRiskLevel(category: string, stdDev: number | null): string {
     return 'Moderate';
   }
   if (cat.includes('gold') || cat.includes('silver')) return 'Moderate';
-  // Equity
   if (stdDev && stdDev > 18) return 'High';
   if (stdDev && stdDev > 12) return 'Moderate';
   return 'Moderate';
@@ -85,12 +85,10 @@ function getStrengthBadge(sharpe: number | null): string {
 }
 
 function generateId(name: string, index: number): string {
-  // Create a stable ID from fund name
   return name.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50) + '_' + index;
 }
 
 function extractAmc(name: string): string {
-  // Extract AMC from fund name (text before first fund type keyword)
   const patterns = [
     /^(.*?)\s+(Liquid|Overnight|Money|Corporate|Credit|Gilt|Dynamic|Short|Medium|Long|Ultra|Floating|Banking|Arbitrage|Balanced|Aggressive|Conservative|Equity|Flexi|Multi|Large|Mid|Small|ELSS|Index|Nifty|BSE|Gold|Silver|ETF|FoF|Fund|Focused|Dividend|Value|Contra|Infrastructure|Healthcare|Digital|Consumption|Energy|PSU|IT|Pharma|Thematic|Sectoral|Innovation|Business|Quant|ESG)/i
   ];
@@ -99,13 +97,11 @@ function extractAmc(name: string): string {
     const match = name.match(pattern);
     if (match && match[1]) {
       let amc = match[1].trim();
-      // Remove trailing dashes
       amc = amc.replace(/\s*-\s*$/, '').trim();
       if (amc.length > 3) return amc;
     }
   }
   
-  // Fallback: take first 2-3 words
   const words = name.split(/\s+/);
   return words.slice(0, 3).join(' ');
 }
@@ -114,14 +110,11 @@ function processSheet(worksheet: XLSX.WorkSheet, colMapping: string[], assetClas
   const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
   const funds: any[] = [];
   
-  // Skip header row (index 0)
   for (let i = 1; i < jsonData.length; i++) {
     const row = jsonData[i] as any[];
     if (!row || !row[0] || String(row[0]).trim() === '') continue;
     
     const name = String(row[0]).trim();
-    
-    // Skip category legend rows (they contain "→")
     if (name.includes('→') || name.includes('🔹') || name.includes('🔸')) continue;
     
     const fund: Record<string, any> = { assetClass };
@@ -147,23 +140,24 @@ function processSheet(worksheet: XLSX.WorkSheet, colMapping: string[], assetClas
       }
     }
     
-    // Only include funds with a valid name and at least some data
     if (fund.name && fund.name.length > 5) {
       fund.id = generateId(fund.name, i);
       fund.amc = extractAmc(fund.name);
       fund.riskLevel = getRiskLevel(fund.category || '', fund.stdDev);
       fund.strengthBadge = getStrengthBadge(fund.sharpeRatio);
       
-      // Map to unified fields
+      // Map to unified fields - use null instead of 0 for missing data
       fund.nav = fund.latestNav || 0;
       fund.aum = fund.netAssets || 0;
-      fund.cagr1Y = fund.ret1Y || 0;
-      fund.cagr3Y = fund.ret3Y || 0;
-      fund.cagr5Y = fund.ret5Y || 0;
-      fund.volatility = fund.stdDev || 0;
+      fund.cagr1Y = fund.ret1Y ?? null;
+      fund.cagr3Y = fund.ret3Y ?? null;
+      fund.cagr5Y = fund.ret5Y ?? null;
+      fund.volatility = fund.stdDev ?? null;
       fund.minInvestment = fund.minInvestment || 500;
       fund.rank = 0;
       fund.benchmark = '';
+      
+      // Keep beta, alpha, sharpeRatio, sortinoRatio as-is (null if missing)
       
       funds.push(fund);
     }
@@ -184,7 +178,6 @@ serve(async (req) => {
 
     console.log("Downloading workbook from storage...");
     
-    // Download the Excel file from Supabase Storage
     const { data: fileData, error: downloadError } = await supabase
       .storage
       .from('data-files')
@@ -196,7 +189,6 @@ serve(async (req) => {
 
     console.log("Parsing workbook...");
     
-    // Parse Excel file
     const arrayBuffer = await fileData.arrayBuffer();
     const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
     
@@ -204,7 +196,6 @@ serve(async (req) => {
 
     const allFunds: any[] = [];
     
-    // Process each sheet
     for (let sheetIndex = 0; sheetIndex < Math.min(workbook.SheetNames.length, SHEET_CONFIG.length); sheetIndex++) {
       const sheetName = workbook.SheetNames[sheetIndex];
       const config = SHEET_CONFIG[sheetIndex];
@@ -231,17 +222,10 @@ serve(async (req) => {
 
     console.log(`Total funds processed: ${allFunds.length}`);
 
-    // Save to fund_cache - one entry for workbook data
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 year expiry
+    const expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
 
-    // Delete existing workbook cache
-    await supabase
-      .from('fund_cache')
-      .delete()
-      .eq('cache_key', 'workbook_data');
-
-    // Insert new cache
+    await supabase.from('fund_cache').delete().eq('cache_key', 'workbook_data');
     const { error: insertError } = await supabase
       .from('fund_cache')
       .insert({
@@ -255,20 +239,13 @@ serve(async (req) => {
       throw new Error(`Failed to save to cache: ${insertError.message}`);
     }
 
-    // Also save the combined data as mf_data for backward compatibility
-    await supabase
-      .from('fund_cache')
-      .delete()
-      .eq('cache_key', 'mf_data');
-
-    await supabase
-      .from('fund_cache')
-      .insert({
-        cache_key: 'mf_data',
-        data: allFunds,
-        last_updated: now.toISOString(),
-        expires_at: expiresAt.toISOString(),
-      });
+    await supabase.from('fund_cache').delete().eq('cache_key', 'mf_data');
+    await supabase.from('fund_cache').insert({
+      cache_key: 'mf_data',
+      data: allFunds,
+      last_updated: now.toISOString(),
+      expires_at: expiresAt.toISOString(),
+    });
 
     console.log("Workbook data cached successfully!");
 
