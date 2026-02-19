@@ -432,13 +432,13 @@ export function AllFundsTab({
       </div>
 
       {/* Section tabs */}
-      <div className="flex gap-1 flex-wrap mb-0 border-b border-border/40 pb-0">
+      <div className="flex gap-0 mb-0 border-b border-border/40 pb-0">
         {SECTIONS.map((sec) => (
           <button
             key={sec.id}
             onClick={() => setActiveSection(sec.id)}
             className={cn(
-              'px-4 py-2.5 text-xs font-medium transition-all border-b-2 -mb-[1px]',
+              'flex-1 px-4 py-3 text-sm font-medium transition-all border-b-2 -mb-[1px] text-center',
               activeSection === sec.id
                 ? 'text-primary border-b-primary bg-primary/5'
                 : 'text-muted-foreground border-b-transparent hover:text-foreground hover:bg-secondary/30'

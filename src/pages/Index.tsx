@@ -524,6 +524,8 @@ const Index = () => {
         onClose={() => setIsModalOpen(false)}
         onAddToPortfolio={handleAddToPortfolio}
         userRiskProfile={profile?.risk_tolerance || undefined}
+        isBookmarked={selectedFundForModal ? isInWatchlist(selectedFundForModal.id) : false}
+        onBookmarkToggle={toggleWatchlist}
       />
 
       {/* Add to Portfolio Dialog */}
