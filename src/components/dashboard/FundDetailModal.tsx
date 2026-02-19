@@ -79,14 +79,14 @@ export function FundDetailModal({ fund, sectorData, isOpen, onClose, onAddToPort
         <div className="p-6 space-y-6">
           {/* Key Metrics Grid with tooltips */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <MetricCard label="1Y CAGR" term="1Y CAGR" value={`${fund.cagr1Y.toFixed(1)}%`} positive={fund.cagr1Y > 0} />
-            <MetricCard label="3Y CAGR" term="3Y CAGR" value={`${fund.cagr3Y.toFixed(1)}%`} positive={fund.cagr3Y > 0} />
-            <MetricCard label="5Y CAGR" term="5Y CAGR" value={`${fund.cagr5Y.toFixed(1)}%`} positive={fund.cagr5Y > 0} />
-            <MetricCard label="NAV" term="NAV" value={`₹${fund.nav.toFixed(2)}`} />
-            <MetricCard label="Volatility" term="Volatility" value={`${fund.volatility.toFixed(1)}%`} />
-            <MetricCard label="Sharpe Ratio" term="Sharpe Ratio" value={fund.sharpeRatio.toFixed(2)} />
-            <MetricCard label="Expense Ratio" term="Expense Ratio" value={`${fund.expenseRatio.toFixed(2)}%`} />
-            <MetricCard label="AUM" term="AUM" value={`₹${(fund.aum / 1000).toFixed(1)}K Cr`} />
+            <MetricCard label="1Y CAGR" term="1Y CAGR" value={`${(fund.cagr1Y ?? 0).toFixed(1)}%`} positive={(fund.cagr1Y ?? 0) > 0} />
+            <MetricCard label="3Y CAGR" term="3Y CAGR" value={`${(fund.cagr3Y ?? 0).toFixed(1)}%`} positive={(fund.cagr3Y ?? 0) > 0} />
+            <MetricCard label="5Y CAGR" term="5Y CAGR" value={`${(fund.cagr5Y ?? 0).toFixed(1)}%`} positive={(fund.cagr5Y ?? 0) > 0} />
+            <MetricCard label="NAV" term="NAV" value={`₹${(fund.nav ?? 0).toFixed(2)}`} />
+            <MetricCard label="Volatility" term="Volatility" value={`${(fund.volatility ?? 0).toFixed(1)}%`} />
+            <MetricCard label="Sharpe Ratio" term="Sharpe Ratio" value={(fund.sharpeRatio ?? 0).toFixed(2)} />
+            <MetricCard label="Expense Ratio" term="Expense Ratio" value={`${(fund.expenseRatio ?? 0).toFixed(2)}%`} />
+            <MetricCard label="AUM" term="AUM" value={`₹${((fund.aum ?? 0) / 1000).toFixed(1)}K Cr`} />
           </div>
 
           {/* NAV Performance Chart with timeframe selector */}
