@@ -14,6 +14,8 @@ import { FundComparisonCard } from '@/components/dashboard/FundComparisonCard';
 import { PortfolioFundModal } from '@/components/dashboard/PortfolioFundModal';
 import { DashboardLoadingState } from '@/components/dashboard/DashboardLoadingState';
 import { AllFundsTab } from '@/components/dashboard/AllFundsTab';
+import { AIChat } from '@/components/dashboard/AIChat';
+import { CAMSUpload } from '@/components/dashboard/CAMSUpload';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -266,7 +268,7 @@ const Index = () => {
               onFundClick={(fund) => {
                 handleFundClick(fund);
               }}
-              showSearch={activeTab !== 'sectors' && activeTab !== 'allfunds'}
+              showSearch={activeTab !== 'sectors' && activeTab !== 'allfunds' && activeTab !== 'ai'}
               showInfoText={activeTab === 'overview'}
               showGreeting={activeTab === 'overview'}
             />
@@ -385,6 +387,9 @@ const Index = () => {
               {/* Portfolio Tab */}
               {activeTab === 'portfolio' && (
                 <div className="animate-fade-in space-y-6">
+                  {/* CAMS Upload Section */}
+                  <CAMSUpload />
+
                   {portfolio.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <Card className="glass-card">
@@ -508,6 +513,11 @@ const Index = () => {
                     </CardContent>
                   </Card>
                 </div>
+              )}
+
+              {/* AI Tab */}
+              {activeTab === 'ai' && (
+                <AIChat />
               )}
             </div>
           </div>

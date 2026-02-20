@@ -111,8 +111,8 @@ interface SectionDef {
   columns: { key: string; label: string; align?: string; render: (f: MutualFund) => string }[];
 }
 
-const fmt = (v: number | null | undefined, suffix = '') => v != null ? `${v > 0 && suffix === '%' ? '+' : ''}${v.toFixed(suffix === '%' ? 1 : 2)}${suffix}` : '--';
-const fmtCr = (v: number | null | undefined) => v != null ? `₹${v.toLocaleString()}` : '--';
+const fmt = (v: number | null | undefined, suffix = '') => v != null ? `${v > 0 && suffix === '%' ? '+' : ''}${v.toFixed(suffix === '%' ? 1 : 2)}${suffix}` : 'NA';
+const fmtCr = (v: number | null | undefined) => v != null ? `₹${v.toLocaleString()}` : 'NA';
 
 const SECTIONS: SectionDef[] = [
   {
@@ -155,7 +155,7 @@ const SECTIONS: SectionDef[] = [
     id: 'nav',
     label: 'NAV',
     columns: [
-      { key: 'nav', label: 'NAV', align: 'right', render: (f) => `₹${(f.latestNav ?? f.nav).toFixed(2)}` },
+      { key: 'nav', label: 'NAV', align: 'right', render: (f) => { const v = f.latestNav ?? f.nav; return v != null ? `₹${v.toFixed(2)}` : 'NA'; } },
       { key: 'previousNav', label: 'Prev NAV', align: 'right', render: (f) => f.previousNav != null ? `₹${f.previousNav.toFixed(2)}` : '--' },
       { key: 'high52W', label: '52W High', align: 'right', render: (f) => f.high52W != null ? `₹${f.high52W.toFixed(2)}` : '--' },
       { key: 'low52W', label: '52W Low', align: 'right', render: (f) => f.low52W != null ? `₹${f.low52W.toFixed(2)}` : '--' },
