@@ -72,7 +72,11 @@ async function extractTextFromPDF(file: File): Promise<string> {
   return pages.join('\n\n');
 }
 
-export function CAMSUpload() {
+interface CAMSUploadProps {
+  compact?: boolean;
+}
+
+export function CAMSUpload({ compact = false }: CAMSUploadProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [portfolio, setPortfolio] = useState<ParsedPortfolio | null>(null);
   const [expandedFund, setExpandedFund] = useState<number | null>(null);
@@ -131,7 +135,38 @@ export function CAMSUpload() {
     setExpandedFund(null);
   };
 
-  if (!portfolio) {
+  // Compact button mode - shown in portfolio tab header when user has manual portfolio items
+  if (compact && !portfolio) {
+    return (
+      <label className="cursor-pointer">
+        <input
+          type="file"
+          accept=".pdf"
+          onChange={handleFileUpload}
+          className="hidden"
+          disabled={isProcessing}
+        />
+        <Button asChild variant="outline" size="sm" disabled={isProcessing}>
+          <span>
+            {isProcessing ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <Upload className="h-3.5 w-3.5 mr-1.5" />
+                Upload CAMS
+              </>
+            )}
+          </span>
+        </Button>
+      </label>
+    );
+  }
+
+  // Full upload UI - shown when portfolio is empty
+  if (!portfolio && !compact) {
     return (
       <Card className="glass-card">
         <CardContent className="py-10 flex flex-col items-center text-center">
@@ -172,19 +207,25 @@ export function CAMSUpload() {
     );
   }
 
+  if (!portfolio) return null;
+
   // Portfolio results view
   const overall = getOverallHealth(portfolio.holdings);
   const overallConfig = HEALTH_CONFIG[overall];
   const totalCurrent = portfolio.total_current_value ?? portfolio.holdings.reduce((s, h) => s + (h.current_value ?? 0), 0);
   const totalCost = portfolio.total_cost_value ?? portfolio.holdings.reduce((s, h) => s + (h.cost_value ?? 0), 0);
   const totalReturn = totalCost > 0 ? ((totalCurrent - totalCost) / totalCost) * 100 : 0;
-  const totalSIP = portfolio.holdings.length * 5000; // Estimate
 
-  // Projected returns (rough compound growth)
-  const growthRate = totalReturn > 0 ? Math.min(totalReturn / 100, 0.15) : 0.08;
-  const proj1Y = totalCurrent * (1 + growthRate);
-  const proj3Y = totalCurrent * Math.pow(1 + growthRate, 3);
-  const proj5Y = totalCurrent * Math.pow(1 + growthRate, 5);
+  // More realistic projections using category-based expected returns
+  const annualizedReturn = totalCost > 0 ? totalReturn / 100 : 0;
+  const conservativeGrowth = Math.max(0.06, Math.min(annualizedReturn * 0.7, 0.14));
+  const baseGrowth = Math.max(0.08, Math.min(annualizedReturn * 0.85, 0.16));
+  const proj1Y = totalCurrent * (1 + conservativeGrowth);
+  const proj3Y = totalCurrent * Math.pow(1 + baseGrowth, 3);
+  const proj5Y = totalCurrent * Math.pow(1 + baseGrowth, 5);
+
+  // Find replacement suggestions for degrading funds
+  const degradingHoldings = portfolio.holdings.filter(h => getHealthStatus(h) === 'degrading');
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -201,32 +242,34 @@ export function CAMSUpload() {
         </Button>
       </div>
 
-      {/* Health Meter */}
-      <Card className="glass-card">
+      {/* Health-o-Meter */}
+      <Card className="glass-card overflow-hidden">
         <CardContent className="py-6">
-          <div className="flex items-center gap-4 mb-4">
-            <div className={cn('h-14 w-14 rounded-2xl flex items-center justify-center', overallConfig.bg)}>
-              <overallConfig.icon className={cn('h-7 w-7', overallConfig.color)} />
+          <div className="flex items-center gap-4 mb-5">
+            <div className={cn('h-16 w-16 rounded-2xl flex items-center justify-center', overallConfig.bg)}>
+              <overallConfig.icon className={cn('h-8 w-8', overallConfig.color)} />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Portfolio Health</p>
-              <p className={cn('text-2xl font-bold', overallConfig.color)}>{overallConfig.label}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Portfolio Health-o-Meter</p>
+              <p className={cn('text-3xl font-bold', overallConfig.color)}>{overallConfig.label}</p>
             </div>
           </div>
-          {/* Health bar */}
-          <div className="flex gap-1 h-3 rounded-full overflow-hidden bg-muted/30">
-            {['healthy', 'moderate', 'degrading'].map(status => {
-              const count = portfolio.holdings.filter(h => getHealthStatus(h) === status).length;
-              const pct = (count / portfolio.holdings.length) * 100;
-              return pct > 0 ? (
-                <div key={status} className={cn('h-full rounded-full', HEALTH_CONFIG[status as HealthStatus].barColor)} style={{ width: `${pct}%` }} />
-              ) : null;
-            })}
-          </div>
-          <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-success" /> Healthy ({portfolio.holdings.filter(h => getHealthStatus(h) === 'healthy').length})</span>
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-warning" /> Moderate ({portfolio.holdings.filter(h => getHealthStatus(h) === 'moderate').length})</span>
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-destructive" /> Needs Attention ({portfolio.holdings.filter(h => getHealthStatus(h) === 'degrading').length})</span>
+          {/* Health bar with percentages */}
+          <div className="space-y-2">
+            <div className="flex gap-1 h-4 rounded-full overflow-hidden bg-muted/30">
+              {(['healthy', 'moderate', 'degrading'] as HealthStatus[]).map(status => {
+                const count = portfolio.holdings.filter(h => getHealthStatus(h) === status).length;
+                const pct = (count / portfolio.holdings.length) * 100;
+                return pct > 0 ? (
+                  <div key={status} className={cn('h-full rounded-full transition-all', HEALTH_CONFIG[status].barColor)} style={{ width: `${pct}%` }} />
+                ) : null;
+              })}
+            </div>
+            <div className="flex gap-4 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-success" /> Healthy ({portfolio.holdings.filter(h => getHealthStatus(h) === 'healthy').length})</span>
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-warning" /> Moderate ({portfolio.holdings.filter(h => getHealthStatus(h) === 'moderate').length})</span>
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-destructive" /> Needs Attention ({portfolio.holdings.filter(h => getHealthStatus(h) === 'degrading').length})</span>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -312,7 +355,13 @@ export function CAMSUpload() {
                     {status === 'degrading' && (
                       <div className="mt-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
                         <p className="text-destructive font-medium mb-1">⚠️ This fund is underperforming</p>
-                        <p className="text-muted-foreground">Consider switching to a better-performing fund in the same {holding.category || 'category'}. Use the AI tab to ask for recommendations.</p>
+                        <p className="text-muted-foreground mb-2">Consider switching to a better-performing fund in the same {holding.category || 'category'}.</p>
+                        <p className="text-foreground font-medium mb-1">Suggested Replacements:</p>
+                        <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+                          <li>Use the AI tab → ask "Best {holding.category || 'fund'} alternatives"</li>
+                          <li>Check the All Funds tab for top performers in this category</li>
+                          <li>Look for funds with higher Sharpe ratio and lower expense</li>
+                        </ul>
                       </div>
                     )}
                   </div>
@@ -328,7 +377,7 @@ export function CAMSUpload() {
           <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
           <p className="text-xs text-muted-foreground">
             <strong className="text-warning">Disclaimer:</strong> Health analysis is based on cost vs current value from the CAMS statement. 
-            Projections use past trends and are not guaranteed. Consult a financial advisor before making changes.
+            Projections use conservative estimates (6-16% annual growth capped) and are not guaranteed. Consult a financial advisor before making changes.
           </p>
         </CardContent>
       </Card>

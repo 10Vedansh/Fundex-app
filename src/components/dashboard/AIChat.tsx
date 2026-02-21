@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Sparkles, Loader2 } from 'lucide-react';
+import { Send, Bot, User, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -18,16 +18,33 @@ const SUGGESTIONS = [
   "Explain Sharpe Ratio and why it matters",
 ];
 
+function ThinkingIndicator() {
+  return (
+    <div className="flex gap-3">
+      <div className="h-8 w-8 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
+        <Bot className="h-4 w-4 text-primary" />
+      </div>
+      <div className="bg-secondary/60 rounded-2xl px-4 py-3 flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '0ms' }} />
+        <span className="h-2 w-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '150ms' }} />
+        <span className="h-2 w-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '300ms' }} />
+        <span className="text-xs text-muted-foreground ml-2">Thinking...</span>
+      </div>
+    </div>
+  );
+}
+
 export function AIChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, isLoading]);
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
@@ -37,6 +54,7 @@ export function AIChat() {
     setMessages(allMessages);
     setInput('');
     setIsLoading(true);
+    setIsStreaming(false);
 
     let assistantSoFar = '';
 
@@ -88,6 +106,7 @@ export function AIChat() {
             const parsed = JSON.parse(jsonStr);
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
             if (content) {
+              if (!isStreaming) setIsStreaming(true);
               assistantSoFar += content;
               setMessages((prev) => {
                 const last = prev[prev.length - 1];
@@ -138,6 +157,7 @@ export function AIChat() {
       ]);
     } finally {
       setIsLoading(false);
+      setIsStreaming(false);
     }
   };
 
@@ -227,6 +247,10 @@ export function AIChat() {
               {msg.role === 'assistant' ? (
                 <div className="prose prose-sm prose-invert max-w-none [&>p]:mb-2 [&>ul]:mb-2 [&>ol]:mb-2 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm">
                   <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  {/* Show blinking cursor while streaming this message */}
+                  {isStreaming && i === messages.length - 1 && (
+                    <span className="inline-block w-1.5 h-4 bg-primary/70 animate-pulse ml-0.5 align-middle" />
+                  )}
                 </div>
               ) : (
                 msg.content
@@ -239,16 +263,8 @@ export function AIChat() {
             )}
           </div>
         ))}
-        {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
-          <div className="flex gap-3">
-            <div className="h-8 w-8 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
-              <Bot className="h-4 w-4 text-primary" />
-            </div>
-            <div className="bg-secondary/60 rounded-2xl px-4 py-3">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-          </div>
-        )}
+        {/* Thinking indicator - shows before first token arrives */}
+        {isLoading && !isStreaming && <ThinkingIndicator />}
         <div ref={messagesEndRef} />
       </div>
 
