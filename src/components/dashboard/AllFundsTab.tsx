@@ -111,8 +111,14 @@ interface SectionDef {
   columns: { key: string; label: string; align?: string; render: (f: MutualFund) => string }[];
 }
 
-const fmt = (v: number | null | undefined, suffix = '') => v != null ? `${v > 0 && suffix === '%' ? '+' : ''}${v.toFixed(suffix === '%' ? 1 : 2)}${suffix}` : 'NA';
-const fmtCr = (v: number | null | undefined) => v != null ? `₹${v.toLocaleString()}` : 'NA';
+const fmt = (v: number | null | undefined, suffix = '') => {
+  if (v == null || v === 0) return 'NA';
+  return `${v > 0 && suffix === '%' ? '+' : ''}${v.toFixed(suffix === '%' ? 1 : 2)}${suffix}`;
+};
+const fmtCr = (v: number | null | undefined) => {
+  if (v == null || v === 0) return 'NA';
+  return `₹${v.toLocaleString()}`;
+};
 
 const SECTIONS: SectionDef[] = [
   {
