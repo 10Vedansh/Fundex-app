@@ -12,7 +12,6 @@ function getGroup(category: string): string {
   if (!category) return 'OTHER';
   const cat = category.toUpperCase();
 
-  // Equity – specific sub-types first
   if (cat.includes('L&MC')) return 'LARGE';
   if (cat === 'EQ-LC') return 'LARGE';
   if (cat === 'EQ-MLC') return 'MULTI';
@@ -25,7 +24,6 @@ function getGroup(category: string): string {
   if (cat.includes('QUANT')) return 'QUANT';
   if (cat.includes('INTL')) return 'INTERNATIONAL';
 
-  // Sectoral & Thematic bucket (all sector-specific equity)
   if (
     cat.includes('THEMATIC') || cat.includes('SA&T') ||
     cat.includes('BANK') || cat.includes('IT') ||
@@ -38,20 +36,17 @@ function getGroup(category: string): string {
     return 'SECTORAL';
   }
 
-  // Debt
   if (cat.startsWith('DT-')) {
     if (cat.includes('LIQ') || cat.includes('OVERNHT') || cat.includes('MM')) return 'LIQUID';
     if (cat.includes('GL') || cat.includes('GILT')) return 'GILT';
     return 'DEBT';
   }
 
-  // Hybrid
   if (cat.startsWith('HY-')) {
     if (cat.includes('AR')) return 'ARBITRAGE';
     return 'HYBRID';
   }
 
-  // Commodities
   if (cat.includes('GOLD') || cat.includes('SILVER')) return 'COMMODITY';
 
   return 'OTHER';
@@ -72,49 +67,64 @@ export interface ScoredFund extends MutualFund {
   confidenceScore: string;
 }
 
-// ── Preference matching filter (from preferenceEngine.js) ──
+// ── Cascading preference filter – each preference narrows the subset ──
 function matchesPreferences(fund: MutualFund, prefs: UserPreferences): boolean {
   const category = (fund.category || '').toUpperCase();
+  const group = getGroup(fund.category);
 
-  // Conservative: avoid aggressive equity
-  if (
-    (prefs.riskTolerance === 'conservative' || prefs.riskTolerance === 'low') &&
-    ['EQ-SC', 'EQ-MC', 'EQ-THEMATIC', 'EQ-PSU', 'EQ-SA&T'].includes(category)
-  ) {
-    return false;
+  // LAYER 1: Risk tolerance filter
+  if (prefs.riskTolerance === 'conservative' || prefs.riskTolerance === 'low') {
+    if (['SMALL', 'SECTORAL', 'QUANT', 'INTERNATIONAL'].includes(group)) return false;
+    if (['EQ-SC', 'EQ-MC', 'EQ-THEMATIC', 'EQ-PSU', 'EQ-SA&T'].includes(category)) return false;
   }
-
-  // Short horizon: avoid high volatility
-  if (
-    (prefs.investmentHorizon === 'short' || prefs.investmentHorizon === '<3yrs') &&
-    ['EQ-SC', 'EQ-THEMATIC', 'EQ-PSU', 'EQ-SA&T', 'EQ-MC'].includes(category)
-  ) {
-    return false;
+  if (prefs.riskTolerance === 'moderate') {
+    if (['INTERNATIONAL'].includes(group)) return false;
   }
-
-  // Beginners: avoid niche
-  if (
-    prefs.experienceLevel === 'beginner' &&
-    ['EQ-THEMATIC', 'EQ-PSU', 'EQ-SA&T', 'EQ-BANK', 'EQ-IT', 'EQ-Pharma', 'EQ-INFRA', 'EQ-Energy'].some(c => category === c.toUpperCase())
-  ) {
-    return false;
-  }
-
-  // International: hard block (from scoring_engine.js CATEGORY_MULTIPLIER EQ-INTL = 0)
+  // Aggressive: allow most, block only international
   if (category === 'EQ-INTL') return false;
 
-  // Wealth creation: skip dividend yield
-  if (
-    (prefs.investmentGoal === 'wealth_creation' || prefs.investmentGoal === 'growth') &&
-    category === 'EQ-DIV Y'
-  ) {
-    return false;
+  // LAYER 2: Investment goal filter (subset of risk-filtered)
+  if (prefs.investmentGoal === 'income' || prefs.investmentGoal === 'regular_income') {
+    // Income: prefer dividend, debt, hybrid; exclude aggressive growth
+    if (['SMALL', 'SECTORAL', 'QUANT'].includes(group)) return false;
+  }
+  if (prefs.investmentGoal === 'preservation' || prefs.investmentGoal === 'capital_preservation') {
+    // Preservation: only stable categories
+    if (!['LARGE', 'DEBT', 'LIQUID', 'GILT', 'HYBRID', 'ARBITRAGE', 'DIVIDEND', 'FLEXI'].includes(group)) return false;
+  }
+  if (prefs.investmentGoal === 'tax' || prefs.investmentGoal === 'tax_saving') {
+    // Tax saving: strongly prefer ELSS, but don't exclude all others
+    // (handled via scoring bonus instead of hard filter for non-ELSS)
+  }
+  if (prefs.investmentGoal === 'wealth' || prefs.investmentGoal === 'wealth_creation' || prefs.investmentGoal === 'growth') {
+    if (category === 'EQ-DIV Y') return false;
+  }
+
+  // LAYER 3: Horizon filter (subset of goal-filtered)
+  if (prefs.investmentHorizon === 'short' || prefs.investmentHorizon === '<3yrs') {
+    if (['SMALL', 'SECTORAL', 'QUANT', 'MID'].includes(group)) return false;
+  }
+  if (prefs.investmentHorizon === 'medium') {
+    if (['SMALL'].includes(group) && prefs.riskTolerance !== 'aggressive') return false;
+  }
+
+  // LAYER 4: Experience filter (subset of horizon-filtered)
+  if (prefs.experienceLevel === 'beginner') {
+    if (['SECTORAL', 'QUANT'].includes(group)) return false;
+    if (['EQ-THEMATIC', 'EQ-PSU', 'EQ-SA&T', 'EQ-BANK', 'EQ-IT'].some(c => category === c.toUpperCase())) return false;
+  }
+
+  // LAYER 5: Investment amount filter
+  if (prefs.investmentAmount === 'small' || prefs.investmentAmount === '<50k' || prefs.investmentAmount === 'under_1l') {
+    // Small amounts: avoid high-expense niche funds
+    const expense = safeNumber(fund.expenseRatio);
+    if (expense !== null && expense > 2.5) return false;
   }
 
   return true;
 }
 
-// ── Core scoring engine (merged from fundScoring.js + recommendFunds.js + scoring_engine.js) ──
+// ── Core scoring engine ──
 function scoreFund(fund: MutualFund, prefs: UserPreferences): { score: number; reasons: string[]; confidenceScore: string } {
   let score = 0;
   const reasons: string[] = [];
@@ -129,10 +139,7 @@ function scoreFund(fund: MutualFund, prefs: UserPreferences): { score: number; r
   const beta = safeNumber(fund.beta);
   const expense = safeNumber(fund.expenseRatio);
 
-  // ================================================================
-  // PERFORMANCE WEIGHTS – Risk-based (from fundScoring.js)
-  // This is the PRIMARY differentiator between profiles
-  // ================================================================
+  // PERFORMANCE WEIGHTS – Risk-based
   if (prefs.riskTolerance === 'aggressive' || prefs.riskTolerance === 'high') {
     if (oneYear !== null) score += oneYear * 0.5;
     if (threeYear !== null) score += threeYear * 0.5;
@@ -142,14 +149,11 @@ function scoreFund(fund: MutualFund, prefs: UserPreferences): { score: number; r
     if (threeYear !== null) score += threeYear * 0.35;
     if (fiveYear !== null) score += fiveYear * 0.35;
   } else {
-    // conservative – very low weight on returns, stability matters more
     if (threeYear !== null) score += threeYear * 0.15;
     if (fiveYear !== null) score += fiveYear * 0.2;
   }
 
-  // ================================================================
-  // RISK-ADJUSTED METRICS (from fundScoring.js + scoring.js)
-  // ================================================================
+  // RISK-ADJUSTED METRICS
   if (sharpe !== null && sharpe !== 0) {
     score += sharpe * 20;
     if (sharpe > 1.5) reasons.push('Strong risk-adjusted returns');
@@ -161,24 +165,19 @@ function scoreFund(fund: MutualFund, prefs: UserPreferences): { score: number; r
     score += sortino * 1.5;
   }
 
-  // ================================================================
-  // VOLATILITY & BETA – direction depends on risk profile
-  // ================================================================
+  // VOLATILITY & BETA
   if (prefs.riskTolerance === 'aggressive' || prefs.riskTolerance === 'high') {
-    // Aggressive: REWARD volatility (from scoring_engine.js)
     if (stdDev !== null && stdDev > 0) score += stdDev * 0.8;
     if (beta !== null && beta > 0) score += beta * 6;
   } else if (prefs.riskTolerance === 'moderate') {
-    // Moderate: slight penalty (from scoring_engine.js)
     if (stdDev !== null && stdDev > 0) score += Math.max(0, 18 - stdDev) * 0.8;
     if (beta !== null) score += Math.max(0, 1 - Math.abs(beta - 1)) * 6;
   } else {
-    // Conservative: HEAVY penalty for volatility (from scoring_engine.js + recommendFunds.js)
     if (stdDev !== null && stdDev > 0) {
       score -= stdDev * 2.0;
       if (stdDev < 10) reasons.push('Stable performance history');
     } else {
-      score -= 8; // unknown risk = penalty for conservative
+      score -= 8;
     }
     if (beta !== null && beta > 0) {
       score -= beta * 12;
@@ -188,11 +187,7 @@ function scoreFund(fund: MutualFund, prefs: UserPreferences): { score: number; r
     }
   }
 
-  // ================================================================
-  // GROUP BONUSES/PENALTIES – The BIGGEST differentiator
-  // These must be large enough to reshape the entire ranking
-  // (from recommendFunds.js)
-  // ================================================================
+  // GROUP BONUSES/PENALTIES
   if (prefs.riskTolerance === 'conservative' || prefs.riskTolerance === 'low') {
     const bonusMap: Record<string, number> = {
       'LARGE': 25, 'FLEXI': 20, 'MULTI': 18, 'DIVIDEND': 22,
@@ -212,7 +207,6 @@ function scoreFund(fund: MutualFund, prefs: UserPreferences): { score: number; r
     };
     score += bonusMap[group] || 0;
   } else {
-    // aggressive
     const bonusMap: Record<string, number> = {
       'SMALL': 30, 'MID': 25, 'SECTORAL': 20, 'QUANT': 18,
       'FLEXI': 15, 'MULTI': 12, 'VALUE': 15, 'LARGE': 8,
@@ -224,72 +218,90 @@ function scoreFund(fund: MutualFund, prefs: UserPreferences): { score: number; r
     score += bonusMap[group] || 0;
   }
 
-  // ================================================================
-  // INVESTMENT GOAL ALIGNMENT (from recommendFunds.js)
-  // ================================================================
+  // INVESTMENT GOAL ALIGNMENT – strong bonuses to differentiate
   if (prefs.investmentGoal === 'regular_income' || prefs.investmentGoal === 'income') {
-    if (group === 'DIVIDEND') { score += 25; reasons.push('Suitable for income generation'); }
-    if (group === 'DEBT' || group === 'GILT') score += 15;
-    if (group === 'HYBRID') score += 10;
-    if (group === 'SMALL') score -= 15;
-    if (group === 'SECTORAL') score -= 10;
+    if (group === 'DIVIDEND') { score += 30; reasons.push('Suitable for income generation'); }
+    if (group === 'DEBT' || group === 'GILT') score += 20;
+    if (group === 'HYBRID') score += 15;
+    if (group === 'LARGE') score += 5;
+    if (group === 'SMALL') score -= 20;
+    if (group === 'SECTORAL') score -= 15;
   }
-  if (prefs.investmentGoal === 'wealth_creation' || prefs.investmentGoal === 'growth') {
-    if (['SMALL', 'MID'].includes(group)) score += 20;
-    if (group === 'FLEXI') { score += 15; reasons.push('Diversified across market caps'); }
-    if (group === 'MULTI') score += 12;
-    // Wealth creation + long horizon boost (from scoring_engine.js)
+  if (prefs.investmentGoal === 'wealth_creation' || prefs.investmentGoal === 'growth' || prefs.investmentGoal === 'wealth') {
+    if (['SMALL', 'MID'].includes(group)) score += 25;
+    if (group === 'FLEXI') { score += 20; reasons.push('Diversified across market caps'); }
+    if (group === 'MULTI') score += 15;
+    if (group === 'VALUE') score += 10;
+    if (group === 'DIVIDEND') score -= 10;
+    if (group === 'DEBT') score -= 15;
+    if (group === 'LIQUID') score -= 20;
     if (prefs.investmentHorizon === 'long' || prefs.investmentHorizon === '5yrs+') {
-      if (group === 'SMALL') score += 18;
-      if (group === 'MID') score += 12;
+      if (group === 'SMALL') score += 20;
+      if (group === 'MID') score += 15;
     }
   }
   if (prefs.investmentGoal === 'tax_saving' || prefs.investmentGoal === 'tax') {
-    if (group === 'ELSS') score += 35;
-    else score -= 5;
+    if (group === 'ELSS') { score += 40; reasons.push('ELSS - eligible for tax saving'); }
+    else score -= 10;
   }
   if (prefs.investmentGoal === 'preservation' || prefs.investmentGoal === 'capital_preservation') {
-    if (['DEBT', 'LIQUID', 'GILT'].includes(group)) score += 25;
-    if (group === 'HYBRID' || group === 'ARBITRAGE') score += 15;
-    if (['SMALL', 'SECTORAL', 'MID'].includes(group)) score -= 25;
+    if (['DEBT', 'LIQUID', 'GILT'].includes(group)) { score += 30; reasons.push('Low-risk for capital preservation'); }
+    if (group === 'HYBRID' || group === 'ARBITRAGE') score += 20;
+    if (group === 'LARGE') score += 10;
+    if (['SMALL', 'SECTORAL', 'MID'].includes(group)) score -= 30;
   }
 
-  // ================================================================
-  // EXPERIENCE LEVEL (from recommendFunds.js)
-  // ================================================================
+  // HORIZON ALIGNMENT
+  if (prefs.investmentHorizon === 'short' || prefs.investmentHorizon === '<3yrs') {
+    if (['LIQUID', 'DEBT', 'ARBITRAGE'].includes(group)) score += 20;
+    if (['LARGE', 'HYBRID'].includes(group)) score += 10;
+    if (['SMALL', 'MID'].includes(group)) score -= 20;
+  }
+  if (prefs.investmentHorizon === 'medium') {
+    if (['LARGE', 'FLEXI', 'HYBRID', 'MULTI'].includes(group)) score += 15;
+    if (['DEBT'].includes(group)) score += 8;
+  }
+  if (prefs.investmentHorizon === 'long' || prefs.investmentHorizon === '5yrs+') {
+    if (['SMALL', 'MID', 'FLEXI'].includes(group)) score += 15;
+    if (['LIQUID'].includes(group)) score -= 15;
+  }
+
+  // EXPERIENCE LEVEL
   if (prefs.experienceLevel === 'beginner') {
-    if (['SMALL', 'SECTORAL', 'QUANT'].includes(group)) score -= 20;
-    if (['LARGE', 'FLEXI'].includes(group)) score += 15;
+    if (['SMALL', 'SECTORAL', 'QUANT'].includes(group)) score -= 25;
+    if (['LARGE', 'FLEXI'].includes(group)) { score += 20; reasons.push('Beginner-friendly fund type'); }
+    if (group === 'HYBRID') score += 10;
   }
-  if (prefs.experienceLevel === 'advanced') {
-    if (['SMALL', 'SECTORAL', 'QUANT'].includes(group)) score += 12;
+  if (prefs.experienceLevel === 'intermediate') {
+    if (['FLEXI', 'MULTI', 'VALUE'].includes(group)) score += 10;
+  }
+  if (prefs.experienceLevel === 'advanced' || prefs.experienceLevel === 'experienced') {
+    if (['SMALL', 'SECTORAL', 'QUANT'].includes(group)) score += 15;
+    if (['VALUE'].includes(group)) score += 10;
   }
 
-  // ================================================================
-  // INVESTMENT AMOUNT (from recommendFunds.js)
-  // ================================================================
-  if (prefs.investmentAmount === '<50k' || prefs.investmentAmount === 'under_1l') {
+  // INVESTMENT AMOUNT
+  if (prefs.investmentAmount === '<50k' || prefs.investmentAmount === 'under_1l' || prefs.investmentAmount === 'small') {
     if (expense !== null && expense > 1.5) score -= 15;
+    if (['LARGE', 'FLEXI'].includes(group)) score += 8;
   }
-  if (prefs.investmentAmount === '50k-5lakhs' || prefs.investmentAmount === '1l_to_10l') {
-    if (['LARGE', 'FLEXI', 'MULTI'].includes(group)) score += 8;
+  if (prefs.investmentAmount === '50k-5lakhs' || prefs.investmentAmount === '1l_to_10l' || prefs.investmentAmount === 'medium') {
+    if (['LARGE', 'FLEXI', 'MULTI'].includes(group)) score += 10;
+    if (['MID', 'VALUE'].includes(group)) score += 5;
   }
-  if (prefs.investmentAmount === '5lakhs+' || prefs.investmentAmount === 'above_10l') {
+  if (prefs.investmentAmount === '5lakhs+' || prefs.investmentAmount === 'above_10l' || prefs.investmentAmount === 'large') {
     score += 5;
+    if (['SMALL', 'MID', 'SECTORAL'].includes(group)) score += 8;
   }
 
-  // ================================================================
-  // EXPENSE PENALTY (from scoring_engine.js: expense * 4, fundScoring.js: expense * 5)
-  // ================================================================
+  // EXPENSE PENALTY
   if (expense !== null) {
     score -= expense * 5;
     if (expense < 0.5) reasons.push('Very low expense ratio');
     else if (expense < 1) reasons.push('Low expense ratio');
   }
 
-  // ================================================================
-  // CATEGORY MULTIPLIER (from scoring_engine.js – applied last)
-  // ================================================================
+  // CATEGORY MULTIPLIER
   const CATEGORY_MULTIPLIER: Record<string, number> = {
     'SMALL': 1.4,
     'MID': 1.25,
@@ -316,46 +328,68 @@ function scoreFund(fund: MutualFund, prefs: UserPreferences): { score: number; r
   return { score: Math.round(score * 100) / 100, reasons, confidenceScore };
 }
 
-// ── Allocation model (from fundAllocator.js) – COMPLETELY different per profile ──
-function getAllocationModel(riskLevel: string) {
-  if (riskLevel === 'conservative' || riskLevel === 'low') {
+// ── Allocation model – varies by ALL preferences now ──
+function getAllocationModel(prefs: UserPreferences) {
+  const risk = prefs.riskTolerance;
+  const goal = prefs.investmentGoal;
+  
+  if (risk === 'conservative' || risk === 'low') {
+    if (goal === 'income' || goal === 'regular_income') {
+      return [
+        { group: 'DIVIDEND', max: 2 }, { group: 'DEBT', max: 2 }, { group: 'HYBRID', max: 1 },
+        { group: 'GILT', max: 1 }, { group: 'LARGE', max: 1 }, { group: 'LIQUID', max: 1 },
+        { group: 'ARBITRAGE', max: 1 },
+      ];
+    }
+    if (goal === 'preservation' || goal === 'capital_preservation') {
+      return [
+        { group: 'DEBT', max: 3 }, { group: 'LIQUID', max: 2 }, { group: 'GILT', max: 1 },
+        { group: 'LARGE', max: 1 }, { group: 'HYBRID', max: 1 }, { group: 'ARBITRAGE', max: 1 },
+      ];
+    }
     return [
-      { group: 'LARGE', max: 2 },
-      { group: 'DEBT', max: 2 },
-      { group: 'HYBRID', max: 1 },
-      { group: 'DIVIDEND', max: 1 },
-      { group: 'GILT', max: 1 },
-      { group: 'FLEXI', max: 1 },
-      { group: 'LIQUID', max: 1 },
-      { group: 'ARBITRAGE', max: 1 },
+      { group: 'LARGE', max: 2 }, { group: 'DEBT', max: 2 }, { group: 'HYBRID', max: 1 },
+      { group: 'DIVIDEND', max: 1 }, { group: 'GILT', max: 1 }, { group: 'FLEXI', max: 1 },
+      { group: 'LIQUID', max: 1 }, { group: 'ARBITRAGE', max: 1 },
     ];
   }
-  if (riskLevel === 'moderate') {
+  
+  if (risk === 'moderate') {
+    if (goal === 'tax' || goal === 'tax_saving') {
+      return [
+        { group: 'ELSS', max: 3 }, { group: 'LARGE', max: 2 }, { group: 'FLEXI', max: 1 },
+        { group: 'MULTI', max: 1 }, { group: 'VALUE', max: 1 }, { group: 'HYBRID', max: 1 },
+      ];
+    }
+    if (goal === 'wealth' || goal === 'wealth_creation' || goal === 'growth') {
+      return [
+        { group: 'FLEXI', max: 2 }, { group: 'LARGE', max: 2 }, { group: 'MID', max: 1 },
+        { group: 'MULTI', max: 1 }, { group: 'VALUE', max: 1 }, { group: 'ELSS', max: 1 },
+        { group: 'HYBRID', max: 1 },
+      ];
+    }
     return [
-      { group: 'LARGE', max: 2 },
-      { group: 'FLEXI', max: 1 },
-      { group: 'MID', max: 1 },
-      { group: 'VALUE', max: 1 },
-      { group: 'DIVIDEND', max: 1 },
-      { group: 'MULTI', max: 1 },
-      { group: 'HYBRID', max: 1 },
-      { group: 'ELSS', max: 1 },
+      { group: 'LARGE', max: 2 }, { group: 'FLEXI', max: 1 }, { group: 'MID', max: 1 },
+      { group: 'VALUE', max: 1 }, { group: 'DIVIDEND', max: 1 }, { group: 'MULTI', max: 1 },
+      { group: 'HYBRID', max: 1 }, { group: 'ELSS', max: 1 },
     ];
   }
+  
   // aggressive / high
+  if (goal === 'wealth' || goal === 'wealth_creation' || goal === 'growth') {
+    return [
+      { group: 'SMALL', max: 3 }, { group: 'MID', max: 2 }, { group: 'FLEXI', max: 1 },
+      { group: 'SECTORAL', max: 1 }, { group: 'VALUE', max: 1 }, { group: 'QUANT', max: 1 },
+    ];
+  }
   return [
-    { group: 'SMALL', max: 2 },
-    { group: 'MID', max: 2 },
-    { group: 'FLEXI', max: 1 },
-    { group: 'SECTORAL', max: 1 },
-    { group: 'VALUE', max: 1 },
-    { group: 'LARGE', max: 1 },
-    { group: 'QUANT', max: 1 },
-    { group: 'MULTI', max: 1 },
+    { group: 'SMALL', max: 2 }, { group: 'MID', max: 2 }, { group: 'FLEXI', max: 1 },
+    { group: 'SECTORAL', max: 1 }, { group: 'VALUE', max: 1 }, { group: 'LARGE', max: 1 },
+    { group: 'QUANT', max: 1 }, { group: 'MULTI', max: 1 },
   ];
 }
 
-// ── Duplicate exposure check (from fundAllocator.js) ──
+// ── Duplicate exposure check ──
 function isDuplicateExposure(fundName: string, usedNames: Set<string>): boolean {
   const name = fundName.toLowerCase();
   for (const used of usedNames) {
@@ -367,7 +401,6 @@ function isDuplicateExposure(fundName: string, usedNames: Set<string>): boolean 
   return false;
 }
 
-// ── Thematic overload check (from fundAllocator.js) ──
 function isThematicOverloaded(fundName: string, usedThemes: Set<string>): boolean {
   const keywords = ['psu', 'bharat', 'infrastructure', 'energy', 'banking', 'sectoral', 'pharma', 'it '];
   const name = fundName.toLowerCase();
@@ -385,7 +418,6 @@ function registerTheme(fundName: string, usedThemes: Set<string>): void {
   }
 }
 
-// ── AMC diversification: max 2 funds per AMC ──
 function isAmcOverloaded(fundAmc: string, usedAmcs: Map<string, number>, max = 2): boolean {
   const count = usedAmcs.get(fundAmc) || 0;
   return count >= max;
@@ -393,10 +425,10 @@ function isAmcOverloaded(fundAmc: string, usedAmcs: Map<string, number>, max = 2
 
 // ── Main recommendation function ──
 export function recommendFunds(funds: MutualFund[], prefs: UserPreferences): ScoredFund[] {
-  // Step 1: Filter eligible funds (from preferenceEngine.js + recommendController.js)
+  // Step 1: Cascading filter – each preference narrows the pool
   let eligible = funds.filter(f => matchesPreferences(f, prefs));
 
-  // Conservative + long horizon: need valid history (from recommendController.js)
+  // Additional data quality filters
   if (
     (prefs.riskTolerance === 'conservative' || prefs.riskTolerance === 'low') &&
     (prefs.investmentHorizon === 'long' || prefs.investmentHorizon === '5yrs+')
@@ -409,12 +441,11 @@ export function recommendFunds(funds: MutualFund[], prefs: UserPreferences): Sco
     if (filtered.length > 20) eligible = filtered;
   }
 
-  // Conservative: beta/stdDev filter (from recommendController.js)
   if (prefs.riskTolerance === 'conservative' || prefs.riskTolerance === 'low') {
     const filtered = eligible.filter(f => {
       const b = safeNumber(f.beta);
       const std = safeNumber(f.stdDev) || safeNumber(f.volatility !== 0 ? f.volatility : null);
-      if (b === null && std === null) return false; // require at least one risk metric
+      if (b === null && std === null) return false;
       if (b !== null && b > 1.3) return false;
       if (std !== null && std > 20) return false;
       return true;
@@ -422,7 +453,6 @@ export function recommendFunds(funds: MutualFund[], prefs: UserPreferences): Sco
     if (filtered.length > 20) eligible = filtered;
   }
 
-  // Aggressive: prefer funds WITH return data
   if (prefs.riskTolerance === 'aggressive' || prefs.riskTolerance === 'high') {
     const filtered = eligible.filter(f => {
       const oneY = safeNumber(f.ret1Y ?? f.cagr1Y);
@@ -431,25 +461,6 @@ export function recommendFunds(funds: MutualFund[], prefs: UserPreferences): Sco
     if (filtered.length > 20) eligible = filtered;
   }
 
-  // Beginners: extra safety (from recommendController.js)
-  if (prefs.experienceLevel === 'beginner') {
-    const filtered = eligible.filter(f => {
-      const cat = (f.category || '').toUpperCase();
-      return !cat.includes('SC') && !cat.includes('THEMATIC') && !cat.includes('SA&T');
-    });
-    if (filtered.length > 10) eligible = filtered;
-  }
-
-  // Short horizon: restrict to debt/hybrid
-  if (prefs.investmentHorizon === 'short' || prefs.investmentHorizon === '<3yrs') {
-    const filtered = eligible.filter(f => {
-      const g = getGroup(f.category);
-      return ['DEBT', 'HYBRID', 'LIQUID', 'GILT', 'ARBITRAGE', 'LARGE', 'FLEXI', 'DIVIDEND'].includes(g);
-    });
-    if (filtered.length > 10) eligible = filtered;
-  }
-
-  // Fallback
   if (eligible.length === 0) eligible = [...funds];
 
   // Step 2: Score all funds
@@ -458,7 +469,7 @@ export function recommendFunds(funds: MutualFund[], prefs: UserPreferences): Sco
     return { ...fund, score, group: getGroup(fund.category), reasons, confidenceScore };
   });
 
-  // Hard filter for conservative: only stable groups (from recommendFunds.js)
+  // Hard filter for conservative: only stable groups
   if (prefs.riskTolerance === 'conservative' || prefs.riskTolerance === 'low') {
     const filtered = scored.filter(f =>
       ['LARGE', 'FLEXI', 'DIVIDEND', 'MULTI', 'DEBT', 'HYBRID', 'GILT', 'LIQUID', 'ARBITRAGE', 'VALUE', 'ELSS'].includes(f.group)
@@ -466,7 +477,6 @@ export function recommendFunds(funds: MutualFund[], prefs: UserPreferences): Sco
     if (filtered.length > 10) scored = filtered;
   }
 
-  // Hard filter for aggressive: prefer growth groups
   if (prefs.riskTolerance === 'aggressive' || prefs.riskTolerance === 'high') {
     const filtered = scored.filter(f =>
       ['SMALL', 'MID', 'FLEXI', 'MULTI', 'SECTORAL', 'VALUE', 'LARGE', 'QUANT', 'ELSS'].includes(f.group)
@@ -474,11 +484,10 @@ export function recommendFunds(funds: MutualFund[], prefs: UserPreferences): Sco
     if (filtered.length > 10) scored = filtered;
   }
 
-  // Sort by score descending
   scored.sort((a, b) => b.score - a.score);
 
-  // Step 3: Diversified allocation (from fundAllocator.js)
-  const model = getAllocationModel(prefs.riskTolerance);
+  // Step 3: Diversified allocation – now uses ALL preferences
+  const model = getAllocationModel(prefs);
   const finalPortfolio: ScoredFund[] = [];
   const usedNames = new Set<string>();
   const usedThemes = new Set<string>();

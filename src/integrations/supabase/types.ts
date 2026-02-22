@@ -98,6 +98,8 @@ export type Database = {
           investment_goal: string | null
           investment_horizon: string | null
           onboarding_completed: boolean | null
+          pin_hash: string | null
+          pin_set: boolean | null
           risk_tolerance: string | null
           updated_at: string
           user_id: string
@@ -113,6 +115,8 @@ export type Database = {
           investment_goal?: string | null
           investment_horizon?: string | null
           onboarding_completed?: boolean | null
+          pin_hash?: string | null
+          pin_set?: boolean | null
           risk_tolerance?: string | null
           updated_at?: string
           user_id: string
@@ -128,6 +132,8 @@ export type Database = {
           investment_goal?: string | null
           investment_horizon?: string | null
           onboarding_completed?: boolean | null
+          pin_hash?: string | null
+          pin_set?: boolean | null
           risk_tolerance?: string | null
           updated_at?: string
           user_id?: string
