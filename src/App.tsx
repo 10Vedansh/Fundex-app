@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { PinGate } from "@/components/auth/PinGate";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
@@ -22,16 +23,18 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/dashboard" element={<Index />} />
-            <Route path="/founders" element={<Founders />} />
-            <Route path="/news" element={<News />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <PinGate>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/dashboard" element={<Index />} />
+              <Route path="/founders" element={<Founders />} />
+              <Route path="/news" element={<News />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </PinGate>
         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>

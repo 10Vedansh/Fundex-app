@@ -15,6 +15,8 @@ export interface UserProfile {
   experience_level: string | null;
   investment_amount: string | null;
   onboarding_completed: boolean;
+  pin_hash: string | null;
+  pin_set: boolean;
 }
 
 interface AuthContextType {

@@ -420,8 +420,7 @@ const Index = () => {
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">Your Investments</h3>
                     <div className="flex items-center gap-3">
-                      {/* CAMS Upload - compact button when portfolio has items */}
-                      <CAMSUpload compact={portfolio.length > 0} />
+                      <CAMSUpload compact />
                       <p className="text-sm text-muted-foreground hidden md:block">
                         Search above to add funds
                       </p>
@@ -526,7 +525,7 @@ const Index = () => {
         </main>
       </div>
       
-      <Footer />
+      {activeTab !== 'ai' && <Footer />}
 
       {/* Fund Detail Modal */}
       <FundDetailModal
