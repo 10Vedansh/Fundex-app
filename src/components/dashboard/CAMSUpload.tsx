@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { Upload, FileText, Loader2, AlertTriangle, TrendingUp, TrendingDown, Minus, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { useState, useCallback, useRef } from 'react';
+import { Upload, FileText, Loader2, AlertTriangle, TrendingUp, TrendingDown, Minus, RefreshCw, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -52,12 +52,17 @@ const HEALTH_CONFIG = {
   degrading: { label: 'Needs Attention', color: 'text-destructive', bg: 'bg-destructive/15', icon: TrendingDown, barColor: 'bg-destructive' },
 };
 
-async function extractTextFromPDF(file: File): Promise<string> {
+async function extractTextFromPDF(file: File, password?: string): Promise<string> {
   const pdfjsLib = await import('pdfjs-dist');
   pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
   const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const loadingParams: any = { data: arrayBuffer };
+  if (password) {
+    loadingParams.password = password;
+  }
+  
+  const pdf = await pdfjsLib.getDocument(loadingParams).promise;
   const pages: string[] = [];
 
   for (let i = 1; i <= Math.min(pdf.numPages, 30); i++) {
@@ -81,6 +86,57 @@ export function CAMSUpload({ compact = false }: CAMSUploadProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [portfolio, setPortfolio] = useState<ParsedPortfolio | null>(null);
   const [expandedFund, setExpandedFund] = useState<number | null>(null);
+  const [needsPassword, setNeedsPassword] = useState(false);
+  const [pdfPassword, setPdfPassword] = useState('');
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const processPDF = useCallback(async (file: File, password?: string) => {
+    setIsProcessing(true);
+    setPortfolio(null);
+
+    try {
+      toast.info('Extracting text from PDF...');
+      const textContent = await extractTextFromPDF(file, password);
+
+      if (textContent.length < 50) {
+        toast.error('Could not extract text from PDF. It may be image-based.');
+        setIsProcessing(false);
+        return;
+      }
+
+      toast.info('Analyzing portfolio with AI...');
+      const { data, error } = await supabase.functions.invoke('parse-cams', {
+        body: { textContent: textContent.slice(0, 30000) },
+      });
+
+      if (error) throw error;
+      if (!data || !data.holdings || data.holdings.length === 0) {
+        toast.error('No holdings found. Please check if it\'s a valid CAMS statement.');
+        setIsProcessing(false);
+        return;
+      }
+
+      setPortfolio(data);
+      setNeedsPassword(false);
+      setPendingFile(null);
+      setPdfPassword('');
+      toast.success(`Found ${data.holdings.length} fund(s) in your portfolio`);
+    } catch (err: any) {
+      console.error('CAMS parse error:', err);
+      // Check if it's a password error
+      if (err.message?.includes('password') || err.name === 'PasswordException') {
+        setNeedsPassword(true);
+        setPendingFile(file);
+        setIsProcessing(false);
+        toast.error('This PDF is password-protected. Please enter the password.');
+        return;
+      }
+      toast.error(err.message || 'Failed to parse document');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, []);
 
   const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -96,45 +152,54 @@ export function CAMSUpload({ compact = false }: CAMSUploadProps) {
       return;
     }
 
-    setIsProcessing(true);
-    setPortfolio(null);
+    await processPDF(file);
+  }, [processPDF]);
 
-    try {
-      toast.info('Extracting text from PDF...');
-      const textContent = await extractTextFromPDF(file);
-
-      if (textContent.length < 50) {
-        toast.error('Could not extract text from PDF. It may be image-based.');
-        setIsProcessing(false);
-        return;
-      }
-
-      toast.info('Analyzing portfolio with AI...');
-      const { data, error } = await supabase.functions.invoke('parse-cams', {
-        body: { textContent: textContent.slice(0, 30000) },
-      });
-
-      if (error) throw error;
-      if (!data || !data.holdings || data.holdings.length === 0) {
-        toast.error('No holdings found in the document. Please check if it\'s a valid CAMS statement.');
-        setIsProcessing(false);
-        return;
-      }
-
-      setPortfolio(data);
-      toast.success(`Found ${data.holdings.length} fund(s) in your portfolio`);
-    } catch (err: any) {
-      console.error('CAMS parse error:', err);
-      toast.error(err.message || 'Failed to parse document');
-    } finally {
-      setIsProcessing(false);
-    }
-  }, []);
+  const handlePasswordSubmit = async () => {
+    if (!pendingFile || !pdfPassword) return;
+    await processPDF(pendingFile, pdfPassword);
+  };
 
   const reset = () => {
     setPortfolio(null);
     setExpandedFund(null);
+    setNeedsPassword(false);
+    setPdfPassword('');
+    setPendingFile(null);
   };
+
+  // Password prompt UI
+  if (needsPassword) {
+    return (
+      <Card className="glass-card">
+        <CardContent className="py-10 flex flex-col items-center text-center">
+          <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+            <Lock className="h-8 w-8 text-primary" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground mb-2">Password Required</h3>
+          <p className="text-sm text-muted-foreground mb-4 max-w-md">
+            This CAMS statement is password-protected. Please enter the PDF password to continue.
+          </p>
+          <div className="flex gap-2 w-full max-w-xs">
+            <input
+              type="password"
+              value={pdfPassword}
+              onChange={(e) => setPdfPassword(e.target.value)}
+              placeholder="Enter PDF password"
+              className="flex-1 px-3 py-2 rounded-md border border-border bg-background text-foreground text-sm"
+              onKeyDown={(e) => e.key === 'Enter' && handlePasswordSubmit()}
+            />
+            <Button onClick={handlePasswordSubmit} disabled={isProcessing || !pdfPassword} size="sm">
+              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Unlock'}
+            </Button>
+          </div>
+          <Button variant="ghost" size="sm" className="mt-3 text-muted-foreground" onClick={reset}>
+            Cancel
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Compact button mode - shown in portfolio tab header when user has manual portfolio items
   if (compact && !portfolio) {

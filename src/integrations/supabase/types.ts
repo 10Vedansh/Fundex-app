@@ -38,6 +38,36 @@ export type Database = {
         }
         Relationships: []
       }
+      otp_records: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          expires_at: string
+          hashed_otp: string
+          id: string
+          phone_number: string
+          verified: boolean
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          expires_at: string
+          hashed_otp: string
+          id?: string
+          phone_number: string
+          verified?: boolean
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          expires_at?: string
+          hashed_otp?: string
+          id?: string
+          phone_number?: string
+          verified?: boolean
+        }
+        Relationships: []
+      }
       portfolio: {
         Row: {
           created_at: string
