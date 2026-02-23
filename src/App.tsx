@@ -23,18 +23,16 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <PinGate>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/onboarding" element={<Onboarding />} />
-              <Route path="/dashboard" element={<Index />} />
-              <Route path="/founders" element={<Founders />} />
-              <Route path="/news" element={<News />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </PinGate>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/dashboard" element={<PinGate><Index /></PinGate>} />
+            <Route path="/founders" element={<Founders />} />
+            <Route path="/news" element={<News />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>
