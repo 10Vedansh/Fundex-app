@@ -30,10 +30,10 @@ const founders = [
   },
   {
     name: 'Vedansh Taparia',
-    role: 'Co-Founder & CFO',
+    role: 'Co-Founder & CTO',
     image: vedanshImage,
     imagePosition: 'center 20%',
-    bio: 'Computer Science Engineer with expertise in data engineering and financial analytics. Vedansh oversees the financial operations and data infrastructure at CIFRAA, ensuring robust analytical capabilities. His background in algorithms and data structures powers the intelligent insights engine.',
+    bio: 'Computer Science Engineer with expertise in data engineering and financial analytics. Vedansh oversees the technical operations and data infrastructure at CIFRAA, ensuring robust analytical capabilities. His background in algorithms and data structures powers the intelligent insights engine.',
     skills: ['Data Engineering', 'Financial Analytics', 'Backend Systems', 'Algorithms'],
     icon: <Database className="h-5 w-5" />
   }
