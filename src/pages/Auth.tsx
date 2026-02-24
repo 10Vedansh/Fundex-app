@@ -424,7 +424,7 @@ export default function Auth() {
                         <Input 
                           id="signup-name"
                           type="text" 
-                          placeholder="John Doe"
+                          placeholder="Siddhant Negi"
                           value={name}
                           onChange={(e) => {
                             setName(e.target.value);
