@@ -38,6 +38,36 @@ export type Database = {
         }
         Relationships: []
       }
+      otp_records: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          expires_at: string
+          hashed_otp: string
+          id: string
+          phone_number: string
+          verified: boolean
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          expires_at: string
+          hashed_otp: string
+          id?: string
+          phone_number: string
+          verified?: boolean
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          expires_at?: string
+          hashed_otp?: string
+          id?: string
+          phone_number?: string
+          verified?: boolean
+        }
+        Relationships: []
+      }
       portfolio: {
         Row: {
           created_at: string
@@ -98,6 +128,8 @@ export type Database = {
           investment_goal: string | null
           investment_horizon: string | null
           onboarding_completed: boolean | null
+          pin_hash: string | null
+          pin_set: boolean | null
           risk_tolerance: string | null
           updated_at: string
           user_id: string
@@ -113,6 +145,8 @@ export type Database = {
           investment_goal?: string | null
           investment_horizon?: string | null
           onboarding_completed?: boolean | null
+          pin_hash?: string | null
+          pin_set?: boolean | null
           risk_tolerance?: string | null
           updated_at?: string
           user_id: string
@@ -128,6 +162,8 @@ export type Database = {
           investment_goal?: string | null
           investment_horizon?: string | null
           onboarding_completed?: boolean | null
+          pin_hash?: string | null
+          pin_set?: boolean | null
           risk_tolerance?: string | null
           updated_at?: string
           user_id?: string

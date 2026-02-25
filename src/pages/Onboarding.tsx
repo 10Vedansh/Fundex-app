@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Check, Shield, Target, Clock, Wallet, TrendingUp, Loader2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Check, Shield, Target, Clock, Wallet, TrendingUp, Loader2, Sparkles, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { FundexLogo } from '@/components/landing/FundexLogo';
@@ -16,32 +16,21 @@ interface Question {
   options: { value: string; label: string; description: string }[];
 }
 
-const questions: Question[] = [
+const ALL_QUESTIONS: Question[] = [
   {
     id: 'risk_tolerance',
-    question: 'What\'s your comfort level with risk?',
+    question: "What's your comfort level with risk?",
     description: 'This helps us understand what kind of investments might align with your preferences.',
     icon: Shield,
     options: [
       { value: 'conservative', label: 'Conservative', description: 'I prefer stability over high returns' },
       { value: 'moderate', label: 'Moderate', description: 'Balanced approach to risk and reward' },
-      { value: 'aggressive', label: 'Aggressive', description: 'I\'m okay with volatility for higher potential' }
-    ]
-  },
-  {
-    id: 'investment_horizon',
-    question: 'What\'s your investment timeline?',
-    description: 'Longer horizons often allow for different strategies.',
-    icon: Clock,
-    options: [
-      { value: 'short', label: 'Short (1-3 years)', description: 'Need funds relatively soon' },
-      { value: 'medium', label: 'Medium (3-7 years)', description: 'Planning for medium-term goals' },
-      { value: 'long', label: 'Long (7+ years)', description: 'Building wealth for the future' }
+      { value: 'aggressive', label: 'Aggressive', description: "I'm okay with volatility for higher potential" }
     ]
   },
   {
     id: 'investment_goal',
-    question: 'What\'s your primary investment goal?',
+    question: "What's your primary investment goal?",
     description: 'Understanding your objective helps personalize your experience.',
     icon: Target,
     options: [
@@ -49,6 +38,17 @@ const questions: Question[] = [
       { value: 'income', label: 'Regular Income', description: 'Generating periodic returns' },
       { value: 'preservation', label: 'Capital Preservation', description: 'Protecting what I have' },
       { value: 'tax', label: 'Tax Savings', description: 'Optimizing tax efficiency' }
+    ]
+  },
+  {
+    id: 'investment_horizon',
+    question: "What's your investment timeline?",
+    description: 'Longer horizons often allow for different strategies.',
+    icon: Clock,
+    options: [
+      { value: 'short', label: 'Short (1-3 years)', description: 'Need funds relatively soon' },
+      { value: 'medium', label: 'Medium (3-7 years)', description: 'Planning for medium-term goals' },
+      { value: 'long', label: 'Long (7+ years)', description: 'Building wealth for the future' }
     ]
   },
   {
@@ -75,6 +75,49 @@ const questions: Question[] = [
   }
 ];
 
+// Smart validation rules: what options are incompatible with previous selections
+function getDisabledOptions(questionId: string, answers: Record<string, string>): Record<string, string> {
+  const disabled: Record<string, string> = {};
+  const risk = answers.risk_tolerance;
+  const goal = answers.investment_goal;
+
+  if (questionId === 'investment_goal' && risk) {
+    if (risk === 'aggressive') {
+      disabled['preservation'] = 'Capital preservation doesn\'t align with aggressive risk appetite';
+      disabled['tax'] = 'Tax saving funds are typically conservative — doesn\'t match aggressive profile';
+    }
+    if (risk === 'conservative') {
+      disabled['wealth'] = 'Wealth creation needs higher risk tolerance';
+    }
+  }
+
+  if (questionId === 'investment_horizon') {
+    if (risk === 'aggressive') {
+      disabled['short'] = 'Aggressive investments need at least 3+ years to ride out volatility';
+    }
+    if (goal === 'wealth') {
+      disabled['short'] = 'Wealth creation works best with 3+ year horizons';
+    }
+    if (risk === 'conservative' && goal === 'preservation') {
+      disabled['long'] = 'For capital preservation, shorter horizons are more suitable';
+    }
+  }
+
+  if (questionId === 'experience_level') {
+    if (risk === 'aggressive') {
+      disabled['beginner'] = 'Aggressive investing requires some market experience';
+    }
+  }
+
+  if (questionId === 'investment_amount') {
+    if (risk === 'aggressive' && goal === 'wealth') {
+      disabled['small'] = 'For aggressive wealth creation, consider investing more to diversify risk';
+    }
+  }
+
+  return disabled;
+}
+
 export default function Onboarding() {
   const navigate = useNavigate();
   const { user, profile, updateProfile, isLoading: authLoading } = useAuth();
@@ -82,18 +125,23 @@ export default function Onboarding() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [showWarning, setShowWarning] = useState<string | null>(null);
 
+  const questions = ALL_QUESTIONS;
   const currentQuestion = questions[currentStep];
   const progress = ((currentStep + 1) / questions.length) * 100;
 
-  // Redirect if not authenticated
+  const disabledOptions = useMemo(() => 
+    getDisabledOptions(currentQuestion.id, answers), 
+    [currentQuestion.id, answers]
+  );
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
     }
   }, [user, authLoading, navigate]);
 
-  // If already completed onboarding, redirect to dashboard
   useEffect(() => {
     if (profile?.onboarding_completed) {
       navigate('/dashboard');
@@ -101,21 +149,23 @@ export default function Onboarding() {
   }, [profile, navigate]);
 
   const handleSelect = async (value: string) => {
+    // Check if option is disabled
+    if (disabledOptions[value]) {
+      setShowWarning(disabledOptions[value]);
+      setTimeout(() => setShowWarning(null), 3000);
+      return;
+    }
+
     const newAnswers = { ...answers, [currentQuestion.id]: value };
     setAnswers(newAnswers);
     
-    // Start transition animation
     setIsTransitioning(true);
-    
-    // Wait for visual feedback
     await new Promise(resolve => setTimeout(resolve, 300));
     
     if (currentStep < questions.length - 1) {
-      // Move to next question
       setCurrentStep(prev => prev + 1);
       setIsTransitioning(false);
     } else {
-      // Complete onboarding
       await completeOnboarding(newAnswers);
     }
   };
@@ -166,12 +216,10 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-background flex relative overflow-hidden">
-      {/* Premium fintech background - shared with Auth */}
       <AuthBackground />
       
       {/* Left Side - Hero Section */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden z-10">
-        
         <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
           <div className="space-y-8">
             <div>
@@ -183,7 +231,6 @@ export default function Onboarding() {
               </p>
             </div>
 
-            {/* Progress indicators on left side */}
             <div className="space-y-3 pt-8">
               {questions.map((q, idx) => (
                 <div 
@@ -218,7 +265,6 @@ export default function Onboarding() {
               ))}
             </div>
 
-            {/* Fun fact or tip */}
             <div className="pt-8 flex items-start gap-3 max-w-sm p-4 rounded-xl bg-secondary/20 backdrop-blur-sm border border-border/20">
               <div className="h-10 w-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
                 <Sparkles className="h-5 w-5 text-primary" />
@@ -236,7 +282,6 @@ export default function Onboarding() {
 
       {/* Right Side - Question Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative z-10">
-        {/* Header for mobile and desktop */}
         <div className="absolute top-6 left-6 right-6 flex items-center justify-between">
           <Button 
             variant="ghost" 
@@ -248,11 +293,10 @@ export default function Onboarding() {
             Back
           </Button>
           <FundexLogo size="sm" />
-          <div className="w-20" /> {/* Spacer for layout balance */}
+          <div className="w-20" />
         </div>
 
         <div className="w-full max-w-lg mt-16 lg:mt-0">
-          {/* Elegant progress bar */}
           <div className="mb-8">
             <div className="flex items-center justify-between text-sm mb-3">
               <span className="text-muted-foreground font-medium">Step {currentStep + 1} of {questions.length}</span>
@@ -263,17 +307,20 @@ export default function Onboarding() {
                 className="h-full rounded-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500 ease-out"
                 style={{ width: `${progress}%` }}
               />
-              <div 
-                className="absolute inset-0 h-full rounded-full opacity-50"
-                style={{ 
-                  width: `${progress}%`,
-                  background: 'linear-gradient(90deg, transparent, hsla(217, 91%, 60%, 0.3), transparent)',
-                }}
-              />
             </div>
           </div>
 
-          {/* Question Card */}
+          {/* Warning popup */}
+          {showWarning && (
+            <div className="mb-4 p-3 rounded-xl bg-warning/15 border border-warning/30 flex items-start gap-3 animate-fade-in">
+              <AlertCircle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-warning">Doesn't match your profile</p>
+                <p className="text-xs text-muted-foreground mt-1">{showWarning}</p>
+              </div>
+            </div>
+          )}
+
           <Card 
             className={`auth-card auth-card-glow transition-all duration-300 ${
               isTransitioning ? 'opacity-80 scale-[0.98]' : 'opacity-100 scale-100'
@@ -292,30 +339,38 @@ export default function Onboarding() {
             </CardHeader>
 
             <CardContent className="space-y-3">
-              {currentQuestion.options.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => handleSelect(option.value)}
-                  disabled={isSaving}
-                  className={`w-full p-4 rounded-xl border text-left transition-all duration-200 ${
-                    answers[currentQuestion.id] === option.value
-                      ? 'onboarding-option-selected'
-                      : 'onboarding-option'
-                  } ${isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold">{option.label}</p>
-                      <p className="text-sm text-muted-foreground">{option.description}</p>
-                    </div>
-                    {answers[currentQuestion.id] === option.value && (
-                      <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center shrink-0 ml-4">
-                        <Check className="h-4 w-4 text-primary-foreground" />
+              {currentQuestion.options.map((option) => {
+                const isDisabled = !!disabledOptions[option.value];
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => handleSelect(option.value)}
+                    disabled={isSaving}
+                    className={`w-full p-4 rounded-xl border text-left transition-all duration-200 ${
+                      isDisabled
+                        ? 'opacity-40 cursor-not-allowed border-border/30 bg-secondary/20'
+                        : answers[currentQuestion.id] === option.value
+                          ? 'onboarding-option-selected'
+                          : 'onboarding-option'
+                    } ${isSaving ? 'opacity-50 cursor-not-allowed' : !isDisabled ? 'cursor-pointer' : ''}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold">{option.label}</p>
+                        <p className="text-sm text-muted-foreground">{option.description}</p>
                       </div>
-                    )}
-                  </div>
-                </button>
-              ))}
+                      {answers[currentQuestion.id] === option.value && (
+                        <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center shrink-0 ml-4">
+                          <Check className="h-4 w-4 text-primary-foreground" />
+                        </div>
+                      )}
+                      {isDisabled && (
+                        <AlertCircle className="h-4 w-4 text-warning shrink-0 ml-4" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
 
               {isSaving && (
                 <div className="flex items-center justify-center gap-2 pt-4 text-muted-foreground">
@@ -326,7 +381,6 @@ export default function Onboarding() {
             </CardContent>
           </Card>
 
-          {/* Step indicators (mobile only) */}
           <div className="flex justify-center gap-2 mt-6 lg:hidden">
             {questions.map((_, idx) => (
               <div

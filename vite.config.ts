@@ -11,10 +11,17 @@ export default defineConfig(() => ({
       overlay: false,
     },
   },
+
   plugins: [react()],
+
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+
+
+  build: {
+    target: "esnext",
   },
 }));

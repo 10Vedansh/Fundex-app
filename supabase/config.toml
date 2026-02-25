@@ -14,3 +14,15 @@ verify_jwt = false
 
 [functions.fetch-news]
 verify_jwt = false
+
+[functions.ai-chat]
+verify_jwt = false
+
+[functions.parse-cams]
+verify_jwt = false
+
+[functions.send-otp]
+verify_jwt = false
+
+[functions.verify-otp]
+verify_jwt = false

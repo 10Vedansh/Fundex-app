@@ -111,8 +111,14 @@ interface SectionDef {
   columns: { key: string; label: string; align?: string; render: (f: MutualFund) => string }[];
 }
 
-const fmt = (v: number | null | undefined, suffix = '') => v != null ? `${v > 0 && suffix === '%' ? '+' : ''}${v.toFixed(suffix === '%' ? 1 : 2)}${suffix}` : '--';
-const fmtCr = (v: number | null | undefined) => v != null ? `₹${v.toLocaleString()}` : '--';
+const fmt = (v: number | null | undefined, suffix = '') => {
+  if (v == null || v === 0) return 'NA';
+  return `${v > 0 && suffix === '%' ? '+' : ''}${v.toFixed(suffix === '%' ? 1 : 2)}${suffix}`;
+};
+const fmtCr = (v: number | null | undefined) => {
+  if (v == null || v === 0) return 'NA';
+  return `₹${v.toLocaleString()}`;
+};
 
 const SECTIONS: SectionDef[] = [
   {
@@ -155,7 +161,7 @@ const SECTIONS: SectionDef[] = [
     id: 'nav',
     label: 'NAV',
     columns: [
-      { key: 'nav', label: 'NAV', align: 'right', render: (f) => `₹${(f.latestNav ?? f.nav).toFixed(2)}` },
+      { key: 'nav', label: 'NAV', align: 'right', render: (f) => { const v = f.latestNav ?? f.nav; return v != null ? `₹${v.toFixed(2)}` : 'NA'; } },
       { key: 'previousNav', label: 'Prev NAV', align: 'right', render: (f) => f.previousNav != null ? `₹${f.previousNav.toFixed(2)}` : '--' },
       { key: 'high52W', label: '52W High', align: 'right', render: (f) => f.high52W != null ? `₹${f.high52W.toFixed(2)}` : '--' },
       { key: 'low52W', label: '52W Low', align: 'right', render: (f) => f.low52W != null ? `₹${f.low52W.toFixed(2)}` : '--' },
@@ -432,13 +438,13 @@ export function AllFundsTab({
       </div>
 
       {/* Section tabs */}
-      <div className="flex gap-1 flex-wrap mb-0 border-b border-border/40 pb-0">
+      <div className="flex gap-0 mb-0 border-b border-border/40 pb-0">
         {SECTIONS.map((sec) => (
           <button
             key={sec.id}
             onClick={() => setActiveSection(sec.id)}
             className={cn(
-              'px-4 py-2.5 text-xs font-medium transition-all border-b-2 -mb-[1px]',
+              'flex-1 px-4 py-3 text-sm font-medium transition-all border-b-2 -mb-[1px] text-center',
               activeSection === sec.id
                 ? 'text-primary border-b-primary bg-primary/5'
                 : 'text-muted-foreground border-b-transparent hover:text-foreground hover:bg-secondary/30'

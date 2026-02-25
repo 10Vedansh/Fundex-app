@@ -14,6 +14,8 @@ import { FundComparisonCard } from '@/components/dashboard/FundComparisonCard';
 import { PortfolioFundModal } from '@/components/dashboard/PortfolioFundModal';
 import { DashboardLoadingState } from '@/components/dashboard/DashboardLoadingState';
 import { AllFundsTab } from '@/components/dashboard/AllFundsTab';
+import { AIChat } from '@/components/dashboard/AIChat';
+import { CAMSUpload } from '@/components/dashboard/CAMSUpload';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -266,7 +268,7 @@ const Index = () => {
               onFundClick={(fund) => {
                 handleFundClick(fund);
               }}
-              showSearch={activeTab !== 'sectors' && activeTab !== 'allfunds'}
+              showSearch={activeTab !== 'sectors' && activeTab !== 'allfunds' && activeTab !== 'ai'}
               showInfoText={activeTab === 'overview'}
               showGreeting={activeTab === 'overview'}
             />
@@ -385,6 +387,7 @@ const Index = () => {
               {/* Portfolio Tab */}
               {activeTab === 'portfolio' && (
                 <div className="animate-fade-in space-y-6">
+                  {/* Portfolio Summary Cards */}
                   {portfolio.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <Card className="glass-card">
@@ -416,9 +419,12 @@ const Index = () => {
 
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">Your Investments</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Search above to add funds to your portfolio
-                    </p>
+                    <div className="flex items-center gap-3">
+                      <CAMSUpload compact />
+                      <p className="text-sm text-muted-foreground hidden md:block">
+                        Search above to add funds
+                      </p>
+                    </div>
                   </div>
 
                   {portfolioLoading ? (
@@ -509,12 +515,17 @@ const Index = () => {
                   </Card>
                 </div>
               )}
+
+              {/* AI Tab */}
+              {activeTab === 'ai' && (
+                <AIChat />
+              )}
             </div>
           </div>
         </main>
       </div>
       
-      <Footer />
+      {activeTab !== 'ai' && <Footer />}
 
       {/* Fund Detail Modal */}
       <FundDetailModal
@@ -524,6 +535,8 @@ const Index = () => {
         onClose={() => setIsModalOpen(false)}
         onAddToPortfolio={handleAddToPortfolio}
         userRiskProfile={profile?.risk_tolerance || undefined}
+        isBookmarked={selectedFundForModal ? isInWatchlist(selectedFundForModal.id) : false}
+        onBookmarkToggle={toggleWatchlist}
       />
 
       {/* Add to Portfolio Dialog */}
