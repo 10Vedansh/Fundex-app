@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { recommendFundsV2, IntersectionPreferences } from '@/utils/recommendation/intersectionEngine';
+import { recommendFundsV2, RecommendationPreferences } from '@/utils/recommendation/intersectionEngine';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeaderZone } from '@/components/dashboard/DashboardHeaderZone';
@@ -107,7 +107,7 @@ const Index = () => {
   const personalizedFunds = useMemo(() => {
     if (!profile || funds.length === 0) return [];
     
-    const prefs: IntersectionPreferences = {
+    const prefs: RecommendationPreferences = {
       riskTolerance: profile.risk_tolerance || 'moderate',
       investmentGoal: profile.investment_goal || 'wealth',
       investmentHorizon: profile.investment_horizon || 'long',
