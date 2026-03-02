@@ -136,17 +136,21 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
             nudge={validation.nudges.risk_tolerance}
           >
             <div className="grid gap-2">
-              {riskOptions.map(opt => (
-                <OptionCard
-                  key={opt.value}
-                  selected={preferences.risk_tolerance === opt.value}
-                  disabled={validation.disabledRisk.includes(opt.value)}
-                  onClick={() => updateField('risk_tolerance', opt.value)}
-                  label={opt.label}
-                  desc={opt.desc}
-                  icon={opt.icon}
-                />
-              ))}
+              {riskOptions.map(opt => {
+                const disabledEntry = validation.disabledRisk.find(d => d.value === opt.value);
+                return (
+                  <OptionCard
+                    key={opt.value}
+                    selected={preferences.risk_tolerance === opt.value}
+                    disabled={!!disabledEntry}
+                    disabledReason={disabledEntry?.reason}
+                    onClick={() => updateField('risk_tolerance', opt.value)}
+                    label={opt.label}
+                    desc={opt.desc}
+                    icon={opt.icon}
+                  />
+                );
+              })}
             </div>
           </PreferenceSection>
 
@@ -157,16 +161,20 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
             nudge={validation.nudges.investment_goal}
           >
             <div className="grid grid-cols-2 gap-2">
-              {goalOptions.map(opt => (
-                <OptionCard
-                  key={opt.value}
-                  selected={preferences.investment_goal === opt.value}
-                  disabled={validation.disabledGoal.includes(opt.value)}
-                  onClick={() => updateField('investment_goal', opt.value)}
-                  label={opt.label}
-                  desc={opt.desc}
-                />
-              ))}
+              {goalOptions.map(opt => {
+                const disabledEntry = validation.disabledGoal.find(d => d.value === opt.value);
+                return (
+                  <OptionCard
+                    key={opt.value}
+                    selected={preferences.investment_goal === opt.value}
+                    disabled={!!disabledEntry}
+                    disabledReason={disabledEntry?.reason}
+                    onClick={() => updateField('investment_goal', opt.value)}
+                    label={opt.label}
+                    desc={opt.desc}
+                  />
+                );
+              })}
             </div>
           </PreferenceSection>
 
@@ -177,16 +185,20 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
             nudge={validation.nudges.investment_horizon}
           >
             <div className="grid grid-cols-3 gap-2">
-              {horizonOptions.map(opt => (
-                <OptionCard
-                  key={opt.value}
-                  selected={preferences.investment_horizon === opt.value}
-                  disabled={validation.disabledHorizon.includes(opt.value)}
-                  onClick={() => updateField('investment_horizon', opt.value)}
-                  label={opt.label}
-                  desc={opt.desc}
-                />
-              ))}
+              {horizonOptions.map(opt => {
+                const disabledEntry = validation.disabledHorizon.find(d => d.value === opt.value);
+                return (
+                  <OptionCard
+                    key={opt.value}
+                    selected={preferences.investment_horizon === opt.value}
+                    disabled={!!disabledEntry}
+                    disabledReason={disabledEntry?.reason}
+                    onClick={() => updateField('investment_horizon', opt.value)}
+                    label={opt.label}
+                    desc={opt.desc}
+                  />
+                );
+              })}
             </div>
           </PreferenceSection>
 
@@ -197,16 +209,20 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
             nudge={validation.nudges.experience_level}
           >
             <div className="grid grid-cols-3 gap-2">
-              {experienceOptions.map(opt => (
-                <OptionCard
-                  key={opt.value}
-                  selected={preferences.experience_level === opt.value}
-                  disabled={validation.disabledExperience.includes(opt.value)}
-                  onClick={() => updateField('experience_level', opt.value)}
-                  label={opt.label}
-                  desc={opt.desc}
-                />
-              ))}
+              {experienceOptions.map(opt => {
+                const disabledEntry = validation.disabledExperience.find(d => d.value === opt.value);
+                return (
+                  <OptionCard
+                    key={opt.value}
+                    selected={preferences.experience_level === opt.value}
+                    disabled={!!disabledEntry}
+                    disabledReason={disabledEntry?.reason}
+                    onClick={() => updateField('experience_level', opt.value)}
+                    label={opt.label}
+                    desc={opt.desc}
+                  />
+                );
+              })}
             </div>
           </PreferenceSection>
 
@@ -289,6 +305,7 @@ function PreferenceSection({
 function OptionCard({
   selected,
   disabled,
+  disabledReason,
   onClick,
   label,
   desc,
@@ -296,6 +313,7 @@ function OptionCard({
 }: {
   selected: boolean;
   disabled: boolean;
+  disabledReason?: string;
   onClick: () => void;
   label: string;
   desc: string;
@@ -348,8 +366,8 @@ function OptionCard({
       <TooltipProvider delayDuration={100}>
         <Tooltip>
           <TooltipTrigger asChild>{card}</TooltipTrigger>
-          <TooltipContent side="top" className="text-xs z-[9999]">
-            This combination is not suitable
+          <TooltipContent side="top" className="text-xs z-[9999] max-w-[260px]">
+            {disabledReason || 'This combination is not suitable'}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
