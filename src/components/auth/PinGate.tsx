@@ -8,17 +8,8 @@ interface PinGateProps {
   children: React.ReactNode;
 }
 
-// Simple hash function for PIN (not cryptographic, but sufficient for client-side comparison)
-async function hashPin(pin: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(pin + 'cifraa_salt_2026');
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
 export function PinGate({ children }: PinGateProps) {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, session, profile, refreshProfile } = useAuth();
   const [pinVerified, setPinVerified] = useState(false);
   const [showPinCreate, setShowPinCreate] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -28,15 +19,12 @@ export function PinGate({ children }: PinGateProps) {
     if (!user || !profile) return;
     
     if (profile.pin_set) {
-      // User has PIN, need to verify
       setPinVerified(false);
     } else {
-      // No PIN set, allow through (will prompt to create after onboarding)
       setPinVerified(true);
     }
   }, [user, profile]);
 
-  // Show PIN creation prompt after onboarding
   useEffect(() => {
     if (profile && profile.onboarding_completed && !profile.pin_set && user) {
       setShowPinCreate(true);
@@ -44,17 +32,22 @@ export function PinGate({ children }: PinGateProps) {
   }, [profile, user]);
 
   const handleVerifyPin = async (pin: string) => {
-    if (!profile) return;
+    if (!session) return;
     setIsLoading(true);
     setError('');
     
     try {
-      const hashed = await hashPin(pin);
-      if (hashed === profile.pin_hash) {
+      const { data, error: fnError } = await supabase.functions.invoke('verify-pin', {
+        body: { pin },
+      });
+
+      if (fnError) throw fnError;
+
+      if (data?.verified) {
         setPinVerified(true);
         toast.success('Welcome back!');
       } else {
-        setError('Incorrect PIN. Please try again.');
+        setError(data?.error || 'Incorrect PIN. Please try again.');
       }
     } catch {
       setError('Something went wrong. Please try again.');
@@ -64,23 +57,25 @@ export function PinGate({ children }: PinGateProps) {
   };
 
   const handleCreatePin = async (pin: string) => {
-    if (!user) return;
+    if (!session) return;
     setIsLoading(true);
     setError('');
     
     try {
-      const hashed = await hashPin(pin);
-      const { error: dbError } = await supabase
-        .from('profiles')
-        .update({ pin_hash: hashed, pin_set: true })
-        .eq('user_id', user.id);
-      
-      if (dbError) throw dbError;
-      
-      await refreshProfile();
-      setShowPinCreate(false);
-      setPinVerified(true);
-      toast.success('PIN created successfully!');
+      const { data, error: fnError } = await supabase.functions.invoke('set-pin', {
+        body: { pin },
+      });
+
+      if (fnError) throw fnError;
+
+      if (data?.success) {
+        await refreshProfile();
+        setShowPinCreate(false);
+        setPinVerified(true);
+        toast.success('PIN created successfully!');
+      } else {
+        setError(data?.error || 'Failed to create PIN. Please try again.');
+      }
     } catch {
       setError('Failed to create PIN. Please try again.');
     } finally {
@@ -93,10 +88,8 @@ export function PinGate({ children }: PinGateProps) {
     setPinVerified(true);
   };
 
-  // Not logged in or loading
   if (!user || !profile) return <>{children}</>;
 
-  // PIN verification required
   if (profile.pin_set && !pinVerified) {
     return (
       <PinEntry
@@ -108,7 +101,6 @@ export function PinGate({ children }: PinGateProps) {
     );
   }
 
-  // PIN creation prompt
   if (showPinCreate) {
     return (
       <>
