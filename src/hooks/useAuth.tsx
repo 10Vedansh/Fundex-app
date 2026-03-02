@@ -15,7 +15,6 @@ export interface UserProfile {
   experience_level: string | null;
   investment_amount: string | null;
   onboarding_completed: boolean;
-  pin_hash: string | null;
   pin_set: boolean;
 }
 
@@ -46,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, user_id, email, full_name, avatar_url, risk_tolerance, investment_horizon, investment_goal, experience_level, investment_amount, onboarding_completed, pin_set, created_at, updated_at')
         .eq('user_id', userId)
         .maybeSingle();
 
