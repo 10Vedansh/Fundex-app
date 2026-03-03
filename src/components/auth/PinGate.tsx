@@ -46,6 +46,10 @@ export function PinGate({ children }: PinGateProps) {
       if (data?.verified) {
         setPinVerified(true);
         toast.success('Welcome back!');
+      } else if (data?.error === 'PIN not set') {
+        // PIN was reset (e.g. after migration) — prompt to create a new one
+        setShowPinCreate(true);
+        setPinVerified(false);
       } else {
         setError(data?.error || 'Incorrect PIN. Please try again.');
       }
