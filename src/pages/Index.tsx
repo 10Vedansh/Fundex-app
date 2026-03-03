@@ -16,6 +16,7 @@ import { DashboardLoadingState } from '@/components/dashboard/DashboardLoadingSt
 import { AllFundsTab } from '@/components/dashboard/AllFundsTab';
 import { AIChat } from '@/components/dashboard/AIChat';
 import { CAMSUpload } from '@/components/dashboard/CAMSUpload';
+import { BuildPortfolio } from '@/components/dashboard/BuildPortfolio';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -514,6 +515,11 @@ const Index = () => {
                     </CardContent>
                   </Card>
                 </div>
+              )}
+
+              {/* Build Portfolio Tab */}
+              {activeTab === 'build' && (
+                <BuildPortfolio funds={funds} userProfile={profile} />
               )}
 
               {/* AI Tab */}

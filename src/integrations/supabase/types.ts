@@ -120,17 +120,24 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          dependents: number | null
           email: string | null
+          existing_investments: string | null
           experience_level: string | null
           full_name: string | null
+          has_insurance: boolean | null
           id: string
+          income_stability: string | null
           investment_amount: string | null
           investment_goal: string | null
           investment_horizon: string | null
+          monthly_emis: number | null
+          occupation: string | null
           onboarding_completed: boolean | null
           pin_hash: string | null
           pin_salt: string | null
           pin_set: boolean | null
+          risk_capacity_score: number | null
           risk_tolerance: string | null
           updated_at: string
           user_id: string
@@ -138,17 +145,24 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          dependents?: number | null
           email?: string | null
+          existing_investments?: string | null
           experience_level?: string | null
           full_name?: string | null
+          has_insurance?: boolean | null
           id?: string
+          income_stability?: string | null
           investment_amount?: string | null
           investment_goal?: string | null
           investment_horizon?: string | null
+          monthly_emis?: number | null
+          occupation?: string | null
           onboarding_completed?: boolean | null
           pin_hash?: string | null
           pin_salt?: string | null
           pin_set?: boolean | null
+          risk_capacity_score?: number | null
           risk_tolerance?: string | null
           updated_at?: string
           user_id: string
@@ -156,17 +170,24 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          dependents?: number | null
           email?: string | null
+          existing_investments?: string | null
           experience_level?: string | null
           full_name?: string | null
+          has_insurance?: boolean | null
           id?: string
+          income_stability?: string | null
           investment_amount?: string | null
           investment_goal?: string | null
           investment_horizon?: string | null
+          monthly_emis?: number | null
+          occupation?: string | null
           onboarding_completed?: boolean | null
           pin_hash?: string | null
           pin_salt?: string | null
           pin_set?: boolean | null
+          risk_capacity_score?: number | null
           risk_tolerance?: string | null
           updated_at?: string
           user_id?: string

@@ -1,4 +1,4 @@
-import { LayoutGrid, PieChart, Bookmark, Wallet, ListFilter, Bot } from 'lucide-react';
+import { LayoutGrid, PieChart, Bookmark, Wallet, ListFilter, Bot, Briefcase } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface DashboardSidebarProps {
@@ -14,6 +14,7 @@ const navItems = [
   { id: 'sectors', label: 'Sectors', icon: PieChart },
   { id: 'watchlist', label: 'Watchlist', icon: Bookmark },
   { id: 'portfolio', label: 'Portfolio', icon: Wallet },
+  { id: 'build', label: 'Build', icon: Briefcase },
   { id: 'ai', label: 'AI', icon: Bot },
 ];
 
