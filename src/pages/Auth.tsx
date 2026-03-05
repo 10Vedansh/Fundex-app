@@ -139,15 +139,14 @@ export default function Auth() {
     
     const isEmailValid = validateEmail(email);
     const isPasswordValid = validatePassword(password);
-    const isNameValid = validateName(name);
     
-    if (!isEmailValid || !isPasswordValid || !isNameValid) {
+    if (!isEmailValid || !isPasswordValid) {
       return;
     }
 
     setIsLoading(true);
     try {
-      const { error } = await signUpWithEmail(email, password, name);
+      const { error } = await signUpWithEmail(email, password, '');
       
       if (error) {
         if (error.message.includes('User already registered')) {
@@ -358,10 +357,11 @@ export default function Auth() {
                   <TabsTrigger value="signup">Sign Up</TabsTrigger>
                 </TabsList>
 
+
                 <TabsContent value="login" className="space-y-4 mt-4">
                   <form onSubmit={handleEmailLogin} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="login-email">Email</Label>
+                      <Label htmlFor="login-email">Email / Mobile No.</Label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input 
@@ -417,25 +417,6 @@ export default function Auth() {
 
                 <TabsContent value="signup" className="space-y-4 mt-4">
                   <form onSubmit={handleEmailSignup} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-name">Full Name</Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          id="signup-name"
-                          type="text" 
-                          placeholder="Siddhant Negi"
-                          value={name}
-                          onChange={(e) => {
-                            setName(e.target.value);
-                            if (errors.name) validateName(e.target.value);
-                          }}
-                          onBlur={() => validateName(name)}
-                          className={`pl-10 ${errors.name ? 'border-destructive' : ''}`}
-                        />
-                      </div>
-                      {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
-                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="signup-email">Email</Label>
                       <div className="relative">

@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
 import { MutualFund, CATEGORY_LABELS } from '@/types/mutualFund';
 import { ScoredFund, recommendFundsV2, RecommendationPreferences } from '@/utils/recommendation/intersectionEngine';
 import { computeRiskCapacity, RiskCapacityInputs, RiskCapacityResult } from '@/utils/recommendation/riskCapacity';
@@ -45,56 +45,132 @@ const SUITABILITY_COLORS = {
   limited: 'bg-destructive/20 text-destructive',
 };
 
+const SECTOR_OPTIONS = [
+  { value: 'EQ-BANK', label: 'Banking' },
+  { value: 'EQ-IT', label: 'IT' },
+  { value: 'EQ-Pharma', label: 'Pharma' },
+  { value: 'EQ-INFRA', label: 'Infrastructure' },
+  { value: 'EQ-PSU', label: 'PSU' },
+  { value: 'EQ-Energy', label: 'Energy' },
+  { value: 'EQ-Consumption', label: 'Consumption' },
+  { value: 'EQ-Manufacturing', label: 'Manufacturing' },
+];
+
+const MF_TYPE_OPTIONS = [
+  { value: 'equity', label: 'Equity' },
+  { value: 'debt', label: 'Debt' },
+  { value: 'hybrid', label: 'Hybrid' },
+  { value: 'commodities', label: 'Commodities (Gold/Silver)' },
+];
+
+const EQUITY_SUB_OPTIONS = [
+  { value: 'large_cap', label: 'Large Cap' },
+  { value: 'mid_cap', label: 'Mid Cap' },
+  { value: 'small_cap', label: 'Small Cap' },
+  { value: 'flexi_cap', label: 'Flexi Cap' },
+  { value: 'elss', label: 'ELSS (Tax Saving)' },
+  { value: 'value', label: 'Value' },
+  { value: 'sectoral', label: 'Sectoral/Thematic' },
+];
+
+const DEBT_SUB_OPTIONS = [
+  { value: 'corporate_bond', label: 'Corporate Bond' },
+  { value: 'short_duration', label: 'Short Duration' },
+  { value: 'liquid', label: 'Liquid' },
+  { value: 'gilt', label: 'Gilt' },
+  { value: 'banking_psu', label: 'Banking & PSU' },
+];
+
+const HYBRID_SUB_OPTIONS = [
+  { value: 'balanced', label: 'Balanced Hybrid' },
+  { value: 'aggressive', label: 'Aggressive Hybrid' },
+  { value: 'conservative', label: 'Conservative Hybrid' },
+  { value: 'dynamic', label: 'Dynamic Asset Allocation' },
+  { value: 'multi_asset', label: 'Multi Asset' },
+];
+
 export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
   const [step, setStep] = useState<'inputs' | 'result'>('inputs');
   const [isBuilding, setIsBuilding] = useState(false);
-  const [portfolio, setPortfolio] = useState<ConstructedPortfolio | null>(null);
-  const [capacityResult, setCapacityResult] = useState<RiskCapacityResult | null>(null);
+  const [portfolio, setPortfolio] = useState<ConstructedPortfolio | null>(() => {
+    try {
+      const saved = sessionStorage.getItem('cifraa_built_portfolio');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.portfolio;
+      }
+    } catch {}
+    return null;
+  });
+  const [capacityResult, setCapacityResult] = useState<RiskCapacityResult | null>(() => {
+    try {
+      const saved = sessionStorage.getItem('cifraa_built_portfolio');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.capacity;
+      }
+    } catch {}
+    return null;
+  });
   const [expandedFund, setExpandedFund] = useState<string | null>(null);
 
-  // Form state
-  const [risk, setRisk] = useState(userProfile?.risk_tolerance || 'moderate');
-  const [goal, setGoal] = useState(userProfile?.investment_goal || 'wealth');
-  const [horizon, setHorizon] = useState(userProfile?.investment_horizon || 'long');
-  const [experience, setExperience] = useState(userProfile?.experience_level || 'intermediate');
-  const [amount, setAmount] = useState('100000');
-  const [monthlySip, setMonthlySip] = useState('10000');
-  const [occupation, setOccupation] = useState(userProfile?.occupation || 'salaried');
-  const [incomeStability, setIncomeStability] = useState(userProfile?.income_stability || 'stable');
-  const [emis, setEmis] = useState(String(userProfile?.monthly_emis || 0));
-  const [dependents, setDependents] = useState(String(userProfile?.dependents || 0));
-  const [hasInsurance, setHasInsurance] = useState(userProfile?.has_insurance ?? true);
-  const [existingInvestments, setExistingInvestments] = useState(userProfile?.existing_investments || 'mixed');
+  // Initialize step based on saved portfolio
+  useEffect(() => {
+    if (portfolio && capacityResult) {
+      setStep('result');
+    }
+  }, []);
+
+  // Form state — empty by default
+  const [risk, setRisk] = useState('');
+  const [goal, setGoal] = useState('');
+  const [horizon, setHorizon] = useState('');
+  const [experience, setExperience] = useState('');
+  const [amount, setAmount] = useState('');
+  const [monthlySip, setMonthlySip] = useState('');
+  const [occupation, setOccupation] = useState('');
+  const [incomeStability, setIncomeStability] = useState('');
+  const [emis, setEmis] = useState('');
+  const [dependents, setDependents] = useState('');
+  const [hasInsurance, setHasInsurance] = useState(false);
+  const [existingInvestments, setExistingInvestments] = useState('');
+
+  // Experience-based extra questions
+  const [wantCommodities, setWantCommodities] = useState(false);
+  const [wantSectoral, setWantSectoral] = useState(false);
+  const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
+  const [selectedMfTypes, setSelectedMfTypes] = useState<string[]>([]);
+  const [selectedEquitySubs, setSelectedEquitySubs] = useState<string[]>([]);
+  const [selectedDebtSubs, setSelectedDebtSubs] = useState<string[]>([]);
+  const [selectedHybridSubs, setSelectedHybridSubs] = useState<string[]>([]);
 
   const handleBuild = () => {
+    if (!risk || !goal || !horizon || !experience) return;
     setIsBuilding(true);
 
     setTimeout(() => {
-      // Compute risk capacity
       const capacityInputs: RiskCapacityInputs = {
-        occupation,
-        incomeStability,
+        occupation: occupation || 'salaried',
+        incomeStability: incomeStability || 'stable',
         monthlyEmis: parseFloat(emis) || 0,
         dependents: parseInt(dependents) || 0,
         hasInsurance,
-        existingInvestments,
+        existingInvestments: existingInvestments || 'none',
       };
 
       const capacity = computeRiskCapacity(capacityInputs, risk);
       setCapacityResult(capacity);
 
-      // Get eligible funds using V3 engine
       const prefs: RecommendationPreferences = {
         riskTolerance: capacity.adjustedRiskLevel,
         investmentGoal: goal,
         investmentHorizon: horizon,
         experienceLevel: experience,
-        investmentAmount: parseFloat(amount) < 50000 ? 'small' : parseFloat(amount) < 500000 ? 'medium' : 'large',
+        investmentAmount: parseFloat(amount || '100000') < 50000 ? 'small' : parseFloat(amount || '100000') < 500000 ? 'medium' : 'large',
       };
 
       const scoredFunds = recommendFundsV2(funds, prefs);
 
-      // Construct portfolio
       const constructed = constructPortfolio(
         scoredFunds,
         capacity.capacityScore,
@@ -106,13 +182,18 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
       setPortfolio(constructed);
       setStep('result');
       setIsBuilding(false);
+
+      // Save to session
+      sessionStorage.setItem('cifraa_built_portfolio', JSON.stringify({
+        portfolio: constructed,
+        capacity,
+      }));
     }, 500);
   };
 
   if (step === 'result' && portfolio && capacityResult) {
     return (
       <div className="animate-fade-in space-y-6">
-        {/* Risk Capacity Banner */}
         {capacityResult.wasAdjusted && (
           <Card className="bg-warning/10 border-warning/30">
             <CardContent className="py-4 flex items-start gap-3">
@@ -127,7 +208,6 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
           </Card>
         )}
 
-        {/* Portfolio Summary */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="glass-card">
             <CardContent className="pt-6 text-center">
@@ -157,34 +237,24 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
           </Card>
         </div>
 
-        {/* Allocation Chart */}
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <PieChart className="h-5 w-5 text-primary" />
               Your Portfolio Allocation
             </CardTitle>
-            <CardDescription>
-              {portfolio.reasons[0]}
-            </CardDescription>
+            <CardDescription>{portfolio.reasons[0]}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {portfolio.allocations.map((alloc, idx) => (
+              {portfolio.allocations.map((alloc) => (
                 <div key={alloc.fund.id}>
                   <div
                     className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors"
                     onClick={() => setExpandedFund(expandedFund === alloc.fund.id ? null : alloc.fund.id)}
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-medium text-sm truncate">{alloc.fund.name}</p>
-                        {alloc.fund.suitabilityBadge && (
-                          <Badge variant="outline" className={cn('text-[10px] px-1.5', SUITABILITY_COLORS[alloc.fund.suitabilityBadge])}>
-                            {alloc.fund.suitabilityBadge}
-                          </Badge>
-                        )}
-                      </div>
+                      <p className="font-medium text-sm truncate">{alloc.fund.name}</p>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <span>{alloc.bucket}</span>
                         <span>•</span>
@@ -195,7 +265,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
                       <div className="text-right">
                         <p className="font-bold text-sm">{alloc.allocationPercent.toFixed(0)}%</p>
                         <p className="text-xs text-muted-foreground">
-                          ₹{Math.round(parseFloat(amount) * alloc.allocationPercent / 100).toLocaleString()}
+                          ₹{Math.round(parseFloat(amount || '100000') * alloc.allocationPercent / 100).toLocaleString()}
                         </p>
                       </div>
                       {expandedFund === alloc.fund.id ?
@@ -225,16 +295,6 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
                           <p className="font-medium">{alloc.fund.expenseRatio?.toFixed(2) ?? 'NA'}%</p>
                         </div>
                       </div>
-                      {alloc.fund.reasons && alloc.fund.reasons.length > 0 && (
-                        <div className="pt-2 border-t border-border/50">
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Why this fund?</p>
-                          <div className="flex flex-wrap gap-1">
-                            {alloc.fund.reasons.map((r, i) => (
-                              <Badge key={i} variant="outline" className="text-[10px]">{r}</Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
@@ -243,8 +303,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
           </CardContent>
         </Card>
 
-        {/* SIP Split */}
-        {parseFloat(monthlySip) > 0 && (
+        {parseFloat(monthlySip || '0') > 0 && (
           <Card className="glass-card">
             <CardHeader>
               <CardTitle className="text-lg">Suggested Monthly SIP Split</CardTitle>
@@ -262,7 +321,6 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
           </Card>
         )}
 
-        {/* Why this portfolio */}
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -298,7 +356,12 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
           </CardContent>
         </Card>
 
-        <Button variant="outline" onClick={() => setStep('inputs')} className="w-full">
+        <Button variant="outline" onClick={() => {
+          setStep('inputs');
+          sessionStorage.removeItem('cifraa_built_portfolio');
+          setPortfolio(null);
+          setCapacityResult(null);
+        }} className="w-full">
           ← Adjust Inputs & Rebuild
         </Button>
       </div>
@@ -318,12 +381,12 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Investment Details */}
+          {/* Core Investment Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Risk Tolerance</Label>
               <Select value={risk} onValueChange={setRisk}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="conservative">Conservative</SelectItem>
                   <SelectItem value="moderate">Moderate</SelectItem>
@@ -334,7 +397,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
             <div className="space-y-2">
               <Label>Investment Goal</Label>
               <Select value={goal} onValueChange={setGoal}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="wealth">Wealth Creation</SelectItem>
                   <SelectItem value="income">Regular Income</SelectItem>
@@ -346,7 +409,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
             <div className="space-y-2">
               <Label>Investment Horizon</Label>
               <Select value={horizon} onValueChange={setHorizon}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="short">&lt; 3 Years</SelectItem>
                   <SelectItem value="medium">3-5 Years</SelectItem>
@@ -356,8 +419,18 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
             </div>
             <div className="space-y-2">
               <Label>Experience Level</Label>
-              <Select value={experience} onValueChange={setExperience}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={experience} onValueChange={(v) => {
+                setExperience(v);
+                // Reset experience-specific options when changing
+                setWantCommodities(false);
+                setWantSectoral(false);
+                setSelectedSectors([]);
+                setSelectedMfTypes([]);
+                setSelectedEquitySubs([]);
+                setSelectedDebtSubs([]);
+                setSelectedHybridSubs([]);
+              }}>
+                <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="beginner">Beginner</SelectItem>
                   <SelectItem value="intermediate">Intermediate</SelectItem>
@@ -367,13 +440,164 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
             </div>
             <div className="space-y-2">
               <Label>Lump Sum Amount (₹)</Label>
-              <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="100000" />
+              <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="e.g. 100000" />
             </div>
             <div className="space-y-2">
               <Label>Monthly SIP (₹)</Label>
-              <Input type="number" value={monthlySip} onChange={e => setMonthlySip(e.target.value)} placeholder="10000" />
+              <Input type="number" value={monthlySip} onChange={e => setMonthlySip(e.target.value)} placeholder="e.g. 10000" />
             </div>
           </div>
+
+          {/* Intermediate Experience: Extra Questions */}
+          {experience === 'intermediate' && (
+            <div className="pt-4 border-t border-border/50 space-y-4">
+              <h4 className="font-medium text-sm flex items-center gap-2">
+                <Target className="h-4 w-4 text-primary" />
+                Additional Preferences
+              </h4>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30">
+                  <Checkbox
+                    id="commodities"
+                    checked={wantCommodities}
+                    onCheckedChange={(v) => setWantCommodities(!!v)}
+                  />
+                  <Label htmlFor="commodities" className="text-sm cursor-pointer">
+                    I want to invest in Commodities (Gold/Silver)
+                  </Label>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30">
+                  <Checkbox
+                    id="sectoral"
+                    checked={wantSectoral}
+                    onCheckedChange={(v) => {
+                      setWantSectoral(!!v);
+                      if (!v) setSelectedSectors([]);
+                    }}
+                  />
+                  <Label htmlFor="sectoral" className="text-sm cursor-pointer">
+                    I want to invest in Sectoral/Thematic funds
+                  </Label>
+                </div>
+                {wantSectoral && (
+                  <div className="ml-8 space-y-2">
+                    <p className="text-xs text-muted-foreground mb-2">Which sectors interest you?</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {SECTOR_OPTIONS.map(s => (
+                        <div key={s.value} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`sector-${s.value}`}
+                            checked={selectedSectors.includes(s.value)}
+                            onCheckedChange={(v) => {
+                              if (v) setSelectedSectors(prev => [...prev, s.value]);
+                              else setSelectedSectors(prev => prev.filter(x => x !== s.value));
+                            }}
+                          />
+                          <Label htmlFor={`sector-${s.value}`} className="text-xs cursor-pointer">{s.label}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Experienced: Full customization */}
+          {experience === 'experienced' && (
+            <div className="pt-4 border-t border-border/50 space-y-4">
+              <h4 className="font-medium text-sm flex items-center gap-2">
+                <Target className="h-4 w-4 text-primary" />
+                Customize Fund Types
+              </h4>
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Which types of mutual funds do you want in your portfolio?</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {MF_TYPE_OPTIONS.map(t => (
+                    <div key={t.value} className="flex items-center gap-2 p-2 rounded-lg bg-secondary/30">
+                      <Checkbox
+                        id={`mf-${t.value}`}
+                        checked={selectedMfTypes.includes(t.value)}
+                        onCheckedChange={(v) => {
+                          if (v) setSelectedMfTypes(prev => [...prev, t.value]);
+                          else {
+                            setSelectedMfTypes(prev => prev.filter(x => x !== t.value));
+                            if (t.value === 'equity') setSelectedEquitySubs([]);
+                            if (t.value === 'debt') setSelectedDebtSubs([]);
+                            if (t.value === 'hybrid') setSelectedHybridSubs([]);
+                          }
+                        }}
+                      />
+                      <Label htmlFor={`mf-${t.value}`} className="text-sm cursor-pointer">{t.label}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {selectedMfTypes.includes('equity') && (
+                <div className="ml-4 space-y-2">
+                  <p className="text-xs text-muted-foreground">Select equity sub-types:</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {EQUITY_SUB_OPTIONS.map(s => (
+                      <div key={s.value} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`eq-${s.value}`}
+                          checked={selectedEquitySubs.includes(s.value)}
+                          onCheckedChange={(v) => {
+                            if (v) setSelectedEquitySubs(prev => [...prev, s.value]);
+                            else setSelectedEquitySubs(prev => prev.filter(x => x !== s.value));
+                          }}
+                        />
+                        <Label htmlFor={`eq-${s.value}`} className="text-xs cursor-pointer">{s.label}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedMfTypes.includes('debt') && (
+                <div className="ml-4 space-y-2">
+                  <p className="text-xs text-muted-foreground">Select debt sub-types:</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {DEBT_SUB_OPTIONS.map(s => (
+                      <div key={s.value} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`dt-${s.value}`}
+                          checked={selectedDebtSubs.includes(s.value)}
+                          onCheckedChange={(v) => {
+                            if (v) setSelectedDebtSubs(prev => [...prev, s.value]);
+                            else setSelectedDebtSubs(prev => prev.filter(x => x !== s.value));
+                          }}
+                        />
+                        <Label htmlFor={`dt-${s.value}`} className="text-xs cursor-pointer">{s.label}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedMfTypes.includes('hybrid') && (
+                <div className="ml-4 space-y-2">
+                  <p className="text-xs text-muted-foreground">Select hybrid sub-types:</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {HYBRID_SUB_OPTIONS.map(s => (
+                      <div key={s.value} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`hy-${s.value}`}
+                          checked={selectedHybridSubs.includes(s.value)}
+                          onCheckedChange={(v) => {
+                            if (v) setSelectedHybridSubs(prev => [...prev, s.value]);
+                            else setSelectedHybridSubs(prev => prev.filter(x => x !== s.value));
+                          }}
+                        />
+                        <Label htmlFor={`hy-${s.value}`} className="text-xs cursor-pointer">{s.label}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Financial Profile */}
           <div className="pt-4 border-t border-border/50">
@@ -386,7 +610,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
               <div className="space-y-2">
                 <Label>Occupation</Label>
                 <Select value={occupation} onValueChange={setOccupation}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="salaried">Salaried</SelectItem>
                     <SelectItem value="business_owner">Business Owner</SelectItem>
@@ -400,7 +624,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
               <div className="space-y-2">
                 <Label>Income Stability</Label>
                 <Select value={incomeStability} onValueChange={setIncomeStability}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="very_stable">Very Stable</SelectItem>
                     <SelectItem value="stable">Stable</SelectItem>
@@ -413,7 +637,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
               <div className="space-y-2">
                 <Label>Existing Investments</Label>
                 <Select value={existingInvestments} onValueChange={setExistingInvestments}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
                     <SelectItem value="fd_only">FD Only</SelectItem>
@@ -444,7 +668,12 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
             </div>
           </div>
 
-          <Button onClick={handleBuild} disabled={isBuilding} className="w-full" size="lg">
+          <Button
+            onClick={handleBuild}
+            disabled={isBuilding || !risk || !goal || !horizon || !experience}
+            className="w-full"
+            size="lg"
+          >
             {isBuilding ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
