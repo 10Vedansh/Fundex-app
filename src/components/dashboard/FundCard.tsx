@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MutualFund, CATEGORY_LABELS } from '@/types/mutualFund';
-import { TrendingUp, TrendingDown, BarChart3, Percent, Bookmark } from 'lucide-react';
+import { TrendingUp, TrendingDown, BarChart3, Percent, Bookmark, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FundCardProps {
@@ -15,19 +15,6 @@ interface FundCardProps {
   isBookmarked?: boolean;
   onBookmarkToggle?: (fund: MutualFund) => void;
 }
-
-const getStrengthColor = (badge: string) => {
-  switch (badge) {
-    case 'Strong':
-      return 'bg-success/20 text-success border-success/30';
-    case 'Balanced':
-      return 'bg-warning/20 text-warning border-warning/30';
-    case 'Risky':
-      return 'bg-destructive/20 text-destructive border-destructive/30';
-    default:
-      return 'bg-muted text-muted-foreground';
-  }
-};
 
 const getCategoryColor = (category: string) => {
   const cat = category.toUpperCase();
@@ -66,9 +53,6 @@ function fmtVal(val: number | null | undefined, decimals = 1, suffix = ''): stri
 }
 
 export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle }: FundCardProps) {
-  const isPositiveReturn = (fund.cagr1Y ?? 0) >= 0;
-  const hasReturn = fund.cagr1Y !== null && fund.cagr1Y !== undefined;
-
   const handleBookmarkClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onBookmarkToggle?.(fund);
@@ -104,19 +88,6 @@ export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle
             <Badge variant="outline" className={cn(getCategoryColor(fund.category), "text-xs px-2.5 py-0.5")}>
               {getDisplayCategory(fund.category)}
             </Badge>
-            <Badge variant="outline" className={cn(getStrengthColor(fund.strengthBadge), "text-xs px-2.5 py-0.5")}>
-              {fund.strengthBadge}
-            </Badge>
-            {fund.suitabilityBadge && (
-              <Badge variant="outline" className={cn(
-                "text-xs px-2.5 py-0.5",
-                fund.suitabilityBadge === 'aligned' ? 'bg-success/20 text-success border-success/30' :
-                fund.suitabilityBadge === 'adjusted' ? 'bg-warning/20 text-warning border-warning/30' :
-                'bg-destructive/20 text-destructive border-destructive/30'
-              )}>
-                {fund.suitabilityBadge.charAt(0).toUpperCase() + fund.suitabilityBadge.slice(1)}
-              </Badge>
-            )}
           </div>
           <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors line-clamp-2 pr-12 leading-snug">
             {fund.name}
@@ -124,16 +95,6 @@ export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle
           <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
             <span>{fund.amc}</span>
             <span className="text-xs bg-muted/50 px-2 py-0.5 rounded-full">{getRiskLabel(fund.category)}</span>
-            {fund.downsideRisk && (
-              <span className={cn(
-                "text-xs px-2 py-0.5 rounded-full",
-                fund.downsideRisk === 'low' ? 'bg-success/10 text-success' :
-                fund.downsideRisk === 'moderate' ? 'bg-warning/10 text-warning' :
-                'bg-destructive/10 text-destructive'
-              )}>
-                Downside: {fund.downsideRisk}
-              </span>
-            )}
           </div>
         </div>
       </CardHeader>
@@ -203,17 +164,21 @@ export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle
           <span>AUM: {fund.aum ? `₹${fund.aum.toLocaleString()}Cr` : 'NA'}</span>
         </div>
 
-        {/* Why this fund? */}
+        {/* Why this fund? — Redesigned */}
         {fund.reasons && fund.reasons.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-border/30">
-            <p className="text-xs font-medium text-muted-foreground mb-1.5">Why this fund?</p>
-            <div className="flex flex-wrap gap-1">
-              {fund.reasons.slice(0, 3).map((r, i) => (
-                <Badge key={i} variant="outline" className="text-[10px] px-1.5 py-0">
-                  {r}
-                </Badge>
-              ))}
+          <div className="mt-4 p-3 rounded-xl bg-primary/5 border border-primary/10">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Lightbulb className="h-3.5 w-3.5 text-primary" />
+              <span className="text-xs font-semibold text-primary">Why this fund?</span>
             </div>
+            <ul className="space-y-1">
+              {fund.reasons.slice(0, 3).map((r, i) => (
+                <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                  <span className="text-primary/60 mt-0.5">•</span>
+                  <span>{r}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </CardContent>

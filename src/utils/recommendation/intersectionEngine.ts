@@ -246,6 +246,7 @@ export function recommendFundsV2(
       medians,
       prefs.experienceLevel,
       prefs.riskTolerance,
+      prefs.investmentHorizon,
     );
     return {
       ...fund,

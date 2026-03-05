@@ -199,6 +199,7 @@ export function scoreV3(
   medians: Map<string, CategoryMedians>,
   experienceLevel: string,
   riskTolerance: string,
+  investmentHorizon?: string,
 ): V3ScoreResult {
   const reasons: string[] = [];
   const cat = (fund.category || '').trim();
@@ -249,6 +250,16 @@ export function scoreV3(
   // Credit penalty for debt
   const creditPenalty = computeCreditPenalty(fund);
   score *= (1 - creditPenalty);
+
+  // Credit Risk category suppression: 20% reduction unless Very High risk + long horizon
+  if (cat === 'DT-CR') {
+    const isVeryHighRisk = riskTolerance === 'aggressive';
+    const isLongHorizon = investmentHorizon === 'long';
+    if (!(isVeryHighRisk && isLongHorizon)) {
+      score *= 0.80;
+      reasons.push('Credit Risk fund: score reduced');
+    }
+  }
 
   // Experience modifier
   if (experienceLevel === 'beginner') {

@@ -4,13 +4,17 @@ import { PinEntry } from '@/components/auth/PinEntry';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+const PIN_SESSION_KEY = 'cifraa_pin_verified';
+
 interface PinGateProps {
   children: React.ReactNode;
 }
 
 export function PinGate({ children }: PinGateProps) {
   const { user, session, profile, refreshProfile } = useAuth();
-  const [pinVerified, setPinVerified] = useState(false);
+  const [pinVerified, setPinVerified] = useState(() => {
+    return sessionStorage.getItem(PIN_SESSION_KEY) === 'true';
+  });
   const [showPinCreate, setShowPinCreate] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -18,9 +22,9 @@ export function PinGate({ children }: PinGateProps) {
   useEffect(() => {
     if (!user || !profile) return;
     
-    if (profile.pin_set) {
+    if (profile.pin_set && !sessionStorage.getItem(PIN_SESSION_KEY)) {
       setPinVerified(false);
-    } else {
+    } else if (!profile.pin_set) {
       setPinVerified(true);
     }
   }, [user, profile]);
@@ -44,10 +48,10 @@ export function PinGate({ children }: PinGateProps) {
       if (fnError) throw fnError;
 
       if (data?.verified) {
+        sessionStorage.setItem(PIN_SESSION_KEY, 'true');
         setPinVerified(true);
         toast.success('Welcome back!');
       } else if (data?.error === 'PIN not set') {
-        // PIN was reset (e.g. after migration) — prompt to create a new one
         setShowPinCreate(true);
         setPinVerified(false);
       } else {
@@ -75,6 +79,7 @@ export function PinGate({ children }: PinGateProps) {
       if (data?.success) {
         await refreshProfile();
         setShowPinCreate(false);
+        sessionStorage.setItem(PIN_SESSION_KEY, 'true');
         setPinVerified(true);
         toast.success('PIN created successfully!');
       } else {
@@ -89,6 +94,7 @@ export function PinGate({ children }: PinGateProps) {
 
   const handleSkipPin = () => {
     setShowPinCreate(false);
+    sessionStorage.setItem(PIN_SESSION_KEY, 'true');
     setPinVerified(true);
   };
 
