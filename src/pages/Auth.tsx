@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Mail, Lock, User, Loader2, TrendingUp, Shield, Target } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, User, Loader2, TrendingUp, Shield, Target, Phone } from 'lucide-react';
 import { FundexLogo } from '@/components/landing/FundexLogo';
 import { AuthBackground } from '@/components/auth/AuthBackground';
 import { useAuth } from '@/hooks/useAuth';
@@ -33,6 +33,12 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string; name?: string }>({});
+  
+  // Signup method toggle
+  const [signupMethod, setSignupMethod] = useState<'email' | 'phone'>('email');
+  
+  // Login method toggle
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
   
   // Forgot password state
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -137,16 +143,17 @@ export default function Auth() {
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    const isNameValid = validateName(name);
     const isEmailValid = validateEmail(email);
     const isPasswordValid = validatePassword(password);
     
-    if (!isEmailValid || !isPasswordValid) {
+    if (!isNameValid || !isEmailValid || !isPasswordValid) {
       return;
     }
 
     setIsLoading(true);
     try {
-      const { error } = await signUpWithEmail(email, password, '');
+      const { error } = await signUpWithEmail(email, password, name);
       
       if (error) {
         if (error.message.includes('User already registered')) {
@@ -347,7 +354,7 @@ export default function Auth() {
               <div className="relative">
                 <Separator />
                 <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-                  or continue with email
+                  or continue with
                 </span>
               </div>
 
@@ -359,107 +366,186 @@ export default function Auth() {
 
 
                 <TabsContent value="login" className="space-y-4 mt-4">
-                  <form onSubmit={handleEmailLogin} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="login-email">Email / Mobile No.</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          id="login-email"
-                          type="email" 
-                          placeholder="you@example.com"
-                          value={email}
-                          onChange={(e) => {
-                            setEmail(e.target.value);
-                            if (errors.email) validateEmail(e.target.value);
-                          }}
-                          onBlur={() => validateEmail(email)}
-                          className={`pl-10 ${errors.email ? 'border-destructive' : ''}`}
-                        />
-                      </div>
-                      {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                  {/* Login method toggle */}
+                  <div className="flex gap-2 p-1 rounded-lg bg-secondary/30">
+                    <button
+                      type="button"
+                      onClick={() => setLoginMethod('email')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                        loginMethod === 'email' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Mail className="h-3 w-3" /> Email
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLoginMethod('phone')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                        loginMethod === 'phone' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Phone className="h-3 w-3" /> Mobile No.
+                    </button>
+                  </div>
+
+                  {loginMethod === 'phone' ? (
+                    <div className="text-center py-6">
+                      <Phone className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+                      <p className="text-sm text-muted-foreground">Mobile login coming soon!</p>
+                      <p className="text-xs text-muted-foreground mt-1">Please use email login for now.</p>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="login-password">Password</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          id="login-password"
-                          type="password" 
-                          placeholder="••••••••"
-                          value={password}
-                          onChange={(e) => {
-                            setPassword(e.target.value);
-                            if (errors.password) validatePassword(e.target.value);
-                          }}
-                          onBlur={() => validatePassword(password)}
-                          className={`pl-10 ${errors.password ? 'border-destructive' : ''}`}
-                        />
+                  ) : (
+                    <form onSubmit={handleEmailLogin} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="login-email">Email</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            id="login-email"
+                            type="email" 
+                            placeholder="you@example.com"
+                            value={email}
+                            onChange={(e) => {
+                              setEmail(e.target.value);
+                              if (errors.email) validateEmail(e.target.value);
+                            }}
+                            onBlur={() => validateEmail(email)}
+                            className={`pl-10 ${errors.email ? 'border-destructive' : ''}`}
+                          />
+                        </div>
+                        {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                       </div>
-                      {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
-                    </div>
-                    <div className="flex items-center justify-end">
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="px-0 text-sm text-primary"
-                        onClick={() => setShowForgotPassword(true)}
-                      >
-                        Forgot password?
+                      <div className="space-y-2">
+                        <Label htmlFor="login-password">Password</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            id="login-password"
+                            type="password" 
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => {
+                              setPassword(e.target.value);
+                              if (errors.password) validatePassword(e.target.value);
+                            }}
+                            onBlur={() => validatePassword(password)}
+                            className={`pl-10 ${errors.password ? 'border-destructive' : ''}`}
+                          />
+                        </div>
+                        {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+                      </div>
+                      <div className="flex items-center justify-end">
+                        <Button
+                          type="button"
+                          variant="link"
+                          className="px-0 text-sm text-primary"
+                          onClick={() => setShowForgotPassword(true)}
+                        >
+                          Forgot password?
+                        </Button>
+                      </div>
+                      <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                        {isLoading ? 'Signing in...' : 'Sign In'}
                       </Button>
-                    </div>
-                    <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                      {isLoading ? 'Signing in...' : 'Sign In'}
-                    </Button>
-                  </form>
+                    </form>
+                  )}
                 </TabsContent>
 
                 <TabsContent value="signup" className="space-y-4 mt-4">
-                  <form onSubmit={handleEmailSignup} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-email">Email</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          id="signup-email"
-                          type="email" 
-                          placeholder="you@example.com"
-                          value={email}
-                          onChange={(e) => {
-                            setEmail(e.target.value);
-                            if (errors.email) validateEmail(e.target.value);
-                          }}
-                          onBlur={() => validateEmail(email)}
-                          className={`pl-10 ${errors.email ? 'border-destructive' : ''}`}
-                        />
-                      </div>
-                      {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                  {/* Signup method toggle */}
+                  <div className="flex gap-2 p-1 rounded-lg bg-secondary/30">
+                    <button
+                      type="button"
+                      onClick={() => setSignupMethod('email')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                        signupMethod === 'email' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Mail className="h-3 w-3" /> Email
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSignupMethod('phone')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                        signupMethod === 'phone' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Phone className="h-3 w-3" /> Mobile No.
+                    </button>
+                  </div>
+
+                  {signupMethod === 'phone' ? (
+                    <div className="text-center py-6">
+                      <Phone className="h-10 w-10 mx-auto mb-3 text-muted-foreground/50" />
+                      <p className="text-sm text-muted-foreground">Mobile signup coming soon!</p>
+                      <p className="text-xs text-muted-foreground mt-1">Please use email signup for now.</p>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-password">Password</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          id="signup-password"
-                          type="password" 
-                          placeholder="Min. 8 characters"
-                          value={password}
-                          onChange={(e) => {
-                            setPassword(e.target.value);
-                            if (errors.password) validatePassword(e.target.value);
-                          }}
-                          onBlur={() => validatePassword(password)}
-                          className={`pl-10 ${errors.password ? 'border-destructive' : ''}`}
-                        />
+                  ) : (
+                    <form onSubmit={handleEmailSignup} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-name">Full Name</Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            id="signup-name"
+                            type="text" 
+                            placeholder="Your full name"
+                            value={name}
+                            onChange={(e) => {
+                              setName(e.target.value);
+                              if (errors.name) validateName(e.target.value);
+                            }}
+                            onBlur={() => validateName(name)}
+                            className={`pl-10 ${errors.name ? 'border-destructive' : ''}`}
+                          />
+                        </div>
+                        {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
                       </div>
-                      {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
-                    </div>
-                    <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                      {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                      {isLoading ? 'Creating account...' : 'Create Account'}
-                    </Button>
-                  </form>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-email">Email</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            id="signup-email"
+                            type="email" 
+                            placeholder="you@example.com"
+                            value={email}
+                            onChange={(e) => {
+                              setEmail(e.target.value);
+                              if (errors.email) validateEmail(e.target.value);
+                            }}
+                            onBlur={() => validateEmail(email)}
+                            className={`pl-10 ${errors.email ? 'border-destructive' : ''}`}
+                          />
+                        </div>
+                        {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="signup-password">Password</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            id="signup-password"
+                            type="password" 
+                            placeholder="Min. 8 characters"
+                            value={password}
+                            onChange={(e) => {
+                              setPassword(e.target.value);
+                              if (errors.password) validatePassword(e.target.value);
+                            }}
+                            onBlur={() => validatePassword(password)}
+                            className={`pl-10 ${errors.password ? 'border-destructive' : ''}`}
+                          />
+                        </div>
+                        {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+                      </div>
+                      <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                        {isLoading ? 'Creating account...' : 'Create Account'}
+                      </Button>
+                    </form>
+                  )}
                 </TabsContent>
               </Tabs>
 

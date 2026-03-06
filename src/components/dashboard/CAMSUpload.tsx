@@ -79,10 +79,11 @@ async function extractTextFromPDF(file: File, password?: string): Promise<string
 
 interface CAMSUploadProps {
   compact?: boolean;
+  onDataLoaded?: () => void;
 }
 
 
-export function CAMSUpload({ compact = false }: CAMSUploadProps) {
+export function CAMSUpload({ compact = false, onDataLoaded }: CAMSUploadProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [portfolio, setPortfolio] = useState<ParsedPortfolio | null>(null);
   const [expandedFund, setExpandedFund] = useState<number | null>(null);
@@ -118,6 +119,7 @@ export function CAMSUpload({ compact = false }: CAMSUploadProps) {
       }
 
       setPortfolio(data);
+      onDataLoaded?.();
       setNeedsPassword(false);
       setPendingFile(null);
       setPdfPassword('');

@@ -6,10 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { MutualFund, CATEGORY_LABELS } from '@/types/mutualFund';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { MutualFund, CATEGORY_LABELS, FundSectorData } from '@/types/mutualFund';
 import { ScoredFund, recommendFundsV2, RecommendationPreferences } from '@/utils/recommendation/intersectionEngine';
 import { computeRiskCapacity, RiskCapacityInputs, RiskCapacityResult } from '@/utils/recommendation/riskCapacity';
 import { constructPortfolio, ConstructedPortfolio, PortfolioAllocation } from '@/utils/recommendation/portfolioConstruction';
+import { FundDetailModal } from '@/components/dashboard/FundDetailModal';
+import { getCachedSectorData } from '@/utils/sectorDataGenerator';
 import { cn } from '@/lib/utils';
 import {
   Shield, TrendingUp, Target, AlertTriangle, PieChart,
@@ -89,45 +92,55 @@ const HYBRID_SUB_OPTIONS = [
   { value: 'multi_asset', label: 'Multi Asset' },
 ];
 
+const PORTFOLIO_THEMES = [
+  { id: 'balanced', label: 'Balanced Growth', desc: 'Optimal risk-return balance' },
+  { id: 'aggressive', label: 'Max Growth', desc: 'Higher returns, higher risk' },
+  { id: 'conservative', label: 'Capital Safety', desc: 'Protect capital first' },
+  { id: 'tax_saving', label: 'Tax Optimized', desc: 'ELSS + debt mix for tax savings' },
+];
+
+interface SavedPortfolios {
+  portfolios: { theme: string; portfolio: ConstructedPortfolio; capacity: RiskCapacityResult }[];
+}
+
 export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
   const [step, setStep] = useState<'inputs' | 'result'>('inputs');
   const [isBuilding, setIsBuilding] = useState(false);
-  const [portfolio, setPortfolio] = useState<ConstructedPortfolio | null>(() => {
+  const [allPortfolios, setAllPortfolios] = useState<{ theme: string; label: string; portfolio: ConstructedPortfolio; capacity: RiskCapacityResult }[]>(() => {
     try {
-      const saved = sessionStorage.getItem('cifraa_built_portfolio');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.portfolio;
-      }
+      const saved = sessionStorage.getItem('cifraa_built_portfolios_v2');
+      if (saved) return JSON.parse(saved);
     } catch {}
-    return null;
+    return [];
   });
-  const [capacityResult, setCapacityResult] = useState<RiskCapacityResult | null>(() => {
-    try {
-      const saved = sessionStorage.getItem('cifraa_built_portfolio');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed.capacity;
-      }
-    } catch {}
-    return null;
-  });
+  const [activePortfolioIdx, setActivePortfolioIdx] = useState(0);
   const [expandedFund, setExpandedFund] = useState<string | null>(null);
 
-  // Initialize step based on saved portfolio
+  // Fund detail modal
+  const [selectedModalFund, setSelectedModalFund] = useState<MutualFund | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Initialize step based on saved portfolios
   useEffect(() => {
-    if (portfolio && capacityResult) {
+    if (allPortfolios.length > 0) {
       setStep('result');
     }
   }, []);
+
+  // Save to session
+  useEffect(() => {
+    if (allPortfolios.length > 0) {
+      sessionStorage.setItem('cifraa_built_portfolios_v2', JSON.stringify(allPortfolios));
+    }
+  }, [allPortfolios]);
 
   // Form state — empty by default
   const [risk, setRisk] = useState('');
   const [goal, setGoal] = useState('');
   const [horizon, setHorizon] = useState('');
   const [experience, setExperience] = useState('');
+  const [investmentMode, setInvestmentMode] = useState<'lumpsum' | 'sip'>('lumpsum');
   const [amount, setAmount] = useState('');
-  const [monthlySip, setMonthlySip] = useState('');
   const [occupation, setOccupation] = useState('');
   const [incomeStability, setIncomeStability] = useState('');
   const [emis, setEmis] = useState('');
@@ -144,8 +157,17 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
   const [selectedDebtSubs, setSelectedDebtSubs] = useState<string[]>([]);
   const [selectedHybridSubs, setSelectedHybridSubs] = useState<string[]>([]);
 
+  const allFieldsFilled = risk && goal && horizon && experience && amount && occupation && incomeStability && emis && dependents && existingInvestments;
+
+  const handleFundClick = (fund: ScoredFund) => {
+    // Find the full MutualFund object
+    const fullFund = funds.find(f => f.id === fund.id) || fund as unknown as MutualFund;
+    setSelectedModalFund(fullFund);
+    setIsModalOpen(true);
+  };
+
   const handleBuild = () => {
-    if (!risk || !goal || !horizon || !experience) return;
+    if (!allFieldsFilled) return;
     setIsBuilding(true);
 
     setTimeout(() => {
@@ -159,41 +181,85 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
       };
 
       const capacity = computeRiskCapacity(capacityInputs, risk);
-      setCapacityResult(capacity);
 
-      const prefs: RecommendationPreferences = {
-        riskTolerance: capacity.adjustedRiskLevel,
-        investmentGoal: goal,
-        investmentHorizon: horizon,
-        experienceLevel: experience,
-        investmentAmount: parseFloat(amount || '100000') < 50000 ? 'small' : parseFloat(amount || '100000') < 500000 ? 'medium' : 'large',
-      };
+      const investmentAmount = parseFloat(amount) || 100000;
+      const sipAmount = investmentMode === 'sip' ? investmentAmount : 0;
+      const lumpAmount = investmentMode === 'lumpsum' ? investmentAmount : 0;
 
-      const scoredFunds = recommendFundsV2(funds, prefs);
+      // Generate multiple portfolio themes
+      const riskVariants = [
+        { theme: 'balanced', label: 'Balanced Growth', riskAdj: 0 },
+        { theme: 'aggressive', label: 'Max Growth', riskAdj: 1 },
+        { theme: 'conservative', label: 'Capital Safety', riskAdj: -1 },
+        { theme: 'tax_saving', label: 'Tax Optimized', riskAdj: 0, goalOverride: 'tax' },
+      ];
 
-      const constructed = constructPortfolio(
-        scoredFunds,
-        capacity.capacityScore,
-        parseFloat(amount) || 100000,
-        parseFloat(monthlySip) || 10000,
-        goal,
-      );
+      const portfolios = riskVariants.map(variant => {
+        const adjustedRiskMap: Record<string, string> = {
+          conservative: variant.riskAdj === -1 ? 'conservative' : variant.riskAdj === 1 ? 'moderate' : 'conservative',
+          moderate: variant.riskAdj === -1 ? 'conservative' : variant.riskAdj === 1 ? 'aggressive' : 'moderate',
+          aggressive: variant.riskAdj === -1 ? 'moderate' : variant.riskAdj === 1 ? 'aggressive' : 'aggressive',
+        };
+        const adjustedRisk = adjustedRiskMap[capacity.adjustedRiskLevel] || capacity.adjustedRiskLevel;
+        const adjustedCapacity = computeRiskCapacity(capacityInputs, adjustedRisk);
 
-      setPortfolio(constructed);
+        const prefs: RecommendationPreferences = {
+          riskTolerance: adjustedCapacity.adjustedRiskLevel,
+          investmentGoal: variant.goalOverride || goal,
+          investmentHorizon: horizon,
+          experienceLevel: experience,
+          investmentAmount: investmentAmount < 50000 ? 'small' : investmentAmount < 500000 ? 'medium' : 'large',
+        };
+
+        const scoredFunds = recommendFundsV2(funds, prefs);
+
+        const constructed = constructPortfolio(
+          scoredFunds,
+          adjustedCapacity.capacityScore,
+          investmentMode === 'lumpsum' ? investmentAmount : investmentAmount * 12,
+          investmentMode === 'sip' ? investmentAmount : 0,
+          variant.goalOverride || goal,
+        );
+
+        return {
+          theme: variant.theme,
+          label: variant.label,
+          portfolio: constructed,
+          capacity: adjustedCapacity,
+        };
+      });
+
+      setAllPortfolios(portfolios);
+      setActivePortfolioIdx(0);
       setStep('result');
       setIsBuilding(false);
-
-      // Save to session
-      sessionStorage.setItem('cifraa_built_portfolio', JSON.stringify({
-        portfolio: constructed,
-        capacity,
-      }));
     }, 500);
   };
 
-  if (step === 'result' && portfolio && capacityResult) {
+  const modalSectorData = selectedModalFund ? getCachedSectorData(selectedModalFund) : null;
+
+  if (step === 'result' && allPortfolios.length > 0) {
+    const current = allPortfolios[activePortfolioIdx];
+    const portfolio = current.portfolio;
+    const capacityResult = current.capacity;
+    const displayAmount = parseFloat(amount) || 100000;
+
     return (
       <div className="animate-fade-in space-y-6">
+        {/* Portfolio theme tabs */}
+        <Tabs value={current.theme} onValueChange={(v) => {
+          const idx = allPortfolios.findIndex(p => p.theme === v);
+          if (idx >= 0) setActivePortfolioIdx(idx);
+        }}>
+          <TabsList className="grid grid-cols-4 w-full">
+            {allPortfolios.map(p => (
+              <TabsTrigger key={p.theme} value={p.theme} className="text-xs">
+                {p.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+
         {capacityResult.wasAdjusted && (
           <Card className="bg-warning/10 border-warning/30">
             <CardContent className="py-4 flex items-start gap-3">
@@ -241,7 +307,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <PieChart className="h-5 w-5 text-primary" />
-              Your Portfolio Allocation
+              {current.label} — Portfolio Allocation
             </CardTitle>
             <CardDescription>{portfolio.reasons[0]}</CardDescription>
           </CardHeader>
@@ -251,7 +317,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
                 <div key={alloc.fund.id}>
                   <div
                     className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors"
-                    onClick={() => setExpandedFund(expandedFund === alloc.fund.id ? null : alloc.fund.id)}
+                    onClick={() => handleFundClick(alloc.fund)}
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{alloc.fund.name}</p>
@@ -265,45 +331,18 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
                       <div className="text-right">
                         <p className="font-bold text-sm">{alloc.allocationPercent.toFixed(0)}%</p>
                         <p className="text-xs text-muted-foreground">
-                          ₹{Math.round(parseFloat(amount || '100000') * alloc.allocationPercent / 100).toLocaleString()}
+                          ₹{Math.round(displayAmount * alloc.allocationPercent / 100).toLocaleString()}
                         </p>
                       </div>
-                      {expandedFund === alloc.fund.id ?
-                        <ChevronUp className="h-4 w-4 text-muted-foreground" /> :
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      }
                     </div>
                   </div>
-
-                  {expandedFund === alloc.fund.id && (
-                    <div className="ml-4 mt-2 p-3 rounded-lg bg-muted/30 space-y-2 animate-fade-in">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                        <div>
-                          <p className="text-muted-foreground text-xs">3Y CAGR</p>
-                          <p className="font-medium">{(alloc.fund.ret3Y ?? alloc.fund.cagr3Y)?.toFixed(1) ?? 'NA'}%</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground text-xs">Sharpe</p>
-                          <p className="font-medium">{alloc.fund.sharpeRatio?.toFixed(2) ?? 'NA'}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground text-xs">Volatility</p>
-                          <p className="font-medium">{alloc.fund.volatility?.toFixed(1) ?? 'NA'}%</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground text-xs">Expense</p>
-                          <p className="font-medium">{alloc.fund.expenseRatio?.toFixed(2) ?? 'NA'}%</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
 
-        {parseFloat(monthlySip || '0') > 0 && (
+        {investmentMode === 'sip' && (
           <Card className="glass-card">
             <CardHeader>
               <CardTitle className="text-lg">Suggested Monthly SIP Split</CardTitle>
@@ -358,12 +397,20 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
 
         <Button variant="outline" onClick={() => {
           setStep('inputs');
-          sessionStorage.removeItem('cifraa_built_portfolio');
-          setPortfolio(null);
-          setCapacityResult(null);
+          sessionStorage.removeItem('cifraa_built_portfolios_v2');
+          setAllPortfolios([]);
         }} className="w-full">
           ← Adjust Inputs & Rebuild
         </Button>
+
+        {/* Fund Detail Modal */}
+        <FundDetailModal
+          fund={selectedModalFund}
+          sectorData={modalSectorData}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          userRiskProfile={userProfile?.risk_tolerance || undefined}
+        />
       </div>
     );
   }
@@ -377,14 +424,14 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
             Build My Portfolio
           </CardTitle>
           <CardDescription>
-            Answer a few questions to get a diversified, risk-adjusted portfolio recommendation
+            Answer all questions below to get 4 diversified, risk-adjusted portfolio recommendations
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Core Investment Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Risk Tolerance</Label>
+              <Label>Risk Tolerance <span className="text-destructive">*</span></Label>
               <Select value={risk} onValueChange={setRisk}>
                 <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
@@ -395,7 +442,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Investment Goal</Label>
+              <Label>Investment Goal <span className="text-destructive">*</span></Label>
               <Select value={goal} onValueChange={setGoal}>
                 <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
@@ -407,7 +454,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Investment Horizon</Label>
+              <Label>Investment Horizon <span className="text-destructive">*</span></Label>
               <Select value={horizon} onValueChange={setHorizon}>
                 <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                 <SelectContent>
@@ -418,10 +465,9 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Experience Level</Label>
+              <Label>Experience Level <span className="text-destructive">*</span></Label>
               <Select value={experience} onValueChange={(v) => {
                 setExperience(v);
-                // Reset experience-specific options when changing
                 setWantCommodities(false);
                 setWantSectoral(false);
                 setSelectedSectors([]);
@@ -438,13 +484,40 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Lump Sum Amount (₹)</Label>
-              <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="e.g. 100000" />
+          </div>
+
+          {/* Investment Mode Toggle */}
+          <div className="space-y-3">
+            <Label>Investment Mode <span className="text-destructive">*</span></Label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => { setInvestmentMode('lumpsum'); setAmount(''); }}
+                className={cn(
+                  'flex-1 py-3 rounded-xl border-2 text-sm font-medium transition-all',
+                  investmentMode === 'lumpsum'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border/50 text-muted-foreground hover:border-primary/30'
+                )}
+              >
+                Lump Sum
+              </button>
+              <button
+                type="button"
+                onClick={() => { setInvestmentMode('sip'); setAmount(''); }}
+                className={cn(
+                  'flex-1 py-3 rounded-xl border-2 text-sm font-medium transition-all',
+                  investmentMode === 'sip'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border/50 text-muted-foreground hover:border-primary/30'
+                )}
+              >
+                Monthly SIP
+              </button>
             </div>
             <div className="space-y-2">
-              <Label>Monthly SIP (₹)</Label>
-              <Input type="number" value={monthlySip} onChange={e => setMonthlySip(e.target.value)} placeholder="e.g. 10000" />
+              <Label>{investmentMode === 'sip' ? 'Monthly SIP Amount (₹)' : 'Lump Sum Amount (₹)'} <span className="text-destructive">*</span></Label>
+              <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder={investmentMode === 'sip' ? 'e.g. 10000' : 'e.g. 100000'} />
             </div>
           </div>
 
@@ -604,11 +677,11 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
             <h4 className="font-medium text-sm mb-4 flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />
               Financial Risk Profile
-              <span className="text-xs text-muted-foreground">(determines your risk capacity)</span>
+              <span className="text-xs text-muted-foreground">(all fields required)</span>
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label>Occupation</Label>
+                <Label>Occupation <span className="text-destructive">*</span></Label>
                 <Select value={occupation} onValueChange={setOccupation}>
                   <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                   <SelectContent>
@@ -622,7 +695,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Income Stability</Label>
+                <Label>Income Stability <span className="text-destructive">*</span></Label>
                 <Select value={incomeStability} onValueChange={setIncomeStability}>
                   <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                   <SelectContent>
@@ -635,7 +708,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Existing Investments</Label>
+                <Label>Existing Investments <span className="text-destructive">*</span></Label>
                 <Select value={existingInvestments} onValueChange={setExistingInvestments}>
                   <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
                   <SelectContent>
@@ -648,11 +721,11 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Monthly EMIs (₹)</Label>
+                <Label>Monthly EMIs (₹) <span className="text-destructive">*</span></Label>
                 <Input type="number" value={emis} onChange={e => setEmis(e.target.value)} placeholder="0" />
               </div>
               <div className="space-y-2">
-                <Label>Dependents</Label>
+                <Label>Dependents <span className="text-destructive">*</span></Label>
                 <Input type="number" value={dependents} onChange={e => setDependents(e.target.value)} placeholder="0" />
               </div>
               <div className="space-y-2">
@@ -670,22 +743,28 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
 
           <Button
             onClick={handleBuild}
-            disabled={isBuilding || !risk || !goal || !horizon || !experience}
+            disabled={isBuilding || !allFieldsFilled}
             className="w-full"
             size="lg"
           >
             {isBuilding ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Building Portfolio...
+                Building Portfolios...
               </>
             ) : (
               <>
                 <TrendingUp className="h-4 w-4 mr-2" />
-                Build My Portfolio
+                Build My Portfolios
               </>
             )}
           </Button>
+
+          {!allFieldsFilled && (risk || goal || horizon || experience || amount) && (
+            <p className="text-xs text-muted-foreground text-center">
+              Please fill all required fields to build your portfolio
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
