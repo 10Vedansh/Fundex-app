@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Sparkles, MessageSquare, Plus, ArrowLeft } from 'lucide-react';
+import { Send, User, Sparkles, MessageSquare, Plus, ArrowLeft, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
@@ -26,17 +26,23 @@ const SUGGESTIONS = [
   "Explain Sharpe Ratio and why it matters",
 ];
 
+function AuctusIcon({ className }: { className?: string }) {
+  return (
+    <div className={cn("rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center", className)}>
+      <Zap className="h-4 w-4 text-primary" />
+    </div>
+  );
+}
+
 function ThinkingIndicator() {
   return (
     <div className="flex gap-3">
-      <div className="h-8 w-8 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
-        <Bot className="h-4 w-4 text-primary" />
-      </div>
+      <AuctusIcon className="h-8 w-8 flex-shrink-0" />
       <div className="bg-secondary/60 rounded-2xl px-4 py-3 flex items-center gap-1.5">
         <span className="h-2 w-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '0ms' }} />
         <span className="h-2 w-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '150ms' }} />
         <span className="h-2 w-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '300ms' }} />
-        <span className="text-xs text-muted-foreground ml-2">Thinking...</span>
+        <span className="text-xs text-muted-foreground ml-2">Auctus is thinking...</span>
       </div>
     </div>
   );
@@ -98,7 +104,6 @@ export function AIChat() {
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
 
-    // Create session if none
     let sessionId = activeSessionId;
     if (!sessionId) {
       sessionId = crypto.randomUUID();
@@ -125,7 +130,7 @@ export function AIChat() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        throw new Error('Please log in to use AI chat.');
+        throw new Error('Please log in to use Auctus.');
       }
 
       const resp = await fetch(CHAT_URL, {
@@ -220,7 +225,6 @@ export function AIChat() {
         }
       }
 
-      // Update session title from first user message
       setSessions(prev => prev.map(s =>
         s.id === sessionId && s.title === text.trim().slice(0, 50)
           ? { ...s, title: text.trim().slice(0, 50) }
@@ -300,13 +304,14 @@ export function AIChat() {
           )}
         </div>
         <div className="flex items-center gap-3 mb-4">
-          <div className="h-12 w-12 rounded-2xl bg-primary/15 flex items-center justify-center">
-            <Sparkles className="h-6 w-6 text-primary" />
+          <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20">
+            <Zap className="h-7 w-7 text-primary" />
           </div>
         </div>
-        <h2 className="text-2xl md:text-3xl font-bold text-foreground text-center mb-2">
-          All Your Answers, One Place
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground text-center mb-1">
+          Auctus
         </h2>
+        <p className="text-sm text-primary/70 font-medium mb-2">Your Financial Intelligence</p>
         <p className="text-muted-foreground text-center mb-8 max-w-md">
           Ask anything about mutual funds — returns, comparisons, strategies, and more.
         </p>
@@ -318,7 +323,7 @@ export function AIChat() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about mutual funds..."
+              placeholder="Ask Auctus about mutual funds..."
               className="w-full h-14 pl-5 pr-14 rounded-2xl bg-secondary/60 border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 text-base"
             />
             <Button
@@ -350,11 +355,13 @@ export function AIChat() {
   // Chat view
   return (
     <div className="animate-fade-in flex flex-col h-[calc(100vh-200px)] max-h-[700px]">
-      {/* Header with history button */}
+      {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-border/40 mb-4">
         <div className="flex items-center gap-2">
-          <Bot className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium text-foreground truncate max-w-[200px]">
+          <AuctusIcon className="h-6 w-6" />
+          <span className="text-sm font-semibold text-primary">Auctus</span>
+          <span className="text-xs text-muted-foreground">•</span>
+          <span className="text-sm text-muted-foreground truncate max-w-[180px]">
             {sessions.find(s => s.id === activeSessionId)?.title || 'New Chat'}
           </span>
         </div>
@@ -383,9 +390,7 @@ export function AIChat() {
             )}
           >
             {msg.role === 'assistant' && (
-              <div className="h-8 w-8 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0 mt-1">
-                <Bot className="h-4 w-4 text-primary" />
-              </div>
+              <AuctusIcon className="h-8 w-8 flex-shrink-0 mt-1" />
             )}
             <div
               className={cn(
@@ -424,7 +429,7 @@ export function AIChat() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a follow-up..."
+            placeholder="Ask Auctus a follow-up..."
             disabled={isLoading}
             className="w-full h-12 pl-4 pr-14 rounded-xl bg-secondary/50 border border-border/40 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm"
           />

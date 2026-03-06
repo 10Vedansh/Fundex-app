@@ -79,6 +79,9 @@ const Index = () => {
   const [selectedPortfolioFund, setSelectedPortfolioFund] = useState<MutualFund | null>(null);
   const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
 
+  // CAMS uploaded flag
+  const [hasCamsData, setHasCamsData] = useState(false);
+
   // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
@@ -196,7 +199,6 @@ const Index = () => {
     const isEquity = cat.startsWith('EQ-') || cat === 'Equity';
     const isDebt = cat.startsWith('DT-') || cat === 'Debt';
 
-    // Multi-factor smart analysis
     if (fund.sharpeRatio >= 1.5 && fund.cagr1Y > 15 && fund.expenseRatio < 1.5) {
       return { type: 'continue', message: `Strong risk-adjusted performance with Sharpe ${fund.sharpeRatio.toFixed(2)} and ${fund.cagr1Y.toFixed(1)}% 1Y return. Low expense ratio keeps costs efficient. Consider continuing SIP or holding.` };
     }
@@ -249,7 +251,7 @@ const Index = () => {
         {/* Main content with left margin to account for fixed sidebar */}
         <main className="flex-1 px-4 md:px-6 lg:px-10 py-8 overflow-x-hidden bg-gradient-to-b from-transparent via-background/50 to-background lg:ml-24">
           <div className="max-w-6xl mx-auto">
-            {/* Mobile Navigation - Before header zone on mobile */}
+            {/* Mobile Navigation */}
             <div className="lg:hidden mb-4">
               <MobileNavTabs 
                 activeTab={activeTab} 
@@ -259,8 +261,7 @@ const Index = () => {
               />
             </div>
 
-            {/* Dashboard Header Zone - Greeting + Search + Info */}
-            {/* Show greeting only on Overview tab */}
+            {/* Dashboard Header Zone */}
             <DashboardHeaderZone
               firstName={activeTab === 'overview' ? firstName : null}
               globalSearch={globalSearch}
@@ -418,14 +419,14 @@ const Index = () => {
                     </div>
                   )}
 
+                  {/* CAMS Upload Section */}
+                  <CAMSUpload compact={portfolio.length > 0} onDataLoaded={() => setHasCamsData(true)} />
+
                   <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">Your Investments</h3>
-                    <div className="flex items-center gap-3">
-                      <CAMSUpload compact />
-                      <p className="text-sm text-muted-foreground hidden md:block">
-                        Search above to add funds
-                      </p>
-                    </div>
+                    <p className="text-sm text-muted-foreground hidden md:block">
+                      Search above to add funds
+                    </p>
                   </div>
 
                   {portfolioLoading ? (
@@ -492,7 +493,7 @@ const Index = () => {
                         );
                       })}
                     </div>
-                  ) : (
+                  ) : !hasCamsData ? (
                     <Card className="glass-card">
                       <CardContent className="py-12 text-center">
                         <Wallet className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
@@ -502,7 +503,7 @@ const Index = () => {
                         </p>
                       </CardContent>
                     </Card>
-                  )}
+                  ) : null}
 
                   <Card className="bg-warning/10 border-warning/30">
                     <CardContent className="py-4 flex items-start gap-3">
