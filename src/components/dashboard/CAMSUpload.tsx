@@ -119,6 +119,7 @@ export function CAMSUpload({ compact = false, onDataLoaded }: CAMSUploadProps) {
       }
 
       setPortfolio(data);
+      onDataLoaded?.();
       setNeedsPassword(false);
       setPendingFile(null);
       setPdfPassword('');
