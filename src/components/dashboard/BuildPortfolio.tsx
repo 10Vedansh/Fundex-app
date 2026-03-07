@@ -15,9 +15,16 @@ import { FundDetailModal } from '@/components/dashboard/FundDetailModal';
 import { getCachedSectorData } from '@/utils/sectorDataGenerator';
 import { cn } from '@/lib/utils';
 import {
-  Shield, TrendingUp, Target, AlertTriangle, PieChart,
-  ArrowRight, Loader2, Info, ChevronDown, ChevronUp
+  PieChart as PieChartIcon, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip,
+} from 'recharts';
+import {
+  Shield, TrendingUp, Target, AlertTriangle,
+  ArrowRight, Loader2, Info,
 } from 'lucide-react';
+import { PieChart, Pie as RechartsPie, Cell as RechartsCell } from 'recharts';
+
+// Fix: use recharts directly
+import * as Recharts from 'recharts';
 
 interface BuildPortfolioProps {
   funds: MutualFund[];
@@ -42,11 +49,16 @@ const RISK_COLORS = {
   high: 'bg-destructive/20 text-destructive border-destructive/30',
 };
 
-const SUITABILITY_COLORS = {
-  aligned: 'bg-success/20 text-success',
-  adjusted: 'bg-warning/20 text-warning',
-  limited: 'bg-destructive/20 text-destructive',
-};
+const PIE_COLORS = [
+  'hsl(var(--primary))',
+  'hsl(var(--chart-2, 160 60% 45%))',
+  'hsl(var(--chart-3, 30 80% 55%))',
+  'hsl(var(--chart-4, 280 65% 60%))',
+  'hsl(var(--chart-5, 340 75% 55%))',
+  'hsl(200, 70%, 50%)',
+  'hsl(120, 50%, 45%)',
+  'hsl(45, 90%, 50%)',
+];
 
 const SECTOR_OPTIONS = [
   { value: 'EQ-BANK', label: 'Banking' },
@@ -92,49 +104,56 @@ const HYBRID_SUB_OPTIONS = [
   { value: 'multi_asset', label: 'Multi Asset' },
 ];
 
-const PORTFOLIO_THEMES = [
-  { id: 'balanced', label: 'Balanced Growth', desc: 'Optimal risk-return balance' },
-  { id: 'aggressive', label: 'Max Growth', desc: 'Higher returns, higher risk' },
-  { id: 'conservative', label: 'Capital Safety', desc: 'Protect capital first' },
-  { id: 'tax_saving', label: 'Tax Optimized', desc: 'ELSS + debt mix for tax savings' },
-];
-
-interface SavedPortfolios {
-  portfolios: { theme: string; portfolio: ConstructedPortfolio; capacity: RiskCapacityResult }[];
+interface PortfolioVariant {
+  id: number;
+  label: string;
+  portfolio: ConstructedPortfolio;
+  capacity: RiskCapacityResult;
 }
+
+interface SavedState {
+  portfolios: PortfolioVariant[];
+}
+
+// Custom pie tooltip
+const PieTooltip = ({ active, payload }: any) => {
+  if (active && payload?.[0]) {
+    return (
+      <div className="bg-card/95 backdrop-blur-sm border border-border rounded-lg px-3 py-2 shadow-lg text-xs">
+        <p className="font-medium text-foreground">{payload[0].payload.name}</p>
+        <p className="text-primary">{payload[0].value.toFixed(1)}%</p>
+      </div>
+    );
+  }
+  return null;
+};
 
 export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
   const [step, setStep] = useState<'inputs' | 'result'>('inputs');
   const [isBuilding, setIsBuilding] = useState(false);
-  const [allPortfolios, setAllPortfolios] = useState<{ theme: string; label: string; portfolio: ConstructedPortfolio; capacity: RiskCapacityResult }[]>(() => {
+  const [allPortfolios, setAllPortfolios] = useState<PortfolioVariant[]>(() => {
     try {
-      const saved = sessionStorage.getItem('cifraa_built_portfolios_v2');
+      const saved = sessionStorage.getItem('cifraa_built_portfolios_v3');
       if (saved) return JSON.parse(saved);
     } catch {}
     return [];
   });
-  const [activePortfolioIdx, setActivePortfolioIdx] = useState(0);
-  const [expandedFund, setExpandedFund] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('1');
 
-  // Fund detail modal
   const [selectedModalFund, setSelectedModalFund] = useState<MutualFund | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Initialize step based on saved portfolios
   useEffect(() => {
-    if (allPortfolios.length > 0) {
-      setStep('result');
-    }
+    if (allPortfolios.length > 0) setStep('result');
   }, []);
 
-  // Save to session
   useEffect(() => {
     if (allPortfolios.length > 0) {
-      sessionStorage.setItem('cifraa_built_portfolios_v2', JSON.stringify(allPortfolios));
+      sessionStorage.setItem('cifraa_built_portfolios_v3', JSON.stringify(allPortfolios));
     }
   }, [allPortfolios]);
 
-  // Form state — empty by default
+  // Form state
   const [risk, setRisk] = useState('');
   const [goal, setGoal] = useState('');
   const [horizon, setHorizon] = useState('');
@@ -148,7 +167,6 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
   const [hasInsurance, setHasInsurance] = useState(false);
   const [existingInvestments, setExistingInvestments] = useState('');
 
-  // Experience-based extra questions
   const [wantCommodities, setWantCommodities] = useState(false);
   const [wantSectoral, setWantSectoral] = useState(false);
   const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
@@ -160,7 +178,6 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
   const allFieldsFilled = risk && goal && horizon && experience && amount && occupation && incomeStability && emis && dependents && existingInvestments;
 
   const handleFundClick = (fund: ScoredFund) => {
-    // Find the full MutualFund object
     const fullFund = funds.find(f => f.id === fund.id) || fund as unknown as MutualFund;
     setSelectedModalFund(fullFund);
     setIsModalOpen(true);
@@ -181,56 +198,49 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
       };
 
       const capacity = computeRiskCapacity(capacityInputs, risk);
-
       const investmentAmount = parseFloat(amount) || 100000;
-      const sipAmount = investmentMode === 'sip' ? investmentAmount : 0;
-      const lumpAmount = investmentMode === 'lumpsum' ? investmentAmount : 0;
 
-      // Generate multiple portfolio themes
-      const riskVariants = [
-        { theme: 'balanced', label: 'Balanced Growth', riskAdj: 0 },
-        { theme: 'aggressive', label: 'Max Growth', riskAdj: 1 },
-        { theme: 'conservative', label: 'Capital Safety', riskAdj: -1 },
-        { theme: 'tax_saving', label: 'Tax Optimized', riskAdj: 0, goalOverride: 'tax' },
-      ];
+      const prefs: RecommendationPreferences = {
+        riskTolerance: capacity.adjustedRiskLevel,
+        investmentGoal: goal,
+        investmentHorizon: horizon,
+        experienceLevel: experience,
+        investmentAmount: investmentAmount < 50000 ? 'small' : investmentAmount < 500000 ? 'medium' : 'large',
+      };
 
-      const portfolios = riskVariants.map(variant => {
-        const adjustedRiskMap: Record<string, string> = {
-          conservative: variant.riskAdj === -1 ? 'conservative' : variant.riskAdj === 1 ? 'moderate' : 'conservative',
-          moderate: variant.riskAdj === -1 ? 'conservative' : variant.riskAdj === 1 ? 'aggressive' : 'moderate',
-          aggressive: variant.riskAdj === -1 ? 'moderate' : variant.riskAdj === 1 ? 'aggressive' : 'aggressive',
-        };
-        const adjustedRisk = adjustedRiskMap[capacity.adjustedRiskLevel] || capacity.adjustedRiskLevel;
-        const adjustedCapacity = computeRiskCapacity(capacityInputs, adjustedRisk);
+      // Get a large pool of scored funds
+      const scoredFunds = recommendFundsV2(funds, prefs);
 
-        const prefs: RecommendationPreferences = {
-          riskTolerance: adjustedCapacity.adjustedRiskLevel,
-          investmentGoal: variant.goalOverride || goal,
-          investmentHorizon: horizon,
-          experienceLevel: experience,
-          investmentAmount: investmentAmount < 50000 ? 'small' : investmentAmount < 500000 ? 'medium' : 'large',
-        };
+      // Build 4 portfolios with different fund combos
+      const portfolios: PortfolioVariant[] = [];
+      const globalUsedIds = new Set<string>();
 
-        const scoredFunds = recommendFundsV2(funds, prefs);
-
+      for (let i = 0; i < 4; i++) {
         const constructed = constructPortfolio(
           scoredFunds,
-          adjustedCapacity.capacityScore,
+          capacity.capacityScore,
           investmentMode === 'lumpsum' ? investmentAmount : investmentAmount * 12,
           investmentMode === 'sip' ? investmentAmount : 0,
-          variant.goalOverride || goal,
+          goal,
+          globalUsedIds,
         );
 
-        return {
-          theme: variant.theme,
-          label: variant.label,
+        // If we got no allocations (ran out of funds), stop
+        if (constructed.allocations.length === 0) break;
+
+        // Add all used fund IDs to the global skip set
+        constructed.allocations.forEach(a => globalUsedIds.add(a.fund.id));
+
+        portfolios.push({
+          id: i + 1,
+          label: `Portfolio ${i + 1}`,
           portfolio: constructed,
-          capacity: adjustedCapacity,
-        };
-      });
+          capacity,
+        });
+      }
 
       setAllPortfolios(portfolios);
-      setActivePortfolioIdx(0);
+      setActiveTab('1');
       setStep('result');
       setIsBuilding(false);
     }, 500);
@@ -238,22 +248,39 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
 
   const modalSectorData = selectedModalFund ? getCachedSectorData(selectedModalFund) : null;
 
+  // ── RESULT VIEW ──
   if (step === 'result' && allPortfolios.length > 0) {
-    const current = allPortfolios[activePortfolioIdx];
+    const current = allPortfolios.find(p => p.id === parseInt(activeTab)) || allPortfolios[0];
     const portfolio = current.portfolio;
     const capacityResult = current.capacity;
     const displayAmount = parseFloat(amount) || 100000;
 
+    // Pie chart data
+    const pieData = portfolio.allocations.map((a, i) => ({
+      name: a.fund.name.length > 25 ? a.fund.name.slice(0, 22) + '...' : a.fund.name,
+      fullName: a.fund.name,
+      value: a.allocationPercent,
+      color: PIE_COLORS[i % PIE_COLORS.length],
+    }));
+
+    // Bucket breakdown for second pie
+    const bucketMap = new Map<string, number>();
+    portfolio.allocations.forEach(a => {
+      bucketMap.set(a.bucket, (bucketMap.get(a.bucket) || 0) + a.allocationPercent);
+    });
+    const bucketData = Array.from(bucketMap.entries()).map(([name, value], i) => ({
+      name,
+      value: Math.round(value * 100) / 100,
+      color: PIE_COLORS[i % PIE_COLORS.length],
+    }));
+
     return (
       <div className="animate-fade-in space-y-6">
-        {/* Portfolio theme tabs */}
-        <Tabs value={current.theme} onValueChange={(v) => {
-          const idx = allPortfolios.findIndex(p => p.theme === v);
-          if (idx >= 0) setActivePortfolioIdx(idx);
-        }}>
-          <TabsList className="grid grid-cols-4 w-full">
+        {/* Portfolio tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className={cn('grid w-full', `grid-cols-${allPortfolios.length}`)}>
             {allPortfolios.map(p => (
-              <TabsTrigger key={p.theme} value={p.theme} className="text-xs">
+              <TabsTrigger key={p.id} value={String(p.id)} className="text-xs">
                 {p.label}
               </TabsTrigger>
             ))}
@@ -274,66 +301,146 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Metrics row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Card className="glass-card">
-            <CardContent className="pt-6 text-center">
-              <p className="text-sm text-muted-foreground mb-1">Expected CAGR</p>
-              <p className="text-2xl font-bold text-success">{portfolio.expectedCagr.toFixed(1)}%</p>
+            <CardContent className="pt-5 pb-4 text-center">
+              <p className="text-xs text-muted-foreground mb-1">Expected CAGR</p>
+              <p className="text-xl font-bold text-success">{portfolio.expectedCagr.toFixed(1)}%</p>
             </CardContent>
           </Card>
           <Card className="glass-card">
-            <CardContent className="pt-6 text-center">
-              <p className="text-sm text-muted-foreground mb-1">Expected Volatility</p>
-              <p className="text-2xl font-bold text-foreground">{portfolio.expectedVolatility.toFixed(1)}%</p>
+            <CardContent className="pt-5 pb-4 text-center">
+              <p className="text-xs text-muted-foreground mb-1">Volatility</p>
+              <p className="text-xl font-bold text-foreground">{portfolio.expectedVolatility.toFixed(1)}%</p>
             </CardContent>
           </Card>
           <Card className="glass-card">
-            <CardContent className="pt-6 text-center">
-              <p className="text-sm text-muted-foreground mb-1">Downside Risk</p>
+            <CardContent className="pt-5 pb-4 text-center">
+              <p className="text-xs text-muted-foreground mb-1">Downside Risk</p>
               <Badge variant="outline" className={RISK_COLORS[portfolio.downsideRisk]}>
                 {portfolio.downsideRisk.charAt(0).toUpperCase() + portfolio.downsideRisk.slice(1)}
               </Badge>
             </CardContent>
           </Card>
           <Card className="glass-card">
-            <CardContent className="pt-6 text-center">
-              <p className="text-sm text-muted-foreground mb-1">Risk Capacity</p>
+            <CardContent className="pt-5 pb-4 text-center">
+              <p className="text-xs text-muted-foreground mb-1">Risk Capacity</p>
               <RiskCapacityMeter score={capacityResult.capacityScore} />
             </CardContent>
           </Card>
         </div>
 
+        {/* Charts: Fund Allocation Pie + Category Breakdown Pie */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="glass-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Fund Allocation</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[220px] w-full">
+                <Recharts.ResponsiveContainer width="100%" height="100%">
+                  <Recharts.PieChart>
+                    <Recharts.Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={85}
+                      paddingAngle={2}
+                      dataKey="value"
+                      labelLine={false}
+                    >
+                      {pieData.map((entry, index) => (
+                        <Recharts.Cell key={index} fill={entry.color} stroke="hsl(var(--background))" strokeWidth={2} />
+                      ))}
+                    </Recharts.Pie>
+                    <Recharts.Tooltip content={<PieTooltip />} />
+                  </Recharts.PieChart>
+                </Recharts.ResponsiveContainer>
+              </div>
+              <div className="space-y-1.5 mt-2">
+                {pieData.map((d, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs">
+                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
+                    <span className="text-muted-foreground truncate flex-1">{d.fullName}</span>
+                    <span className="font-medium text-foreground">{d.value.toFixed(0)}%</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Category Breakdown</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[220px] w-full">
+                <Recharts.ResponsiveContainer width="100%" height="100%">
+                  <Recharts.PieChart>
+                    <Recharts.Pie
+                      data={bucketData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={85}
+                      paddingAngle={2}
+                      dataKey="value"
+                      labelLine={false}
+                    >
+                      {bucketData.map((entry, index) => (
+                        <Recharts.Cell key={index} fill={entry.color} stroke="hsl(var(--background))" strokeWidth={2} />
+                      ))}
+                    </Recharts.Pie>
+                    <Recharts.Tooltip content={<PieTooltip />} />
+                  </Recharts.PieChart>
+                </Recharts.ResponsiveContainer>
+              </div>
+              <div className="space-y-1.5 mt-2">
+                {bucketData.map((d, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs">
+                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
+                    <span className="text-muted-foreground truncate flex-1">{d.name}</span>
+                    <span className="font-medium text-foreground">{d.value.toFixed(0)}%</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Fund list */}
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
-              <PieChart className="h-5 w-5 text-primary" />
-              {current.label} — Portfolio Allocation
+              <Target className="h-5 w-5 text-primary" />
+              {current.label} — Funds
             </CardTitle>
             <CardDescription>{portfolio.reasons[0]}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {portfolio.allocations.map((alloc) => (
-                <div key={alloc.fund.id}>
-                  <div
-                    className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors"
-                    onClick={() => handleFundClick(alloc.fund)}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{alloc.fund.name}</p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{alloc.bucket}</span>
-                        <span>•</span>
-                        <span>{CATEGORY_LABELS[alloc.fund.category] || alloc.fund.category}</span>
-                      </div>
+                <div
+                  key={alloc.fund.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-colors"
+                  onClick={() => handleFundClick(alloc.fund)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{alloc.fund.name}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{alloc.bucket}</span>
+                      <span>•</span>
+                      <span>{CATEGORY_LABELS[alloc.fund.category] || alloc.fund.category}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <p className="font-bold text-sm">{alloc.allocationPercent.toFixed(0)}%</p>
-                        <p className="text-xs text-muted-foreground">
-                          ₹{Math.round(displayAmount * alloc.allocationPercent / 100).toLocaleString()}
-                        </p>
-                      </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="font-bold text-sm">{alloc.allocationPercent.toFixed(0)}%</p>
+                      <p className="text-xs text-muted-foreground">
+                        ₹{Math.round(displayAmount * alloc.allocationPercent / 100).toLocaleString()}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -342,6 +449,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
           </CardContent>
         </Card>
 
+        {/* SIP split */}
         {investmentMode === 'sip' && (
           <Card className="glass-card">
             <CardHeader>
@@ -360,11 +468,12 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
           </Card>
         )}
 
+        {/* Why this portfolio */}
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Info className="h-5 w-5 text-primary" />
-              Why This Portfolio Suits You
+              Why This Portfolio
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -377,33 +486,30 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
               ))}
               <li className="flex items-start gap-2 text-sm">
                 <ArrowRight className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                <span className="text-muted-foreground">
-                  Rebalancing recommended: {portfolio.rebalancingFrequency}
-                </span>
+                <span className="text-muted-foreground">Rebalancing recommended: {portfolio.rebalancingFrequency}</span>
               </li>
             </ul>
           </CardContent>
         </Card>
 
+        {/* Disclaimer */}
         <Card className="bg-warning/10 border-warning/30">
           <CardContent className="py-4 flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
             <p className="text-sm text-muted-foreground">
-              <strong className="text-warning">Disclaimer:</strong> This is an educational tool, not investment advice.
-              Past performance does not guarantee future results. Consult a SEBI-registered advisor before investing.
+              <strong className="text-warning">Disclaimer:</strong> This is an educational tool, not investment advice. Past performance does not guarantee future results. Consult a SEBI-registered advisor before investing.
             </p>
           </CardContent>
         </Card>
 
         <Button variant="outline" onClick={() => {
           setStep('inputs');
-          sessionStorage.removeItem('cifraa_built_portfolios_v2');
+          sessionStorage.removeItem('cifraa_built_portfolios_v3');
           setAllPortfolios([]);
         }} className="w-full">
           ← Adjust Inputs & Rebuild
         </Button>
 
-        {/* Fund Detail Modal */}
         <FundDetailModal
           fund={selectedModalFund}
           sectorData={modalSectorData}
@@ -415,6 +521,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
     );
   }
 
+  // ── INPUT FORM ──
   return (
     <div className="animate-fade-in space-y-6">
       <Card className="glass-card">
@@ -424,7 +531,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
             Build My Portfolio
           </CardTitle>
           <CardDescription>
-            Answer all questions below to get 4 diversified, risk-adjusted portfolio recommendations
+            Answer all questions to get 4 diversified portfolios with different fund combinations tailored to your profile
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -521,7 +628,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
             </div>
           </div>
 
-          {/* Intermediate Experience: Extra Questions */}
+          {/* Intermediate Experience */}
           {experience === 'intermediate' && (
             <div className="pt-4 border-t border-border/50 space-y-4">
               <h4 className="font-medium text-sm flex items-center gap-2">
@@ -530,27 +637,12 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
               </h4>
               <div className="space-y-3">
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30">
-                  <Checkbox
-                    id="commodities"
-                    checked={wantCommodities}
-                    onCheckedChange={(v) => setWantCommodities(!!v)}
-                  />
-                  <Label htmlFor="commodities" className="text-sm cursor-pointer">
-                    I want to invest in Commodities (Gold/Silver)
-                  </Label>
+                  <Checkbox id="commodities" checked={wantCommodities} onCheckedChange={(v) => setWantCommodities(!!v)} />
+                  <Label htmlFor="commodities" className="text-sm cursor-pointer">I want to invest in Commodities (Gold/Silver)</Label>
                 </div>
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30">
-                  <Checkbox
-                    id="sectoral"
-                    checked={wantSectoral}
-                    onCheckedChange={(v) => {
-                      setWantSectoral(!!v);
-                      if (!v) setSelectedSectors([]);
-                    }}
-                  />
-                  <Label htmlFor="sectoral" className="text-sm cursor-pointer">
-                    I want to invest in Sectoral/Thematic funds
-                  </Label>
+                  <Checkbox id="sectoral" checked={wantSectoral} onCheckedChange={(v) => { setWantSectoral(!!v); if (!v) setSelectedSectors([]); }} />
+                  <Label htmlFor="sectoral" className="text-sm cursor-pointer">I want to invest in Sectoral/Thematic funds</Label>
                 </div>
                 {wantSectoral && (
                   <div className="ml-8 space-y-2">
@@ -584,7 +676,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
                 Customize Fund Types
               </h4>
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Which types of mutual funds do you want in your portfolio?</p>
+                <p className="text-xs text-muted-foreground">Which types of mutual funds do you want?</p>
                 <div className="grid grid-cols-2 gap-2">
                   {MF_TYPE_OPTIONS.map(t => (
                     <div key={t.value} className="flex items-center gap-2 p-2 rounded-lg bg-secondary/30">
@@ -606,63 +698,39 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
                   ))}
                 </div>
               </div>
-
               {selectedMfTypes.includes('equity') && (
                 <div className="ml-4 space-y-2">
                   <p className="text-xs text-muted-foreground">Select equity sub-types:</p>
                   <div className="grid grid-cols-2 gap-2">
                     {EQUITY_SUB_OPTIONS.map(s => (
                       <div key={s.value} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`eq-${s.value}`}
-                          checked={selectedEquitySubs.includes(s.value)}
-                          onCheckedChange={(v) => {
-                            if (v) setSelectedEquitySubs(prev => [...prev, s.value]);
-                            else setSelectedEquitySubs(prev => prev.filter(x => x !== s.value));
-                          }}
-                        />
+                        <Checkbox id={`eq-${s.value}`} checked={selectedEquitySubs.includes(s.value)} onCheckedChange={(v) => { if (v) setSelectedEquitySubs(prev => [...prev, s.value]); else setSelectedEquitySubs(prev => prev.filter(x => x !== s.value)); }} />
                         <Label htmlFor={`eq-${s.value}`} className="text-xs cursor-pointer">{s.label}</Label>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-
               {selectedMfTypes.includes('debt') && (
                 <div className="ml-4 space-y-2">
                   <p className="text-xs text-muted-foreground">Select debt sub-types:</p>
                   <div className="grid grid-cols-2 gap-2">
                     {DEBT_SUB_OPTIONS.map(s => (
                       <div key={s.value} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`dt-${s.value}`}
-                          checked={selectedDebtSubs.includes(s.value)}
-                          onCheckedChange={(v) => {
-                            if (v) setSelectedDebtSubs(prev => [...prev, s.value]);
-                            else setSelectedDebtSubs(prev => prev.filter(x => x !== s.value));
-                          }}
-                        />
+                        <Checkbox id={`dt-${s.value}`} checked={selectedDebtSubs.includes(s.value)} onCheckedChange={(v) => { if (v) setSelectedDebtSubs(prev => [...prev, s.value]); else setSelectedDebtSubs(prev => prev.filter(x => x !== s.value)); }} />
                         <Label htmlFor={`dt-${s.value}`} className="text-xs cursor-pointer">{s.label}</Label>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-
               {selectedMfTypes.includes('hybrid') && (
                 <div className="ml-4 space-y-2">
                   <p className="text-xs text-muted-foreground">Select hybrid sub-types:</p>
                   <div className="grid grid-cols-2 gap-2">
                     {HYBRID_SUB_OPTIONS.map(s => (
                       <div key={s.value} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`hy-${s.value}`}
-                          checked={selectedHybridSubs.includes(s.value)}
-                          onCheckedChange={(v) => {
-                            if (v) setSelectedHybridSubs(prev => [...prev, s.value]);
-                            else setSelectedHybridSubs(prev => prev.filter(x => x !== s.value));
-                          }}
-                        />
+                        <Checkbox id={`hy-${s.value}`} checked={selectedHybridSubs.includes(s.value)} onCheckedChange={(v) => { if (v) setSelectedHybridSubs(prev => [...prev, s.value]); else setSelectedHybridSubs(prev => prev.filter(x => x !== s.value)); }} />
                         <Label htmlFor={`hy-${s.value}`} className="text-xs cursor-pointer">{s.label}</Label>
                       </div>
                     ))}
@@ -741,29 +809,16 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
             </div>
           </div>
 
-          <Button
-            onClick={handleBuild}
-            disabled={isBuilding || !allFieldsFilled}
-            className="w-full"
-            size="lg"
-          >
+          <Button onClick={handleBuild} disabled={isBuilding || !allFieldsFilled} className="w-full" size="lg">
             {isBuilding ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Building Portfolios...
-              </>
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Building Portfolios...</>
             ) : (
-              <>
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Build My Portfolios
-              </>
+              <><TrendingUp className="h-4 w-4 mr-2" />Build My Portfolios</>
             )}
           </Button>
 
           {!allFieldsFilled && (risk || goal || horizon || experience || amount) && (
-            <p className="text-xs text-muted-foreground text-center">
-              Please fill all required fields to build your portfolio
-            </p>
+            <p className="text-xs text-muted-foreground text-center">Please fill all required fields to build your portfolio</p>
           )}
         </CardContent>
       </Card>
@@ -771,23 +826,14 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
   );
 }
 
-// ── Risk Capacity Meter ──
-
 function RiskCapacityMeter({ score }: { score: number }) {
   const colors = ['bg-destructive', 'bg-destructive/70', 'bg-warning', 'bg-success/70', 'bg-success'];
   const labels = ['Very Low', 'Low', 'Moderate', 'High', 'Very High'];
-
   return (
     <div className="space-y-1">
       <div className="flex gap-0.5">
         {[1, 2, 3, 4, 5].map(i => (
-          <div
-            key={i}
-            className={cn(
-              'h-2 flex-1 rounded-sm transition-colors',
-              i <= score ? colors[score - 1] : 'bg-muted'
-            )}
-          />
+          <div key={i} className={cn('h-2 flex-1 rounded-sm transition-colors', i <= score ? colors[score - 1] : 'bg-muted')} />
         ))}
       </div>
       <p className="text-xs font-medium">{labels[score - 1]}</p>
