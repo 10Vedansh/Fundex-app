@@ -73,6 +73,7 @@ export function constructPortfolio(
   investmentAmount: number,
   monthlySip: number,
   goal: string,
+  skipFundIds: Set<string> = new Set(),
 ): ConstructedPortfolio {
   const equityPercent = getEquityAllocation(riskCapacityScore);
   const debtPercent = 100 - equityPercent;
@@ -82,7 +83,7 @@ export function constructPortfolio(
 
   const allocations: PortfolioAllocation[] = [];
   const usedAmcs = new Map<string, number>();
-  const usedIds = new Set<string>();
+  const usedIds = new Set<string>(skipFundIds);
 
   // Select funds for equity buckets
   for (const bucket of equityBuckets) {
