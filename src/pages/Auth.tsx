@@ -27,7 +27,7 @@ const nameSchema = z.string().min(2, 'Name must be at least 2 characters');
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword, isLoading: authLoading } = useAuth();
+  const { user, signInWithEmail, signUpWithEmail, resetPassword, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
