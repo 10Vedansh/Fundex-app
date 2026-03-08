@@ -27,6 +27,7 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ onRefresh, isLoading }: DashboardHeaderProps) {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const { unreadCount } = useNotifications();
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isPreferencesModalOpen, setIsPreferencesModalOpen] = useState(false);
   const [isFAQModalOpen, setIsFAQModalOpen] = useState(false);
