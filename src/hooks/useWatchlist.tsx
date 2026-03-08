@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { MutualFund } from '@/types/mutualFund';
 import { toast } from 'sonner';
+import { useNotifications } from './useNotifications';
 
 interface WatchlistItem {
   id: string;
@@ -15,6 +16,7 @@ export function useWatchlist() {
   const { user } = useAuth();
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { addNotification } = useNotifications();
 
   const fetchWatchlist = useCallback(async () => {
     if (!user) {
@@ -67,6 +69,7 @@ export function useWatchlist() {
 
       await fetchWatchlist();
       toast.success('Added to watchlist');
+      addNotification('info', `${fund.name} added to Watchlist`, `You're now tracking ${fund.name}. We'll keep you updated on its performance.`);
       return true;
     } catch (err) {
       console.error('Error adding to watchlist:', err);

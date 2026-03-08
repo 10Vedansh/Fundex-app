@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { RefreshCw, LogOut, User, Settings, Sliders, Bell, HelpCircle } from 'lucide-react';
+import { useNotifications } from '@/hooks/useNotifications';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { FundexLogo } from '@/components/landing/FundexLogo';
@@ -26,6 +27,7 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ onRefresh, isLoading }: DashboardHeaderProps) {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const { unreadCount } = useNotifications();
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isPreferencesModalOpen, setIsPreferencesModalOpen] = useState(false);
   const [isFAQModalOpen, setIsFAQModalOpen] = useState(false);
@@ -84,8 +86,9 @@ export function DashboardHeader({ onRefresh, isLoading }: DashboardHeaderProps) 
                     <TooltipTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full relative">
                         <Bell className="h-5 w-5 text-muted-foreground" />
-                        {/* Notification dot */}
-                        <span className="absolute top-2 right-2 h-2 w-2 bg-primary rounded-full" />
+                        {unreadCount > 0 && (
+                          <span className="absolute top-2 right-2 h-2 w-2 bg-primary rounded-full" />
+                        )}
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
