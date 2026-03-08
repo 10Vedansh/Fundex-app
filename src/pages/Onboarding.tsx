@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Mascot } from '@/components/Mascot';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -397,6 +398,8 @@ export default function Onboarding() {
           </div>
         </div>
       </div>
+
+      <Mascot message="Let's create your risk profile, Sir! This will help me find the perfect funds for you." position="bottom-left" delay={800} />
     </div>
   );
 }
