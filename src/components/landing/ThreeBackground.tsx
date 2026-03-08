@@ -381,6 +381,8 @@ function Scene({ scrollProgress }: { scrollProgress: number }) {
 // ─── Main Export ──────────────────────────────────────────────────
 
 export function ThreeBackground() {
+  const scrollProgress = useScrollProgress();
+
   return (
     <div className="fixed inset-0 z-0">
       {/* Deep dark base gradient */}
@@ -406,7 +408,7 @@ export function ThreeBackground() {
         style={{ position: 'absolute', inset: 0 }}
       >
         <Suspense fallback={null}>
-          <Scene />
+          <Scene scrollProgress={scrollProgress} />
         </Suspense>
       </Canvas>
 
