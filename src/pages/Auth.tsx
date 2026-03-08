@@ -808,8 +808,6 @@ export default function Auth() {
           </form>
         </DialogContent>
       </Dialog>
-
-      <Mascot message="Welcome Commander! Ready to conquer the markets?" position="bottom-left" />
     </div>
   );
 }
