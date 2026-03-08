@@ -1,8 +1,7 @@
-import { useRef, useMemo, Suspense, useEffect, useState } from 'react';
-import { Canvas, useFrame, useLoader } from '@react-three/fiber';
+import { useRef, useMemo, Suspense } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { Sphere } from '@react-three/drei';
 import * as THREE from 'three';
-import rocketImg from '@/assets/rocket.png';
 import { feature } from 'topojson-client';
 // @ts-ignore – world-atlas ships raw JSON, no type defs
 import landTopology from 'world-atlas/land-110m.json';
