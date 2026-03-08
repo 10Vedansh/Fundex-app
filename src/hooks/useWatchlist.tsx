@@ -16,6 +16,7 @@ export function useWatchlist() {
   const { user } = useAuth();
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { addNotification } = useNotifications();
 
   const fetchWatchlist = useCallback(async () => {
     if (!user) {
