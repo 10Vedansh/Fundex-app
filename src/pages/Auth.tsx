@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Mascot } from '@/components/Mascot';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
