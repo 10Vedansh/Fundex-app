@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { RefreshCw, LogOut, User, Settings, Sliders, Bell, HelpCircle } from 'lucide-react';
+import { useNotifications } from '@/hooks/useNotifications';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { FundexLogo } from '@/components/landing/FundexLogo';
