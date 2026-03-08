@@ -473,57 +473,35 @@ export default function Auth() {
       {/* Left Side - Hero Section */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden z-10">
         
-        <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
+        <div className="relative z-10 flex flex-col justify-between px-12 xl:px-20 py-8 h-full">
           <Button 
             variant="ghost" 
             onClick={() => navigate('/')}
-            className="absolute top-8 left-8 gap-2 text-muted-foreground hover:text-foreground"
+            className="self-start gap-2 text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Home
           </Button>
 
-          <div className="space-y-8">
+          <div className="space-y-4">
             <div>
               <h1 className="text-4xl xl:text-5xl font-bold tracking-tight">
                 Dear <span className="text-primary">Investor</span>
               </h1>
-              <p className="mt-4 text-xl text-muted-foreground max-w-md">
+              <p className="mt-3 text-lg text-muted-foreground max-w-md">
                 Sign in to experience personalized mutual fund recommendations tailored to your goals.
               </p>
             </div>
 
-            {/* Feature highlights */}
-            <div className="space-y-5 pt-8">
-              <div className="flex items-center gap-4 p-4 rounded-xl bg-secondary/20 backdrop-blur-sm border border-border/20">
-                <div className="h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center">
-                  <TrendingUp className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium">Smart Recommendations</p>
-                  <p className="text-sm text-muted-foreground">AI-powered fund suggestions</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-4 rounded-xl bg-secondary/20 backdrop-blur-sm border border-border/20">
-                <div className="h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center">
-                  <Shield className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium">Risk-Aligned</p>
-                  <p className="text-sm text-muted-foreground">Matches your risk appetite</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 p-4 rounded-xl bg-secondary/20 backdrop-blur-sm border border-border/20">
-                <div className="h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center">
-                  <Target className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium">Goal-Focused</p>
-                  <p className="text-sm text-muted-foreground">Track progress towards your targets</p>
-                </div>
-              </div>
-            </div>
+            {/* Mascot embedded in hero */}
+            <Mascot
+              message="Welcome Commander! Ready to conquer the markets? 🚀"
+              mode="inline"
+              delay={600}
+            />
           </div>
+
+          <div /> {/* spacer */}
         </div>
       </div>
 
