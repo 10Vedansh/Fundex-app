@@ -1,8 +1,7 @@
-import { useRef, useMemo, Suspense, useEffect, useState } from 'react';
-import { Canvas, useFrame, useLoader } from '@react-three/fiber';
+import { useRef, useMemo, Suspense } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { Sphere } from '@react-three/drei';
 import * as THREE from 'three';
-import rocketImg from '@/assets/rocket.png';
 import { feature } from 'topojson-client';
 // @ts-ignore – world-atlas ships raw JSON, no type defs
 import landTopology from 'world-atlas/land-110m.json';
@@ -236,72 +235,6 @@ function EarthGlobe() {
   );
 }
 
-// ─── Orbital Ring with Scroll Rocket ──────────────────────────────
-
-function useScrollProgress() {
-  const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      setProgress(docHeight > 0 ? scrollTop / docHeight : 0);
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  return progress;
-}
-
-function OrbitalRocket({ scrollProgress }: { scrollProgress: number }) {
-  const rocketRef = useRef<THREE.Group>(null);
-  const orbitRadius = 3.2;
-  const tiltAngle = Math.PI / 2.5;
-  const texture = useLoader(THREE.TextureLoader, rocketImg);
-
-  useFrame(() => {
-    if (!rocketRef.current) return;
-
-    const angle = scrollProgress * Math.PI * 2;
-
-    const x = orbitRadius * Math.cos(angle);
-    const yUntilted = orbitRadius * Math.sin(angle);
-    const y = yUntilted * Math.cos(tiltAngle);
-    const z = yUntilted * Math.sin(tiltAngle);
-
-    rocketRef.current.position.set(x, y, z);
-
-    // Point rocket along tangent direction
-    const tangentX = -Math.sin(angle);
-    const tangentYUntilted = Math.cos(angle);
-    const tangentY = tangentYUntilted * Math.cos(tiltAngle);
-    const tangentZ = tangentYUntilted * Math.sin(tiltAngle);
-
-    const dir = new THREE.Vector3(tangentX, tangentY, tangentZ).normalize();
-    const up = new THREE.Vector3(x, y, z).normalize();
-    const quaternion = new THREE.Quaternion();
-    const matrix = new THREE.Matrix4();
-    matrix.lookAt(new THREE.Vector3(0, 0, 0), dir, up);
-    quaternion.setFromRotationMatrix(matrix);
-    rocketRef.current.quaternion.copy(quaternion);
-  });
-
-  return (
-    <group ref={rocketRef}>
-      {/* Rocket sprite from rocket.png */}
-      <sprite scale={[0.35, 0.35, 0.35]}>
-        <spriteMaterial map={texture} transparent depthWrite={false} />
-      </sprite>
-      {/* Glow behind rocket */}
-      <sprite scale={[0.6, 0.6, 0.6]}>
-        <spriteMaterial map={texture} transparent opacity={0.15} depthWrite={false} />
-      </sprite>
-      <pointLight color="#3b82f6" intensity={0.5} distance={1.5} />
-    </group>
-  );
-}
 
 function OrbitalRing() {
   const ringRef = useRef<THREE.Mesh>(null);
@@ -337,7 +270,7 @@ function CinematicLighting() {
 
 // ─── Scene Composition ────────────────────────────────────────────
 
-function Scene({ scrollProgress }: { scrollProgress: number }) {
+function Scene() {
   const groupRef = useRef<THREE.Group>(null);
 
   useFrame((state) => {
@@ -352,7 +285,6 @@ function Scene({ scrollProgress }: { scrollProgress: number }) {
       <CinematicLighting />
       <EarthGlobe />
       <OrbitalRing />
-      <OrbitalRocket scrollProgress={scrollProgress} />
     </group>
   );
 }
@@ -360,8 +292,6 @@ function Scene({ scrollProgress }: { scrollProgress: number }) {
 // ─── Main Export ──────────────────────────────────────────────────
 
 export function ThreeBackground() {
-  const scrollProgress = useScrollProgress();
-
   return (
     <div className="fixed inset-0 z-0">
       {/* Deep dark base gradient */}
@@ -387,7 +317,7 @@ export function ThreeBackground() {
         style={{ position: 'absolute', inset: 0 }}
       >
         <Suspense fallback={null}>
-          <Scene scrollProgress={scrollProgress} />
+          <Scene />
         </Suspense>
       </Canvas>
 
