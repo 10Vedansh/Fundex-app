@@ -270,7 +270,7 @@ function CinematicLighting() {
 
 // ─── Scene Composition ────────────────────────────────────────────
 
-function Scene({ scrollProgress }: { scrollProgress: number }) {
+function Scene() {
   const groupRef = useRef<THREE.Group>(null);
 
   useFrame((state) => {
@@ -285,7 +285,6 @@ function Scene({ scrollProgress }: { scrollProgress: number }) {
       <CinematicLighting />
       <EarthGlobe />
       <OrbitalRing />
-      <OrbitalRocket scrollProgress={scrollProgress} />
     </group>
   );
 }
