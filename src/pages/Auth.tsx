@@ -483,20 +483,21 @@ export default function Auth() {
             Back to Home
           </Button>
 
-          <div className="space-y-4">
-            <div>
+          <div className="flex items-end gap-6 xl:gap-10">
+            {/* Text content */}
+            <div className="flex-1 space-y-3">
               <h1 className="text-4xl xl:text-5xl font-bold tracking-tight">
                 Dear <span className="text-primary">Investor</span>
               </h1>
-              <p className="mt-3 text-lg text-muted-foreground max-w-md">
+              <p className="text-lg text-muted-foreground max-w-md">
                 Sign in to experience personalized mutual fund recommendations tailored to your goals.
               </p>
             </div>
 
-            {/* Mascot embedded in hero */}
+            {/* 3D Mascot standing beside text */}
             <Mascot
               message="Welcome Commander! Ready to conquer the markets? 🚀"
-              mode="inline"
+              mode="hero"
               delay={600}
             />
           </div>
