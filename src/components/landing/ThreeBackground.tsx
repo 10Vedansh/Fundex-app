@@ -317,7 +317,7 @@ export function ThreeBackground() {
         style={{ position: 'absolute', inset: 0 }}
       >
         <Suspense fallback={null}>
-          <Scene scrollProgress={scrollProgress} />
+          <Scene />
         </Suspense>
       </Canvas>
 
