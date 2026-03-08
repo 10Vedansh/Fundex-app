@@ -1,66 +1,20 @@
-import { useState } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
-import { Bell, TrendingUp, AlertTriangle, Info, Check } from 'lucide-react';
+import { Bell, TrendingUp, AlertTriangle, Info, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useNotifications, Notification } from '@/hooks/useNotifications';
+import { formatDistanceToNow } from 'date-fns';
+import { useState } from 'react';
 
 interface NotificationsPopoverProps {
   children: React.ReactNode;
 }
 
-interface Notification {
-  id: string;
-  type: 'info' | 'success' | 'warning';
-  title: string;
-  message: string;
-  time: string;
-  read: boolean;
-}
-
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    type: 'success',
-    title: 'Welcome to CIFRAA!',
-    message: 'Your account is set up. Start exploring mutual funds tailored to your profile.',
-    time: 'Just now',
-    read: false,
-  },
-  {
-    id: '2',
-    type: 'info',
-    title: 'Market Update',
-    message: 'Daily NAV data has been refreshed. Check your watchlist for the latest values.',
-    time: '2h ago',
-    read: false,
-  },
-  {
-    id: '3',
-    type: 'warning',
-    title: 'Complete Your Profile',
-    message: 'Update your investment preferences for better fund recommendations.',
-    time: '1d ago',
-    read: true,
-  },
-];
-
 export function NotificationsPopover({ children }: NotificationsPopoverProps) {
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
-  
-  const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  };
-
-  const getIcon = (type: Notification['type']) => {
+  const getIcon = (type: string) => {
     switch (type) {
       case 'success':
         return <TrendingUp className="h-4 w-4 text-success" />;
@@ -68,6 +22,14 @@ export function NotificationsPopover({ children }: NotificationsPopoverProps) {
         return <AlertTriangle className="h-4 w-4 text-warning" />;
       default:
         return <Info className="h-4 w-4 text-primary" />;
+    }
+  };
+
+  const formatTime = (dateStr: string) => {
+    try {
+      return formatDistanceToNow(new Date(dateStr), { addSuffix: true });
+    } catch {
+      return '';
     }
   };
 
@@ -118,11 +80,11 @@ export function NotificationsPopover({ children }: NotificationsPopoverProps) {
                         <span className="h-2 w-2 bg-primary rounded-full flex-shrink-0" />
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-3 whitespace-pre-line">
                       {notification.message}
                     </p>
                     <p className="text-xs text-muted-foreground/60 mt-1">
-                      {notification.time}
+                      {formatTime(notification.created_at)}
                     </p>
                   </div>
                 </div>
@@ -131,7 +93,7 @@ export function NotificationsPopover({ children }: NotificationsPopoverProps) {
           ) : (
             <div className="p-8 text-center">
               <Bell className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">No notifications</p>
+              <p className="text-sm text-muted-foreground">No notifications yet</p>
             </div>
           )}
         </div>
