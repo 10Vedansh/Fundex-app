@@ -134,6 +134,7 @@ export type Database = {
           monthly_emis: number | null
           occupation: string | null
           onboarding_completed: boolean | null
+          phone_number: string | null
           pin_hash: string | null
           pin_salt: string | null
           pin_set: boolean | null
@@ -159,6 +160,7 @@ export type Database = {
           monthly_emis?: number | null
           occupation?: string | null
           onboarding_completed?: boolean | null
+          phone_number?: string | null
           pin_hash?: string | null
           pin_salt?: string | null
           pin_set?: boolean | null
@@ -184,6 +186,7 @@ export type Database = {
           monthly_emis?: number | null
           occupation?: string | null
           onboarding_completed?: boolean | null
+          phone_number?: string | null
           pin_hash?: string | null
           pin_salt?: string | null
           pin_set?: boolean | null
