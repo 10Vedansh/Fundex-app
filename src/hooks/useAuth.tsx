@@ -23,6 +23,7 @@ export interface UserProfile {
   has_insurance: boolean | null;
   existing_investments: string | null;
   risk_capacity_score: number | null;
+  phone_number: string | null;
 }
 
 interface AuthContextType {
@@ -52,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_id, email, full_name, avatar_url, risk_tolerance, investment_horizon, investment_goal, experience_level, investment_amount, onboarding_completed, pin_set, occupation, income_stability, monthly_emis, dependents, has_insurance, existing_investments, risk_capacity_score, created_at, updated_at')
+        .select('id, user_id, email, full_name, avatar_url, risk_tolerance, investment_horizon, investment_goal, experience_level, investment_amount, onboarding_completed, pin_set, occupation, income_stability, monthly_emis, dependents, has_insurance, existing_investments, risk_capacity_score, phone_number, created_at, updated_at')
         .eq('user_id', userId)
         .maybeSingle();
 
