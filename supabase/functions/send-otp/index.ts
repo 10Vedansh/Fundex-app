@@ -76,9 +76,8 @@ serve(async (req) => {
         'x-rapidapi-host': RAPIDAPI_HOST,
       },
       body: JSON.stringify({
-        phoneNumber: phoneNumber,
-        otpLength: 6,
-        channel: 'sms',
+        target: phoneNumber,
+        code: otp,
       }),
     });
 
