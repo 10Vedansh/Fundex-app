@@ -69,6 +69,7 @@ export function useWatchlist() {
 
       await fetchWatchlist();
       toast.success('Added to watchlist');
+      addNotification('info', `${fund.name} added to Watchlist`, `You're now tracking ${fund.name}. We'll keep you updated on its performance.`);
       return true;
     } catch (err) {
       console.error('Error adding to watchlist:', err);
