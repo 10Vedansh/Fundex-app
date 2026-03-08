@@ -221,18 +221,18 @@ export default function Onboarding() {
       
       {/* Left Side - Hero Section */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden z-10">
-        <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
-          <div className="space-y-8">
+        <div className="relative z-10 flex flex-col justify-between px-12 xl:px-20 py-8 h-full">
+          <div className="space-y-4">
             <div>
               <h1 className="text-4xl xl:text-5xl font-bold tracking-tight">
                 Let's <span className="text-primary">Personalize</span>
               </h1>
-              <p className="mt-4 text-xl text-muted-foreground max-w-md">
+              <p className="mt-3 text-lg text-muted-foreground max-w-md">
                 Answer a few quick questions so we can recommend the best mutual funds for your goals.
               </p>
             </div>
 
-            <div className="space-y-3 pt-8">
+            <div className="space-y-2">
               {questions.map((q, idx) => (
                 <div 
                   key={q.id} 
@@ -265,19 +265,16 @@ export default function Onboarding() {
                 </div>
               ))}
             </div>
-
-            <div className="pt-8 flex items-start gap-3 max-w-sm p-4 rounded-xl bg-secondary/20 backdrop-blur-sm border border-border/20">
-              <div className="h-10 w-10 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
-                <Sparkles className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Did you know?</p>
-                <p className="text-sm text-muted-foreground">
-                  Personalized recommendations can improve your investment outcomes by matching funds to your unique profile.
-                </p>
-              </div>
-            </div>
           </div>
+
+          {/* Mascot embedded in hero */}
+          <Mascot
+            message="Let's create your risk profile, Sir! This will help me find the perfect funds for you. 📊"
+            mode="inline"
+            delay={800}
+          />
+
+          <div /> {/* spacer */}
         </div>
       </div>
 
