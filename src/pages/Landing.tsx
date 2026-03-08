@@ -32,8 +32,15 @@ import {
 import { cn } from '@/lib/utils';
 import { faqs as sharedFaqs } from '@/data/faqData';
 
-// Lazy load the 3D background to prevent blocking
-const ThreeBackground = lazy(() => import('@/components/landing/ThreeBackground').then(m => ({ default: m.ThreeBackground })));
+// Lazy load the 3D background to prevent blocking; reload on stale chunk errors
+const ThreeBackground = lazy(() =>
+  import('@/components/landing/ThreeBackground')
+    .then(m => ({ default: m.ThreeBackground }))
+    .catch(() => {
+      window.location.reload();
+      return { default: () => null } as any;
+    })
+);
 
 gsap.registerPlugin(ScrollTrigger);
 
