@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
@@ -67,8 +67,8 @@ serve(async (req) => {
       verified: false,
     });
 
-    // Send OTP via RapidAPI
-    const response = await fetch('https://sms-verify3.p.rapidapi.com/send-numeric-verify', {
+    // Send OTP via RapidAPI - use the correct parameter format
+    const response = await fetch(`https://${RAPIDAPI_HOST}/send-numeric-verify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -77,14 +77,24 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         target: phoneNumber,
-        code: otp,
       }),
     });
 
+    const respBody = await response.text();
+    console.log('RapidAPI response status:', response.status, 'body:', respBody);
+
     if (!response.ok) {
-      const errBody = await response.text();
-      console.error('RapidAPI error:', errBody);
-      throw new Error(`SMS send failed [${response.status}]`);
+      console.error('RapidAPI error:', respBody);
+      throw new Error(`SMS send failed [${response.status}]: ${respBody}`);
+    }
+
+    // Parse response to check status
+    let parsed;
+    try { parsed = JSON.parse(respBody); } catch { parsed = {}; }
+    
+    if (parsed.status === 'failed') {
+      console.error('RapidAPI returned failed status:', respBody);
+      throw new Error('SMS delivery failed. Please check the phone number and try again.');
     }
 
     return new Response(JSON.stringify({ success: true, message: 'OTP sent successfully' }), {
