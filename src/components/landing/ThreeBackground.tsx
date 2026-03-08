@@ -235,7 +235,94 @@ function EarthGlobe() {
   );
 }
 
-// ─── Orbital Ring (unchanged) ─────────────────────────────────────
+// ─── Orbital Ring with Scroll Rocket ──────────────────────────────
+
+function useScrollProgress() {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      setProgress(docHeight > 0 ? scrollTop / docHeight : 0);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return progress;
+}
+
+function OrbitalRocket({ scrollProgress }: { scrollProgress: number }) {
+  const rocketRef = useRef<THREE.Group>(null);
+  const trailRef = useRef<THREE.Mesh>(null);
+  const orbitRadius = 3.2;
+  const tiltAngle = Math.PI / 2.5;
+
+  useFrame(() => {
+    if (!rocketRef.current) return;
+
+    // Map scroll 0→1 to angle 0→2π (full orbit)
+    const angle = scrollProgress * Math.PI * 2;
+
+    // Position on the tilted ring
+    const x = orbitRadius * Math.cos(angle);
+    const yUntilted = orbitRadius * Math.sin(angle);
+    const y = yUntilted * Math.cos(tiltAngle);
+    const z = yUntilted * Math.sin(tiltAngle);
+
+    rocketRef.current.position.set(x, y, z);
+
+    // Point rocket along tangent direction
+    const tangentX = -Math.sin(angle);
+    const tangentYUntilted = Math.cos(angle);
+    const tangentY = tangentYUntilted * Math.cos(tiltAngle);
+    const tangentZ = tangentYUntilted * Math.sin(tiltAngle);
+
+    const dir = new THREE.Vector3(tangentX, tangentY, tangentZ).normalize();
+    const up = new THREE.Vector3(x, y, z).normalize();
+    const quaternion = new THREE.Quaternion();
+    const matrix = new THREE.Matrix4();
+    matrix.lookAt(new THREE.Vector3(0, 0, 0), dir, up);
+    quaternion.setFromRotationMatrix(matrix);
+    rocketRef.current.quaternion.copy(quaternion);
+
+    // Trail
+    if (trailRef.current) {
+      trailRef.current.position.copy(rocketRef.current.position);
+      trailRef.current.quaternion.copy(rocketRef.current.quaternion);
+      const trailOpacity = Math.min(scrollProgress * 5, 1) * 0.6;
+      (trailRef.current.children[0] as any)?.material && 
+        ((trailRef.current.children[0] as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity !== undefined &&
+        ((trailRef.current.children[0] as THREE.Mesh).material as THREE.MeshBasicMaterial).needsUpdate;
+    }
+  });
+
+  return (
+    <>
+      <group ref={rocketRef}>
+        {/* Rocket body */}
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <coneGeometry args={[0.04, 0.16, 6]} />
+          <meshBasicMaterial color="#93c5fd" transparent opacity={0.9} />
+        </mesh>
+        {/* Rocket glow */}
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <coneGeometry args={[0.08, 0.24, 6]} />
+          <meshBasicMaterial color="#3b82f6" transparent opacity={0.2} />
+        </mesh>
+        {/* Engine flame */}
+        <mesh position={[0, 0, 0]} rotation={[0, 0, -Math.PI / 2]}>
+          <coneGeometry args={[0.03, 0.12, 4]} />
+          <meshBasicMaterial color="#60a5fa" transparent opacity={0.7} />
+        </mesh>
+        {/* Point light on rocket */}
+        <pointLight color="#3b82f6" intensity={0.5} distance={1.5} />
+      </group>
+    </>
+  );
+}
 
 function OrbitalRing() {
   const ringRef = useRef<THREE.Mesh>(null);
