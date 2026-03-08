@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Mascot } from '@/components/Mascot';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,7 +19,7 @@ import {
   InputOTPSlot,
 } from '@/components/ui/input-otp';
 import { toast } from 'sonner';
-import { ArrowLeft, Mail, Lock, User, Loader2, Phone } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, User, Loader2, TrendingUp, Shield, Target, Phone } from 'lucide-react';
 import { FundexLogo } from '@/components/landing/FundexLogo';
 import { AuthBackground } from '@/components/auth/AuthBackground';
 import { useAuth } from '@/hooks/useAuth';
@@ -473,36 +472,57 @@ export default function Auth() {
       {/* Left Side - Hero Section */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden z-10">
         
-        <div className="relative z-10 flex flex-col justify-between px-12 xl:px-20 py-8 h-full">
+        <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
           <Button 
             variant="ghost" 
             onClick={() => navigate('/')}
-            className="self-start gap-2 text-muted-foreground hover:text-foreground"
+            className="absolute top-8 left-8 gap-2 text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Home
           </Button>
 
-          <div className="flex items-end gap-6 xl:gap-10">
-            {/* Text content */}
-            <div className="flex-1 space-y-3">
+          <div className="space-y-8">
+            <div>
               <h1 className="text-4xl xl:text-5xl font-bold tracking-tight">
                 Dear <span className="text-primary">Investor</span>
               </h1>
-              <p className="text-lg text-muted-foreground max-w-md">
+              <p className="mt-4 text-xl text-muted-foreground max-w-md">
                 Sign in to experience personalized mutual fund recommendations tailored to your goals.
               </p>
             </div>
 
-            {/* 3D Mascot standing beside text */}
-            <Mascot
-              message="Welcome Commander! Ready to conquer the markets? 🚀"
-              mode="hero"
-              delay={600}
-            />
+            {/* Feature highlights */}
+            <div className="space-y-5 pt-8">
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-secondary/20 backdrop-blur-sm border border-border/20">
+                <div className="h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center">
+                  <TrendingUp className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium">Smart Recommendations</p>
+                  <p className="text-sm text-muted-foreground">AI-powered fund suggestions</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-secondary/20 backdrop-blur-sm border border-border/20">
+                <div className="h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center">
+                  <Shield className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium">Risk-Aligned</p>
+                  <p className="text-sm text-muted-foreground">Matches your risk appetite</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-secondary/20 backdrop-blur-sm border border-border/20">
+                <div className="h-12 w-12 rounded-xl bg-primary/15 flex items-center justify-center">
+                  <Target className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium">Goal-Focused</p>
+                  <p className="text-sm text-muted-foreground">Track progress towards your targets</p>
+                </div>
+              </div>
+            </div>
           </div>
-
-          <div /> {/* spacer */}
         </div>
       </div>
 
