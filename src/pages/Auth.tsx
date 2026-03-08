@@ -92,19 +92,6 @@ export default function Auth() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setIsLoading(true);
-    try {
-      const { error } = await signInWithGoogle();
-      if (error) {
-        toast.error(error.message || 'Failed to sign in with Google');
-      }
-    } catch (err) {
-      toast.error('An unexpected error occurred');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
