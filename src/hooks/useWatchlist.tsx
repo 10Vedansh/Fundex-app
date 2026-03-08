@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { MutualFund } from '@/types/mutualFund';
 import { toast } from 'sonner';
+import { useNotifications } from './useNotifications';
 
 interface WatchlistItem {
   id: string;
