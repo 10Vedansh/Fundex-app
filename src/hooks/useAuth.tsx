@@ -23,6 +23,7 @@ export interface UserProfile {
   has_insurance: boolean | null;
   existing_investments: string | null;
   risk_capacity_score: number | null;
+  phone_number: string | null;
 }
 
 interface AuthContextType {
