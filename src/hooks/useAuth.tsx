@@ -102,16 +102,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithGoogle = async () => {
-    const redirectUrl = `${window.location.origin}/onboarding`;
-    
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectUrl,
-      },
+    const { lovable } = await import('@/integrations/lovable/index');
+    const result = await lovable.auth.signInWithOAuth('google', {
+      redirect_uri: window.location.origin,
     });
 
-    return { error: error as Error | null };
+    if ('error' in result && result.error) {
+      return { error: result.error as Error };
+    }
+    return { error: null };
   };
 
   const signInWithEmail = async (email: string, password: string) => {
