@@ -39,6 +39,29 @@ gsap.registerPlugin(ScrollTrigger);
 
 export default function Landing() {
   const navigate = useNavigate();
+
+  // Check for authenticated user and redirect
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await (await import('@/integrations/supabase/client')).supabase.auth.getSession();
+      if (session?.user) {
+        // Check if profile has completed onboarding
+        const { data: profile } = await (await import('@/integrations/supabase/client')).supabase
+          .from('profiles')
+          .select('onboarding_completed')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        
+        if (profile?.onboarding_completed) {
+          navigate('/dashboard');
+        } else {
+          navigate('/onboarding');
+        }
+      }
+    };
+    checkAuth();
+  }, [navigate]);
+
   const [termsOpen, setTermsOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
