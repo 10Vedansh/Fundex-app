@@ -292,8 +292,6 @@ function Scene() {
 // ─── Main Export ──────────────────────────────────────────────────
 
 export function ThreeBackground() {
-  const scrollProgress = useScrollProgress();
-
   return (
     <div className="fixed inset-0 z-0">
       {/* Deep dark base gradient */}
