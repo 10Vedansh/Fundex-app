@@ -20,7 +20,7 @@ import {
   InputOTPSlot,
 } from '@/components/ui/input-otp';
 import { toast } from 'sonner';
-import { ArrowLeft, Mail, Lock, User, Loader2, TrendingUp, Shield, Target, Phone } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, User, Loader2, Phone } from 'lucide-react';
 import { FundexLogo } from '@/components/landing/FundexLogo';
 import { AuthBackground } from '@/components/auth/AuthBackground';
 import { useAuth } from '@/hooks/useAuth';
