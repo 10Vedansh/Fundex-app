@@ -1,4 +1,4 @@
-import { FundexLogo } from '@/components/landing/FundexLogo';
+
 
 export function AuthBrandPanel({ 
   title = "Welcome to CIFRAA",
