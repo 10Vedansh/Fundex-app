@@ -94,11 +94,20 @@ export function useFundCache() {
     }
   };
 
-  // Trigger full refresh (AMFI + MFAPI - slow but fresh)
+  // Trigger full refresh via OneDrive sync
   const triggerFullRefresh = async (): Promise<{ funds: MutualFund[]; lastUpdated: string } | null> => {
     try {
-      const { data, error } = await supabase.functions.invoke('fetch-fund-data?action=full');
+      // First try OneDrive sync (pulls latest data from your Excel sheet)
+      const { data: syncData, error: syncError } = await supabase.functions.invoke('sync-onedrive');
       
+      if (!syncError && syncData?.success && syncData?.totalFunds > 0) {
+        // After sync, fetch the updated cache
+        const cachedResult = await fetchCachedData();
+        if (cachedResult) return cachedResult;
+      }
+      
+      // Fallback to old fetch-fund-data full refresh
+      const { data, error } = await supabase.functions.invoke('fetch-fund-data?action=full');
       if (error) throw error;
       if (!data?.funds || data.funds.length === 0) {
         throw new Error('No funds returned from refresh');
