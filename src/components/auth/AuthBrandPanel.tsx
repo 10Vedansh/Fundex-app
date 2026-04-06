@@ -1,4 +1,4 @@
-import { FundexLogo } from '@/components/landing/FundexLogo';
+
 
 export function AuthBrandPanel({ 
   title = "Welcome to CIFRAA",
@@ -84,10 +84,6 @@ export function AuthBrandPanel({
 
       {/* Content overlay */}
       <div className="relative z-10 flex flex-col justify-between p-12 xl:p-16 w-full">
-        {/* Logo area */}
-        <div>
-          <FundexLogo size="sm" />
-        </div>
 
         {/* Main text */}
         <div className="space-y-4">
