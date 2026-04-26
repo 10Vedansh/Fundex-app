@@ -22,9 +22,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 interface DashboardHeaderProps {
   onRefresh?: () => void;
   isLoading?: boolean;
+  /** Phones-only: callback for the "Auctus" header text button. */
+  onOpenAuctus?: () => void;
 }
 
-export function DashboardHeader({ onRefresh, isLoading }: DashboardHeaderProps) {
+export function DashboardHeader({ onRefresh, isLoading, onOpenAuctus }: DashboardHeaderProps) {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const { unreadCount } = useNotifications();
@@ -60,14 +62,23 @@ export function DashboardHeader({ onRefresh, isLoading }: DashboardHeaderProps) 
             </div>
             
             <div className="flex items-center gap-3">
-              {/* FAQ Button */}
+              {/* Phones: plain "Auctus" text button (replaces FAQ/Bell/Avatar on <lg) */}
+              <button
+                onClick={onOpenAuctus}
+                className="lg:hidden text-sm font-semibold text-primary hover:underline underline-offset-4 px-2 py-1"
+                aria-label="Open Auctus AI"
+              >
+                Auctus
+              </button>
+
+              {/* FAQ Button (desktop only) */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button 
                       variant="ghost" 
                       size="icon" 
-                      className="h-11 w-11 rounded-full"
+                      className="hidden lg:inline-flex h-11 w-11 rounded-full"
                       onClick={() => setIsFAQModalOpen(true)}
                     >
                       <HelpCircle className="h-5 w-5 text-muted-foreground" />
@@ -79,9 +90,9 @@ export function DashboardHeader({ onRefresh, isLoading }: DashboardHeaderProps) 
                 </Tooltip>
               </TooltipProvider>
 
-              {/* Notifications Button */}
+              {/* Notifications Button (desktop only) */}
               <NotificationsPopover>
-                <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full relative">
+                <Button variant="ghost" size="icon" className="hidden lg:inline-flex h-11 w-11 rounded-full relative">
                   <Bell className="h-5 w-5 text-muted-foreground" />
                   {unreadCount > 0 && (
                     <span className="absolute top-2 right-2 h-2 w-2 bg-primary rounded-full" />
@@ -92,7 +103,7 @@ export function DashboardHeader({ onRefresh, isLoading }: DashboardHeaderProps) 
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-11 w-11 rounded-full">
+                    <Button variant="ghost" className="hidden lg:inline-flex relative h-11 w-11 rounded-full">
                       <Avatar className="h-11 w-11">
                         <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || 'User'} />
                         <AvatarFallback className="bg-primary/10 text-primary text-base font-semibold">
