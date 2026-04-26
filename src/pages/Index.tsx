@@ -5,7 +5,7 @@ import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeaderZone } from '@/components/dashboard/DashboardHeaderZone';
 import { DashboardBackground } from '@/components/dashboard/DashboardBackground';
-import { MobileNavTabs } from '@/components/dashboard/MobileNavTabs';
+import { MobileBottomNav } from '@/components/dashboard/MobileBottomNav';
 import { FundCard } from '@/components/dashboard/FundCard';
 import { SectorAllocationChart } from '@/components/dashboard/SectorAllocationChart';
 import { FundDetailModal } from '@/components/dashboard/FundDetailModal';
@@ -62,6 +62,7 @@ const Index = () => {
 
   const [globalSearch, setGlobalSearch] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [aiResetKey, setAiResetKey] = useState(0);
   const [selectedFundA, setSelectedFundA] = useState('');
   const [selectedFundB, setSelectedFundB] = useState('');
   
@@ -234,10 +235,19 @@ const Index = () => {
     );
   }
 
+  const handleOpenAuctus = () => {
+    setActiveTab('ai');
+    setAiResetKey(k => k + 1);
+  };
+
   return (
     <div className="min-h-screen flex flex-col relative">
       <DashboardBackground />
-      <DashboardHeader onRefresh={refreshFunds} isLoading={isLoading} />
+      <DashboardHeader
+        onRefresh={refreshFunds}
+        isLoading={isLoading}
+        onOpenAuctus={handleOpenAuctus}
+      />
       
       <div className="flex flex-1">
         {/* Desktop Sidebar - Fixed position */}
@@ -249,17 +259,8 @@ const Index = () => {
         />
         
         {/* Main content with left margin to account for fixed sidebar */}
-        <main className="flex-1 px-4 md:px-6 lg:px-10 py-8 overflow-x-hidden bg-gradient-to-b from-transparent via-background/50 to-background lg:ml-24">
+        <main className="flex-1 px-4 md:px-6 lg:px-10 py-8 pb-24 lg:pb-8 overflow-x-hidden bg-gradient-to-b from-transparent via-background/50 to-background lg:ml-24">
           <div className="max-w-6xl mx-auto">
-            {/* Mobile Navigation */}
-            <div className="lg:hidden mb-4">
-              <MobileNavTabs 
-                activeTab={activeTab} 
-                onTabChange={setActiveTab}
-                watchlistCount={watchlist.length}
-                portfolioCount={portfolio.length}
-              />
-            </div>
 
             {/* Dashboard Header Zone */}
             <DashboardHeaderZone
@@ -525,7 +526,7 @@ const Index = () => {
 
               {/* AI Tab */}
               {activeTab === 'ai' && (
-                <AIChat />
+                <AIChat resetKey={aiResetKey} />
               )}
             </div>
           </div>
@@ -533,6 +534,14 @@ const Index = () => {
       </div>
       
       {activeTab !== 'ai' && <Footer />}
+
+      {/* Mobile bottom navigation (phones / small tablets only) */}
+      <MobileBottomNav
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        watchlistCount={watchlist.length}
+        portfolioCount={portfolio.length}
+      />
 
       {/* Fund Detail Modal */}
       <FundDetailModal

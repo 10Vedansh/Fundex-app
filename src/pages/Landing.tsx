@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import { isMobileApp } from '@/utils/isMobileApp';
+import { AppSplash } from '@/components/mobile/AppSplash';
+import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -46,6 +49,9 @@ gsap.registerPlugin(ScrollTrigger);
 
 export default function Landing() {
   const navigate = useNavigate();
+  const { user, isLoading: authLoading } = useAuth();
+  const [appMode] = useState(() => isMobileApp());
+  const [splashDone, setSplashDone] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
@@ -53,6 +59,12 @@ export default function Landing() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
+
+  // Mobile-app launch flow: show splash, then redirect past landing.
+  useEffect(() => {
+    if (!appMode || !splashDone || authLoading) return;
+    navigate(user ? '/dashboard' : '/auth', { replace: true });
+  }, [appMode, splashDone, authLoading, user, navigate]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -118,7 +130,12 @@ export default function Landing() {
   ];
 
   const heroText = "CIFRAA";
-  
+
+  // App-mode: render only the splash, then redirect (effect above handles nav).
+  if (appMode) {
+    return <AppSplash onFinish={() => setSplashDone(true)} />;
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       {/* 3D Background */}
