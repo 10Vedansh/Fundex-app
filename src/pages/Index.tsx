@@ -243,11 +243,14 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col relative">
       <DashboardBackground />
-      <DashboardHeader
-        onRefresh={refreshFunds}
-        isLoading={isLoading}
-        onOpenAuctus={handleOpenAuctus}
-      />
+      {/* Header: always shown on lg+; on mobile only on Home (overview) tab */}
+      <div className={activeTab === 'overview' ? '' : 'hidden lg:block'}>
+        <DashboardHeader
+          onRefresh={refreshFunds}
+          isLoading={isLoading}
+          onOpenAuctus={handleOpenAuctus}
+        />
+      </div>
       
       <div className="flex flex-1">
         {/* Desktop Sidebar - Fixed position */}
