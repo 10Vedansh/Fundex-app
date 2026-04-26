@@ -54,7 +54,7 @@ export function SIPCalculator({ fund }: SIPCalculatorProps) {
           <Calculator className="h-4 w-4 text-primary" />
           Investment Calculator
           <span className="text-xs text-muted-foreground font-normal ml-auto">
-            Based on 3Y CAGR: {fund.cagr3Y.toFixed(1)}%
+            Based on 3Y CAGR: {fund.cagr3Y != null ? `${fund.cagr3Y.toFixed(1)}%` : 'NA'}
           </span>
         </CardTitle>
       </CardHeader>
