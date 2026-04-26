@@ -130,7 +130,12 @@ export default function Landing() {
   ];
 
   const heroText = "CIFRAA";
-  
+
+  // App-mode: render only the splash, then redirect (effect above handles nav).
+  if (appMode) {
+    return <AppSplash onFinish={() => setSplashDone(true)} />;
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       {/* 3D Background */}
