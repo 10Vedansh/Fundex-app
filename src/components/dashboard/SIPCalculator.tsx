@@ -45,7 +45,7 @@ export function SIPCalculator({ fund }: SIPCalculatorProps) {
       const wealthGained = futureValue - totalInvested;
       return { totalInvested, futureValue, wealthGained };
     }
-  }, [monthlyAmount, lumpSumAmount, years, fund.cagr3Y, mode]);
+  }, [monthlyAmount, lumpSumAmount, years, safeCagr3Y, mode]);
 
   return (
     <Card className="glass-card border-border/30">
