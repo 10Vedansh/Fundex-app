@@ -19,8 +19,10 @@ export function SIPCalculator({ fund }: SIPCalculatorProps) {
   const [lumpSumAmount, setLumpSumAmount] = useState(100000);
   const [years, setYears] = useState(5);
 
+  const safeCagr3Y = fund.cagr3Y ?? 0;
+
   const results = useMemo(() => {
-    const rate = fund.cagr3Y / 100;
+    const rate = safeCagr3Y / 100;
 
     if (mode === 'sip') {
       const monthlyRate = rate / 12;
@@ -43,7 +45,7 @@ export function SIPCalculator({ fund }: SIPCalculatorProps) {
       const wealthGained = futureValue - totalInvested;
       return { totalInvested, futureValue, wealthGained };
     }
-  }, [monthlyAmount, lumpSumAmount, years, fund.cagr3Y, mode]);
+  }, [monthlyAmount, lumpSumAmount, years, safeCagr3Y, mode]);
 
   return (
     <Card className="glass-card border-border/30">
@@ -52,7 +54,7 @@ export function SIPCalculator({ fund }: SIPCalculatorProps) {
           <Calculator className="h-4 w-4 text-primary" />
           Investment Calculator
           <span className="text-xs text-muted-foreground font-normal ml-auto">
-            Based on 3Y CAGR: {fund.cagr3Y.toFixed(1)}%
+            Based on 3Y CAGR: {fund.cagr3Y != null ? `${fund.cagr3Y.toFixed(1)}%` : 'NA'}
           </span>
         </CardTitle>
       </CardHeader>

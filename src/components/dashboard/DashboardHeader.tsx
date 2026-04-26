@@ -22,11 +22,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 interface DashboardHeaderProps {
   onRefresh?: () => void;
   isLoading?: boolean;
-  /** Phones-only: callback for the "Auctus" header text button. */
+  /** Kept for backwards compatibility — no longer used in header UI. */
   onOpenAuctus?: () => void;
 }
 
-export function DashboardHeader({ onRefresh, isLoading, onOpenAuctus }: DashboardHeaderProps) {
+export function DashboardHeader({ onRefresh, isLoading }: DashboardHeaderProps) {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const { unreadCount } = useNotifications();
@@ -52,25 +52,16 @@ export function DashboardHeader({ onRefresh, isLoading, onOpenAuctus }: Dashboar
   return (
     <>
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-2 lg:py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-8">
-              {/* Logo - navigates to dashboard when authenticated */}
+              {/* Logo - smaller on mobile, full size on desktop */}
               <Link to="/dashboard" className="flex items-center">
-                <FundexLogo size="md" className="!h-20" />
+                <FundexLogo size="md" className="!h-12 lg:!h-20" />
               </Link>
             </div>
             
             <div className="flex items-center gap-3">
-              {/* Phones: plain "Auctus" text button (replaces FAQ/Bell/Avatar on <lg) */}
-              <button
-                onClick={onOpenAuctus}
-                className="lg:hidden text-sm font-semibold text-primary hover:underline underline-offset-4 px-2 py-1"
-                aria-label="Open Auctus AI"
-              >
-                Auctus
-              </button>
-
               {/* FAQ Button (desktop only) */}
               <TooltipProvider>
                 <Tooltip>
@@ -103,10 +94,10 @@ export function DashboardHeader({ onRefresh, isLoading, onOpenAuctus }: Dashboar
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="hidden lg:inline-flex relative h-11 w-11 rounded-full">
-                      <Avatar className="h-11 w-11">
+                    <Button variant="ghost" className="relative h-9 w-9 lg:h-11 lg:w-11 rounded-full">
+                      <Avatar className="h-9 w-9 lg:h-11 lg:w-11">
                         <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || 'User'} />
-                        <AvatarFallback className="bg-primary/10 text-primary text-base font-semibold">
+                        <AvatarFallback className="bg-primary/10 text-primary text-sm lg:text-base font-semibold">
                           {getInitials()}
                         </AvatarFallback>
                       </Avatar>
