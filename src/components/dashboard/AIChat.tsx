@@ -372,7 +372,7 @@ export function AIChat({ resetKey = 0 }: AIChatProps) {
 
   // Chat view
   return (
-    <div className="animate-fade-in flex flex-col h-[calc(100vh-200px)] max-h-[700px]">
+    <div className="animate-fade-in flex flex-col h-[calc(100vh-200px)] max-h-[700px] mb-16 lg:mb-0">
       {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-border/40 mb-4">
         <div className="flex items-center gap-2">
