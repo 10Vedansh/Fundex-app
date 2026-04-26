@@ -58,7 +58,6 @@ export function MobileBottomNav({
   const [accountOpen, setAccountOpen] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
   const [faqOpen, setFaqOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
 
   const getCount = (id: string) => {
     if (id === 'watchlist') return watchlistCount;
@@ -165,12 +164,19 @@ export function MobileBottomNav({
                   label="Preferences"
                   onClick={() => openFromMore(() => setPrefsOpen(true))}
                 />
-                <MoreItem
-                  icon={Bell}
-                  label="Notifications"
-                  badge={unreadCount > 0}
-                  onClick={() => openFromMore(() => setNotifOpen(true))}
-                />
+                <NotificationsPopover>
+                  <button
+                    className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-border/40 bg-secondary/40 hover:bg-secondary/70 transition-colors"
+                  >
+                    <div className="relative">
+                      <Bell className="h-5 w-5 text-foreground" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary" />
+                      )}
+                    </div>
+                    <span className="text-xs font-medium">Notifications</span>
+                  </button>
+                </NotificationsPopover>
                 <MoreItem
                   icon={HelpCircle}
                   label="Help & FAQ"
@@ -192,11 +198,6 @@ export function MobileBottomNav({
       <AccountModal isOpen={accountOpen} onClose={() => setAccountOpen(false)} />
       <PreferencesModal isOpen={prefsOpen} onClose={() => setPrefsOpen(false)} />
       <FAQModal isOpen={faqOpen} onClose={() => setFaqOpen(false)} />
-
-      {/* Hidden trigger for the notifications popover so we can open it from the sheet */}
-      <NotificationsPopover open={notifOpen} onOpenChange={setNotifOpen}>
-        <span className="hidden" aria-hidden />
-      </NotificationsPopover>
     </>
   );
 }
