@@ -19,8 +19,10 @@ export function SIPCalculator({ fund }: SIPCalculatorProps) {
   const [lumpSumAmount, setLumpSumAmount] = useState(100000);
   const [years, setYears] = useState(5);
 
+  const safeCagr3Y = fund.cagr3Y ?? 0;
+
   const results = useMemo(() => {
-    const rate = fund.cagr3Y / 100;
+    const rate = safeCagr3Y / 100;
 
     if (mode === 'sip') {
       const monthlyRate = rate / 12;
