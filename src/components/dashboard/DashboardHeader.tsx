@@ -94,10 +94,10 @@ export function DashboardHeader({ onRefresh, isLoading }: DashboardHeaderProps) 
               {user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="hidden lg:inline-flex relative h-11 w-11 rounded-full">
-                      <Avatar className="h-11 w-11">
+                    <Button variant="ghost" className="relative h-9 w-9 lg:h-11 lg:w-11 rounded-full">
+                      <Avatar className="h-9 w-9 lg:h-11 lg:w-11">
                         <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || 'User'} />
-                        <AvatarFallback className="bg-primary/10 text-primary text-base font-semibold">
+                        <AvatarFallback className="bg-primary/10 text-primary text-sm lg:text-base font-semibold">
                           {getInitials()}
                         </AvatarFallback>
                       </Avatar>
