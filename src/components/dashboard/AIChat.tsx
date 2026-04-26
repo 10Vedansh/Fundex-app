@@ -48,7 +48,12 @@ function ThinkingIndicator() {
   );
 }
 
-export function AIChat() {
+interface AIChatProps {
+  /** Increment to start a fresh chat (clears messages, focuses input). */
+  resetKey?: number;
+}
+
+export function AIChat({ resetKey = 0 }: AIChatProps) {
   const [sessions, setSessions] = useState<ChatSession[]>(() => {
     try {
       const saved = sessionStorage.getItem('cifraa_chat_sessions');
@@ -67,6 +72,19 @@ export function AIChat() {
   const [isStreaming, setIsStreaming] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // External "New Chat" trigger from header Auctus button
+  useEffect(() => {
+    if (resetKey > 0) {
+      setActiveSessionId(null);
+      setMessages([]);
+      setShowHistory(false);
+      setInput('');
+      // focus on next paint
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetKey]);
 
   // Save sessions to sessionStorage
   useEffect(() => {
