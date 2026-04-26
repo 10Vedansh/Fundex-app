@@ -148,6 +148,14 @@ export function MobileBottomNav({
 
               <div className="grid grid-cols-3 gap-3 py-4">
                 <MoreItem
+                  icon={Sparkles}
+                  label="Auctus AI"
+                  onClick={() => {
+                    onTabChange('ai');
+                    setMoreOpen(false);
+                  }}
+                />
+                <MoreItem
                   icon={PieChart}
                   label="Sectors"
                   onClick={() => {
