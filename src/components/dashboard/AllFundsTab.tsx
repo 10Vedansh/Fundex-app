@@ -368,7 +368,6 @@ export function AllFundsTab({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
           {ASSET_CLASSES.map((ac) => {
             const meta = ASSET_CLASS_META[ac];
-            const count = assetClassCounts[ac] || 0;
             return (
               <button
                 key={ac}
@@ -379,20 +378,56 @@ export function AllFundsTab({
                   meta.color
                 )}
               >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="text-primary mb-2">{meta.icon}</div>
-                    <h3 className="text-xl font-bold text-foreground">{ac}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">{meta.description}</p>
-                  </div>
-                  <span className="text-2xl font-bold text-muted-foreground/50">{count}</span>
-                </div>
+                <div className="text-primary mb-2">{meta.icon}</div>
+                <h3 className="text-xl font-bold text-foreground">{ac}</h3>
+                <p className="text-sm text-muted-foreground mt-1">{meta.description}</p>
                 <div className="mt-4 text-xs text-muted-foreground">
-                  {SUB_CATEGORIES[ac].length} sub-categories →
+                  Browse categories →
                 </div>
               </button>
             );
           })}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Level 2: Sub-category cards ──
+  if (!selectedSubCategory) {
+    const subCats = SUB_CATEGORIES[selectedAssetClass];
+    return (
+      <div className="animate-fade-in space-y-4">
+        <div className="flex items-center gap-3 mb-2">
+          <button onClick={handleBack} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="h-4 w-4" /> Back
+          </button>
+          <h2 className="text-lg font-semibold text-foreground">{selectedAssetClass} — Choose Category</h2>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-fr">
+          {subCats.map((sc) => {
+            const count = subCategoryCounts[sc] || 0;
+            return (
+              <button
+                key={sc}
+                onClick={() => handleSubCategorySelect(sc)}
+                className={cn(
+                  'min-h-[120px] p-6 rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm transition-all duration-200 text-left group flex flex-col justify-between',
+                  'hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:scale-[0.98]',
+                  count === 0 && 'opacity-50 cursor-not-allowed'
+                )}
+                disabled={count === 0}
+              >
+                <h3 className="text-base font-semibold text-foreground leading-tight">{sc}</h3>
+                <div className="flex items-center justify-end">
+                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
         </div>
       </div>
     );
