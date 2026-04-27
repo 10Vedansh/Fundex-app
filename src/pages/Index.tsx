@@ -643,6 +643,16 @@ const Index = () => {
         onClose={() => setIsPortfolioModalOpen(false)}
         insight={selectedPortfolioItem ? getPortfolioInsight(selectedPortfolioItem) : null}
       />
+
+      {/* Add Mutual Fund manual flow */}
+      <AddFundDialog
+        open={isAddFundOpen}
+        onClose={() => setIsAddFundOpen(false)}
+        funds={funds}
+        onAdd={async (fund, details) => {
+          await addToPortfolio(fund, details);
+        }}
+      />
     </div>
   );
 };
