@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { MutualFund, AssetClass, CATEGORY_LABELS } from '@/types/mutualFund';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -207,6 +207,28 @@ export function AllFundsTab({
   const [sortKey, setSortKey] = useState<SortKey>('cagr1Y');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+  const resizingRef = useRef<{ key: string; startX: number; startW: number } | null>(null);
+
+  // Mouse handlers for column resize
+  const onResizeStart = (key: string, currentW: number) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    resizingRef.current = { key, startX: e.clientX, startW: currentW };
+    const onMove = (ev: MouseEvent) => {
+      if (!resizingRef.current) return;
+      const delta = ev.clientX - resizingRef.current.startX;
+      const next = Math.max(60, resizingRef.current.startW + delta);
+      setColWidths((prev) => ({ ...prev, [resizingRef.current!.key]: next }));
+    };
+    const onUp = () => {
+      resizingRef.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
 
   const handleAssetClassSelect = (ac: AssetClass) => {
     setSelectedAssetClass(ac);
