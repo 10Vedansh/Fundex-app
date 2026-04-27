@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { MutualFund, AssetClass, CATEGORY_LABELS } from '@/types/mutualFund';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -207,6 +207,28 @@ export function AllFundsTab({
   const [sortKey, setSortKey] = useState<SortKey>('cagr1Y');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+  const [colWidths, setColWidths] = useState<Record<string, number>>({});
+  const resizingRef = useRef<{ key: string; startX: number; startW: number } | null>(null);
+
+  // Mouse handlers for column resize
+  const onResizeStart = (key: string, currentW: number) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    resizingRef.current = { key, startX: e.clientX, startW: currentW };
+    const onMove = (ev: MouseEvent) => {
+      if (!resizingRef.current) return;
+      const delta = ev.clientX - resizingRef.current.startX;
+      const next = Math.max(60, resizingRef.current.startW + delta);
+      setColWidths((prev) => ({ ...prev, [resizingRef.current!.key]: next }));
+    };
+    const onUp = () => {
+      resizingRef.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
 
   const handleAssetClassSelect = (ac: AssetClass) => {
     setSelectedAssetClass(ac);
@@ -346,7 +368,6 @@ export function AllFundsTab({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
           {ASSET_CLASSES.map((ac) => {
             const meta = ASSET_CLASS_META[ac];
-            const count = assetClassCounts[ac] || 0;
             return (
               <button
                 key={ac}
@@ -357,16 +378,11 @@ export function AllFundsTab({
                   meta.color
                 )}
               >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="text-primary mb-2">{meta.icon}</div>
-                    <h3 className="text-xl font-bold text-foreground">{ac}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">{meta.description}</p>
-                  </div>
-                  <span className="text-2xl font-bold text-muted-foreground/50">{count}</span>
-                </div>
+                <div className="text-primary mb-2">{meta.icon}</div>
+                <h3 className="text-xl font-bold text-foreground">{ac}</h3>
+                <p className="text-sm text-muted-foreground mt-1">{meta.description}</p>
                 <div className="mt-4 text-xs text-muted-foreground">
-                  {SUB_CATEGORIES[ac].length} sub-categories →
+                  Browse categories →
                 </div>
               </button>
             );
@@ -378,6 +394,7 @@ export function AllFundsTab({
 
   // ── Level 2: Sub-category cards ──
   if (!selectedSubCategory) {
+    const subCats = SUB_CATEGORIES[selectedAssetClass];
     return (
       <div className="animate-fade-in space-y-4">
         <div className="flex items-center gap-3 mb-2">
@@ -386,26 +403,23 @@ export function AllFundsTab({
           </button>
           <h2 className="text-lg font-semibold text-foreground">{selectedAssetClass} — Choose Category</h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {SUB_CATEGORIES[selectedAssetClass].map((sc) => {
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-fr">
+          {subCats.map((sc) => {
             const count = subCategoryCounts[sc] || 0;
             return (
               <button
                 key={sc}
                 onClick={() => handleSubCategorySelect(sc)}
                 className={cn(
-                  'p-5 rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm transition-all duration-200 text-left group',
+                  'min-h-[120px] p-6 rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm transition-all duration-200 text-left group flex flex-col justify-between',
                   'hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:scale-[0.98]',
                   count === 0 && 'opacity-50 cursor-not-allowed'
                 )}
                 disabled={count === 0}
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground">{sc}</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">{count} funds</p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                <h3 className="text-base font-semibold text-foreground leading-tight">{sc}</h3>
+                <div className="flex items-center justify-end">
+                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
               </button>
             );
@@ -414,6 +428,7 @@ export function AllFundsTab({
       </div>
     );
   }
+
 
   // ── Level 3: Table view ──
   return (
@@ -465,34 +480,46 @@ export function AllFundsTab({
           <CardContent className="py-12 text-center text-muted-foreground">No funds match your filters.</CardContent>
         </Card>
       ) : (
-        <div className="rounded-b-xl border border-border/40 border-t-0 overflow-hidden bg-card/60 backdrop-blur-sm">
-          <Table>
+        <div className="rounded-b-xl border border-border/40 border-t-0 overflow-x-auto bg-card/60 backdrop-blur-sm">
+          <Table style={{ tableLayout: 'fixed', minWidth: '900px' }}>
             <TableHeader>
               <TableRow className="bg-secondary/40 hover:bg-secondary/40">
-                <TableHead className="w-8" />
+                <TableHead className="w-8" style={{ width: 40 }} />
                 <TableHead
-                  className="min-w-[180px] max-w-[240px] cursor-pointer select-none"
+                  className="cursor-pointer select-none relative group"
+                  style={{ width: colWidths['__name'] ?? 240 }}
                   onClick={() => handleSort('name')}
                 >
                   <span className="flex items-center gap-1">Fund <SortIcon col="name" /></span>
+                  <span
+                    onMouseDown={onResizeStart('__name', colWidths['__name'] ?? 240)}
+                    className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize bg-transparent hover:bg-primary/40 transition-colors"
+                  />
                 </TableHead>
                 {currentSection.columns.map((col) => {
                   const sortable = ['amc', 'expenseRatio', 'aum', 'riskLevel', 'cagr1Y', 'cagr3Y', 'cagr5Y'].includes(col.key);
+                  const w = colWidths[col.key] ?? 110;
                   return (
                     <TableHead
                       key={col.key}
                       className={cn(
-                        'whitespace-nowrap text-xs',
+                        'whitespace-nowrap text-xs relative group',
                         col.align === 'right' && 'text-right',
                         col.align === 'center' && 'text-center',
                         sortable && 'cursor-pointer select-none'
                       )}
+                      style={{ width: w }}
                       onClick={sortable ? () => handleSort(col.key as SortKey) : undefined}
                     >
                       <span className={cn('flex items-center gap-1', col.align === 'right' && 'justify-end', col.align === 'center' && 'justify-center')}>
                         {col.label}
                         {sortable && <SortIcon col={col.key as SortKey} />}
                       </span>
+                      <span
+                        onMouseDown={onResizeStart(col.key, w)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize bg-transparent hover:bg-primary/40 transition-colors"
+                      />
                     </TableHead>
                   );
                 })}
@@ -501,7 +528,7 @@ export function AllFundsTab({
             <TableBody>
               {visibleFunds.map((fund) => (
                 <TableRow key={fund.id} className="cursor-pointer hover:bg-primary/5 transition-colors" onClick={() => onFundClick(fund)}>
-                  <TableCell className="px-2">
+                  <TableCell className="px-2" style={{ width: 40 }}>
                     <button
                       onClick={(e) => { e.stopPropagation(); onBookmarkToggle(fund); }}
                       className="p-1 hover:bg-secondary/50 rounded"
@@ -509,19 +536,20 @@ export function AllFundsTab({
                       <Bookmark className={cn('h-4 w-4', isInWatchlist(fund.id) ? 'fill-primary text-primary' : 'text-muted-foreground')} />
                     </button>
                   </TableCell>
-                  <TableCell className="font-medium text-xs max-w-[240px]">
-                    <span className="line-clamp-2">{fund.name}</span>
+                  <TableCell className="font-medium text-xs" style={{ width: colWidths['__name'] ?? 240 }}>
+                    <span className="line-clamp-2 break-words">{fund.name}</span>
                   </TableCell>
                   {currentSection.columns.map((col) => (
                     <TableCell
                       key={col.key}
                       className={cn(
-                        'text-xs whitespace-nowrap',
+                        'text-xs',
                         col.align === 'right' && 'text-right',
                         col.align === 'center' && 'text-center'
                       )}
+                      style={{ width: colWidths[col.key] ?? 110 }}
                     >
-                      {renderCellValue(fund, col)}
+                      <div className="truncate">{renderCellValue(fund, col)}</div>
                     </TableCell>
                   ))}
                 </TableRow>

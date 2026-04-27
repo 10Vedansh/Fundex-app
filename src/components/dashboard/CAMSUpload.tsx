@@ -214,7 +214,7 @@ export function CAMSUpload({ compact = false, onDataLoaded }: CAMSUploadProps) {
           className="hidden"
           disabled={isProcessing}
         />
-        <Button asChild variant="outline" size="sm" disabled={isProcessing}>
+        <Button asChild size="sm" disabled={isProcessing}>
           <span>
             {isProcessing ? (
               <>
