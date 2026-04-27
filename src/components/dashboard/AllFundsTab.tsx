@@ -428,49 +428,7 @@ export function AllFundsTab({
       </div>
     );
   }
-        </div>
-      </div>
-    );
-  }
 
-  // ── Level 2: Sub-category cards ──
-  if (!selectedSubCategory) {
-    return (
-      <div className="animate-fade-in space-y-4">
-        <div className="flex items-center gap-3 mb-2">
-          <button onClick={handleBack} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="h-4 w-4" /> Back
-          </button>
-          <h2 className="text-lg font-semibold text-foreground">{selectedAssetClass} — Choose Category</h2>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {SUB_CATEGORIES[selectedAssetClass].map((sc) => {
-            const count = subCategoryCounts[sc] || 0;
-            return (
-              <button
-                key={sc}
-                onClick={() => handleSubCategorySelect(sc)}
-                className={cn(
-                  'p-5 rounded-xl border border-border/40 bg-card/60 backdrop-blur-sm transition-all duration-200 text-left group',
-                  'hover:border-primary/40 hover:bg-primary/5 hover:shadow-md active:scale-[0.98]',
-                  count === 0 && 'opacity-50 cursor-not-allowed'
-                )}
-                disabled={count === 0}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground">{sc}</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">{count} funds</p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
 
   // ── Level 3: Table view ──
   return (
