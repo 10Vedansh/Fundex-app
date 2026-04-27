@@ -480,34 +480,46 @@ export function AllFundsTab({
           <CardContent className="py-12 text-center text-muted-foreground">No funds match your filters.</CardContent>
         </Card>
       ) : (
-        <div className="rounded-b-xl border border-border/40 border-t-0 overflow-hidden bg-card/60 backdrop-blur-sm">
-          <Table>
+        <div className="rounded-b-xl border border-border/40 border-t-0 overflow-x-auto bg-card/60 backdrop-blur-sm">
+          <Table style={{ tableLayout: 'fixed', minWidth: '900px' }}>
             <TableHeader>
               <TableRow className="bg-secondary/40 hover:bg-secondary/40">
-                <TableHead className="w-8" />
+                <TableHead className="w-8" style={{ width: 40 }} />
                 <TableHead
-                  className="min-w-[180px] max-w-[240px] cursor-pointer select-none"
+                  className="cursor-pointer select-none relative group"
+                  style={{ width: colWidths['__name'] ?? 240 }}
                   onClick={() => handleSort('name')}
                 >
                   <span className="flex items-center gap-1">Fund <SortIcon col="name" /></span>
+                  <span
+                    onMouseDown={onResizeStart('__name', colWidths['__name'] ?? 240)}
+                    className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize bg-transparent hover:bg-primary/40 transition-colors"
+                  />
                 </TableHead>
                 {currentSection.columns.map((col) => {
                   const sortable = ['amc', 'expenseRatio', 'aum', 'riskLevel', 'cagr1Y', 'cagr3Y', 'cagr5Y'].includes(col.key);
+                  const w = colWidths[col.key] ?? 110;
                   return (
                     <TableHead
                       key={col.key}
                       className={cn(
-                        'whitespace-nowrap text-xs',
+                        'whitespace-nowrap text-xs relative group',
                         col.align === 'right' && 'text-right',
                         col.align === 'center' && 'text-center',
                         sortable && 'cursor-pointer select-none'
                       )}
+                      style={{ width: w }}
                       onClick={sortable ? () => handleSort(col.key as SortKey) : undefined}
                     >
                       <span className={cn('flex items-center gap-1', col.align === 'right' && 'justify-end', col.align === 'center' && 'justify-center')}>
                         {col.label}
                         {sortable && <SortIcon col={col.key as SortKey} />}
                       </span>
+                      <span
+                        onMouseDown={onResizeStart(col.key, w)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute right-0 top-0 h-full w-1.5 cursor-col-resize bg-transparent hover:bg-primary/40 transition-colors"
+                      />
                     </TableHead>
                   );
                 })}
@@ -516,7 +528,7 @@ export function AllFundsTab({
             <TableBody>
               {visibleFunds.map((fund) => (
                 <TableRow key={fund.id} className="cursor-pointer hover:bg-primary/5 transition-colors" onClick={() => onFundClick(fund)}>
-                  <TableCell className="px-2">
+                  <TableCell className="px-2" style={{ width: 40 }}>
                     <button
                       onClick={(e) => { e.stopPropagation(); onBookmarkToggle(fund); }}
                       className="p-1 hover:bg-secondary/50 rounded"
@@ -524,19 +536,20 @@ export function AllFundsTab({
                       <Bookmark className={cn('h-4 w-4', isInWatchlist(fund.id) ? 'fill-primary text-primary' : 'text-muted-foreground')} />
                     </button>
                   </TableCell>
-                  <TableCell className="font-medium text-xs max-w-[240px]">
-                    <span className="line-clamp-2">{fund.name}</span>
+                  <TableCell className="font-medium text-xs" style={{ width: colWidths['__name'] ?? 240 }}>
+                    <span className="line-clamp-2 break-words">{fund.name}</span>
                   </TableCell>
                   {currentSection.columns.map((col) => (
                     <TableCell
                       key={col.key}
                       className={cn(
-                        'text-xs whitespace-nowrap',
+                        'text-xs',
                         col.align === 'right' && 'text-right',
                         col.align === 'center' && 'text-center'
                       )}
+                      style={{ width: colWidths[col.key] ?? 110 }}
                     >
-                      {renderCellValue(fund, col)}
+                      <div className="truncate">{renderCellValue(fund, col)}</div>
                     </TableCell>
                   ))}
                 </TableRow>
