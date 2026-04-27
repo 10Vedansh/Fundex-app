@@ -13,6 +13,7 @@ import Index from "./pages/Index";
 import Founders from "./pages/Founders";
 import News from "./pages/News";
 import NotFound from "./pages/NotFound";
+import Search from "./pages/Search";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/dashboard" element={<PinGate><Index /></PinGate>} />
+            <Route path="/search" element={<PinGate><Search /></PinGate>} />
             <Route path="/founders" element={<Founders />} />
             <Route path="/news" element={<News />} />
             <Route path="*" element={<NotFound />} />
