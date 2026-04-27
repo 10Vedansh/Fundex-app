@@ -28,8 +28,8 @@ const SUGGESTIONS = [
 
 function AuctusIcon({ className }: { className?: string }) {
   return (
-    <div className={cn("rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center", className)}>
-      <Zap className="h-4 w-4 text-primary" />
+    <div className={cn("rounded-lg bg-white/5 border border-white/10 flex items-center justify-center", className)}>
+      <Zap className="h-4 w-4 text-foreground" />
     </div>
   );
 }
@@ -312,7 +312,7 @@ export function AIChat({ resetKey = 0 }: AIChatProps) {
   // Initial empty state
   if (messages.length === 0 && !activeSessionId) {
     return (
-      <div className="animate-fade-in flex flex-col items-center justify-center min-h-[60vh] px-4">
+      <div className="animate-fade-in flex flex-col items-center justify-center min-h-[60dvh] lg:min-h-[60vh] px-4">
         <div className="w-full max-w-2xl flex justify-end mb-4">
           {sessions.length > 0 && (
             <Button variant="outline" size="sm" onClick={() => setShowHistory(true)} className="gap-2">
@@ -322,14 +322,14 @@ export function AIChat({ resetKey = 0 }: AIChatProps) {
           )}
         </div>
         <div className="flex items-center gap-3 mb-4">
-          <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border border-primary/20">
-            <Zap className="h-7 w-7 text-primary" />
+          <div className="h-14 w-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+            <Zap className="h-7 w-7 text-foreground" />
           </div>
         </div>
         <h2 className="text-2xl md:text-3xl font-bold text-foreground text-center mb-1">
           Auctus
         </h2>
-        <p className="text-sm text-primary/70 font-medium mb-2">Your Financial Intelligence</p>
+        <p className="text-sm text-muted-foreground font-medium mb-2">Your Financial Intelligence</p>
         <p className="text-muted-foreground text-center mb-8 max-w-md">
           Ask anything about mutual funds — returns, comparisons, strategies, and more.
         </p>
@@ -342,7 +342,7 @@ export function AIChat({ resetKey = 0 }: AIChatProps) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask Auctus about mutual funds..."
-              className="w-full h-14 pl-5 pr-14 rounded-2xl bg-secondary/60 border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 text-base"
+              className="w-full h-14 pl-5 pr-14 rounded-2xl bg-secondary/60 border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring/50 text-base"
             />
             <Button
               type="submit"
@@ -360,7 +360,7 @@ export function AIChat({ resetKey = 0 }: AIChatProps) {
             <button
               key={s}
               onClick={() => sendMessage(s)}
-              className="text-left p-4 rounded-xl border border-border/40 bg-card/50 hover:bg-primary/5 hover:border-primary/30 transition-all text-sm text-muted-foreground hover:text-foreground"
+              className="text-left p-4 rounded-xl border border-border/40 bg-card/50 hover:bg-white/5 hover:border-white/20 transition-all text-sm text-muted-foreground hover:text-foreground"
             >
               {s}
             </button>
@@ -371,15 +371,28 @@ export function AIChat({ resetKey = 0 }: AIChatProps) {
   }
 
   // Chat view
+  // On mobile (<lg) we use a FIXED layout pinned between the slim header (top:56px area)
+  // and the bottom nav (bottom:56px). This way when the keyboard opens, only the chat
+  // surface resizes — the page itself doesn't scroll.
   return (
-    <div className="animate-fade-in flex flex-col h-[calc(100vh-200px)] max-h-[700px] mb-16 lg:mb-0">
+    <div
+      className={cn(
+        'animate-fade-in flex flex-col',
+        // Mobile: fixed full-surface chat, sized via dynamic viewport units so the
+        // composer & message list shrink when the keyboard appears (ChatGPT-style),
+        // while the bottom nav (also fixed) stays put.
+        'fixed inset-x-0 top-[56px] bottom-[56px] z-30 px-4 pb-[env(safe-area-inset-bottom)] bg-background',
+        // Desktop: revert to inline flow, no fixed positioning
+        'lg:static lg:inset-auto lg:z-auto lg:px-0 lg:pb-0 lg:bg-transparent lg:h-[calc(100vh-200px)] lg:max-h-[700px]'
+      )}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-border/40 mb-4">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between pt-3 pb-3 border-b border-border/40 mb-3 lg:mb-4">
+        <div className="flex items-center gap-2 min-w-0">
           <AuctusIcon className="h-6 w-6" />
-          <span className="text-sm font-semibold text-primary">Auctus</span>
+          <span className="text-sm font-semibold text-foreground">Auctus</span>
           <span className="text-xs text-muted-foreground">•</span>
-          <span className="text-sm text-muted-foreground truncate max-w-[180px]">
+          <span className="text-sm text-muted-foreground truncate">
             {sessions.find(s => s.id === activeSessionId)?.title || 'New Chat'}
           </span>
         </div>
@@ -398,7 +411,7 @@ export function AIChat({ resetKey = 0 }: AIChatProps) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-4 pb-4 pr-2">
+      <div className="flex-1 overflow-y-auto space-y-4 pb-4 pr-1 lg:pr-2 min-h-0">
         {messages.map((msg, i) => (
           <div
             key={i}
@@ -414,7 +427,7 @@ export function AIChat({ resetKey = 0 }: AIChatProps) {
               className={cn(
                 'max-w-[80%] rounded-2xl px-4 py-3 text-sm',
                 msg.role === 'user'
-                  ? 'bg-primary text-primary-foreground'
+                  ? 'bg-white text-black'
                   : 'bg-secondary/60 text-foreground'
               )}
             >
@@ -422,7 +435,7 @@ export function AIChat({ resetKey = 0 }: AIChatProps) {
                 <div className="prose prose-sm prose-invert max-w-none [&>p]:mb-2 [&>ul]:mb-2 [&>ol]:mb-2 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm">
                   <ReactMarkdown>{msg.content}</ReactMarkdown>
                   {isStreaming && i === messages.length - 1 && (
-                    <span className="inline-block w-1.5 h-4 bg-primary/70 animate-pulse ml-0.5 align-middle" />
+                    <span className="inline-block w-1.5 h-4 bg-foreground/70 animate-pulse ml-0.5 align-middle" />
                   )}
                 </div>
               ) : (
@@ -441,7 +454,7 @@ export function AIChat({ resetKey = 0 }: AIChatProps) {
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="border-t border-border/40 pt-4">
+      <form onSubmit={handleSubmit} className="border-t border-border/40 pt-3 lg:pt-4 pb-2">
         <div className="relative">
           <input
             type="text"
@@ -449,7 +462,7 @@ export function AIChat({ resetKey = 0 }: AIChatProps) {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask Auctus a follow-up..."
             disabled={isLoading}
-            className="w-full h-12 pl-4 pr-14 rounded-xl bg-secondary/50 border border-border/40 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 text-sm"
+            className="w-full h-12 pl-4 pr-14 rounded-xl bg-secondary/50 border border-border/40 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/40 text-sm"
           />
           <Button
             type="submit"

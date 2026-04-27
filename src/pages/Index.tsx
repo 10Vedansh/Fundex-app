@@ -17,6 +17,7 @@ import { AllFundsTab } from '@/components/dashboard/AllFundsTab';
 import { AIChat } from '@/components/dashboard/AIChat';
 import { CAMSUpload } from '@/components/dashboard/CAMSUpload';
 import { BuildPortfolio } from '@/components/dashboard/BuildPortfolio';
+import { AddFundDialog } from '@/components/dashboard/AddFundDialog';
 import { Footer } from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -82,6 +83,7 @@ const Index = () => {
 
   // CAMS uploaded flag
   const [hasCamsData, setHasCamsData] = useState(false);
+  const [isAddFundOpen, setIsAddFundOpen] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -274,7 +276,7 @@ const Index = () => {
               onFundClick={(fund) => {
                 handleFundClick(fund);
               }}
-              showSearch={activeTab !== 'sectors' && activeTab !== 'allfunds' && activeTab !== 'ai'}
+              showSearch={activeTab === 'overview' || activeTab === 'watchlist'}
               showInfoText={activeTab === 'overview'}
               showGreeting={activeTab === 'overview'}
             />
@@ -423,91 +425,111 @@ const Index = () => {
                     </div>
                   )}
 
-                  {/* CAMS Upload Section */}
-                  <CAMSUpload compact={portfolio.length > 0} onDataLoaded={() => setHasCamsData(true)} />
-
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-semibold">Your Investments</h3>
-                    <p className="text-sm text-muted-foreground hidden md:block">
-                      Search above to add funds
-                    </p>
-                  </div>
-
-                  {portfolioLoading ? (
-                    <DashboardLoadingState />
-                  ) : portfolio.length > 0 ? (
-                    <div className="space-y-4">
-                      {portfolio.map(item => {
-                        const fund = funds.find(f => f.id === item.fund_id);
-                        const insight = getPortfolioInsight(item);
-                        
-                        return (
-                          <Card 
-                            key={item.id} 
-                            className="glass-card cursor-pointer hover:border-primary/50 transition-colors"
-                            onClick={() => handlePortfolioItemClick(item)}
-                          >
-                            <CardContent className="py-4">
-                              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <h4 className="font-semibold">{item.fund_name}</h4>
-                                    <Badge variant="outline" className="text-xs">
-                                      {item.fund_category}
-                                    </Badge>
-                                  </div>
-                                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                                    {item.invested_amount && (
-                                      <span>Invested: ₹{item.invested_amount.toLocaleString()}</span>
-                                    )}
-                                    {item.is_sip && item.sip_amount && (
-                                      <span>SIP: ₹{item.sip_amount.toLocaleString()}/mo</span>
-                                    )}
-                                  </div>
-                                </div>
-                                
-                                <div className="flex items-center gap-3">
-                                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
-                                    insight.type === 'continue' 
-                                      ? 'bg-success/20 text-success' 
-                                      : insight.type === 'reduce'
-                                        ? 'bg-destructive/20 text-destructive'
-                                        : 'bg-warning/20 text-warning'
-                                  }`}>
-                                    {insight.type === 'continue' && <TrendingUp className="h-3 w-3" />}
-                                    {insight.type === 'review' && <Minus className="h-3 w-3" />}
-                                    {insight.type === 'reduce' && <TrendingDown className="h-3 w-3" />}
-                                    {insight.message}
-                                  </div>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      removeFromPortfolio(item.id);
-                                    }}
-                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  >
-                                    Remove
-                                  </Button>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  ) : !hasCamsData ? (
+                  {/* Unified action card: Upload CAMS / Add manually */}
+                  {portfolio.length === 0 && !hasCamsData && (
                     <Card className="glass-card">
-                      <CardContent className="py-12 text-center">
-                        <Wallet className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                        <p className="text-muted-foreground mb-2">Your portfolio is empty</p>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Search for mutual funds above and add them to track your investments
+                      <CardContent className="py-8 text-center">
+                        <h3 className="text-lg font-semibold text-foreground mb-2">
+                          Upload CAMS statement / Create manually
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+                          Import your full portfolio from a CAMS PDF, or add individual funds one at a time.
                         </p>
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                          <CAMSUpload compact onDataLoaded={() => setHasCamsData(true)} />
+                          <Button onClick={() => setIsAddFundOpen(true)}>
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add Mutual Fund
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
-                  ) : null}
+                  )}
+
+                  {/* CAMS results (only after upload) */}
+                  {hasCamsData && (
+                    <CAMSUpload compact={false} onDataLoaded={() => setHasCamsData(true)} />
+                  )}
+
+                  {/* Investments list (only when there are holdings) */}
+                  {portfolio.length > 0 && (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-lg font-semibold">Your Investments</h3>
+                        <div className="flex gap-2">
+                          <CAMSUpload compact onDataLoaded={() => setHasCamsData(true)} />
+                          <Button size="sm" onClick={() => setIsAddFundOpen(true)}>
+                            <Plus className="h-3.5 w-3.5 mr-1" />
+                            Add Fund
+                          </Button>
+                        </div>
+                      </div>
+
+                      {portfolioLoading ? (
+                        <DashboardLoadingState />
+                      ) : (
+                        <div className="space-y-4">
+                          {portfolio.map(item => {
+                            const insight = getPortfolioInsight(item);
+                            return (
+                              <Card
+                                key={item.id}
+                                className="glass-card cursor-pointer hover:border-white/25 transition-colors"
+                                onClick={() => handlePortfolioItemClick(item)}
+                              >
+                                <CardContent className="py-4">
+                                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <h4 className="font-semibold">{item.fund_name}</h4>
+                                        <Badge variant="outline" className="text-xs">
+                                          {item.fund_category}
+                                        </Badge>
+                                      </div>
+                                      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                                        {item.invested_amount && (
+                                          <span>Invested: ₹{item.invested_amount.toLocaleString()}</span>
+                                        )}
+                                        {item.is_sip && item.sip_amount && (
+                                          <span>SIP: ₹{item.sip_amount.toLocaleString()}/mo</span>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-3">
+                                      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
+                                        insight.type === 'continue'
+                                          ? 'bg-success/20 text-success'
+                                          : insight.type === 'reduce'
+                                            ? 'bg-destructive/20 text-destructive'
+                                            : 'bg-warning/20 text-warning'
+                                      }`}>
+                                        {insight.type === 'continue' && <TrendingUp className="h-3 w-3" />}
+                                        {insight.type === 'review' && <Minus className="h-3 w-3" />}
+                                        {insight.type === 'reduce' && <TrendingDown className="h-3 w-3" />}
+                                        {insight.message}
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          removeFromPortfolio(item.id);
+                                        }}
+                                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      >
+                                        Remove
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </>
+                  )}
 
                   <Card className="bg-warning/10 border-warning/30">
                     <CardContent className="py-4 flex items-start gap-3">
@@ -620,6 +642,16 @@ const Index = () => {
         isOpen={isPortfolioModalOpen}
         onClose={() => setIsPortfolioModalOpen(false)}
         insight={selectedPortfolioItem ? getPortfolioInsight(selectedPortfolioItem) : null}
+      />
+
+      {/* Add Mutual Fund manual flow */}
+      <AddFundDialog
+        open={isAddFundOpen}
+        onClose={() => setIsAddFundOpen(false)}
+        funds={funds}
+        onAdd={async (fund, details) => {
+          await addToPortfolio(fund, details);
+        }}
       />
     </div>
   );
