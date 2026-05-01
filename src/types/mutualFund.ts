@@ -28,7 +28,7 @@ export interface MutualFund {
   benchmark: string;
 
   // Extended workbook fields
-  launch?: string | null;
+  launch?: string | number | Date | null;
   marketCap?: number | null;
   latestNav?: number | null;
   previousNav?: number | null;
