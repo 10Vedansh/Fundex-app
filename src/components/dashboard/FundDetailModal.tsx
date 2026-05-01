@@ -11,6 +11,7 @@ import { HoldingAnalysisCharts } from './HoldingAnalysisCharts';
 import { TermTooltip } from './TermTooltip';
 import { generateInvestmentGuidance } from '@/utils/investmentGuidance';
 import { TrendingUp, TrendingDown, Shield, Zap, Target, AlertTriangle, ThumbsUp, ThumbsDown, Plus, Bookmark, Calendar, Building2, User } from 'lucide-react';
+import { formatLaunchDate } from '@/utils/displayUtils';
 
 interface FundDetailModalProps {
   fund: MutualFund | null;
@@ -169,7 +170,7 @@ export function FundDetailModal({ fund, sectorData, isOpen, onClose, onAddToPort
                   <Calendar className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                   <div>
                     <p className="text-xs text-muted-foreground">Date of Launch</p>
-                    <p className="text-sm font-medium text-foreground">{fund.launch || 'NA'}</p>
+                    <p className="text-sm font-medium text-foreground">{formatLaunchDate(fund.launch)}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
