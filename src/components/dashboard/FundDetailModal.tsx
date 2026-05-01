@@ -11,6 +11,7 @@ import { HoldingAnalysisCharts } from './HoldingAnalysisCharts';
 import { TermTooltip } from './TermTooltip';
 import { generateInvestmentGuidance } from '@/utils/investmentGuidance';
 import { TrendingUp, TrendingDown, Shield, Zap, Target, AlertTriangle, ThumbsUp, ThumbsDown, Plus, Bookmark, Calendar, Building2, User } from 'lucide-react';
+import { formatLaunchDate } from '@/utils/displayUtils';
 
 interface FundDetailModalProps {
   fund: MutualFund | null;
