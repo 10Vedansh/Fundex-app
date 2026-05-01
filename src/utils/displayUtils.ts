@@ -26,14 +26,18 @@ function formatDateParts(y: number, m: number, d: number): string {
   return `${d.toString().padStart(2, '0')} ${MONTHS[m - 1]} ${y}`;
 }
 
-export function formatLaunchDate(raw: string | null | undefined): string {
+export function formatLaunchDate(raw: unknown): string {
   if (raw === null || raw === undefined) return 'NA';
+  if (raw instanceof Date && !isNaN(raw.getTime())) {
+    return formatDateParts(raw.getUTCFullYear(), raw.getUTCMonth() + 1, raw.getUTCDate()) || 'NA';
+  }
   const s = String(raw).trim();
   if (!s) return 'NA';
 
   // Excel serial number (days since 1899-12-30)
-  if (/^\d+(\.\d+)?$/.test(s)) {
-    const serial = parseFloat(s);
+  const numeric = typeof raw === 'number' ? raw : Number(s.replace(/,/g, ''));
+  if (Number.isFinite(numeric) && /^\d{4,6}(\.\d+)?$/.test(s.replace(/,/g, ''))) {
+    const serial = numeric;
     if (serial > 59 && serial < 80000) {
       const epoch = Date.UTC(1899, 11, 30);
       const ms = epoch + serial * 86400000;
