@@ -7,17 +7,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// OneDrive sharing link - convert to direct download URL
-const ONEDRIVE_SHARE_URL = "https://onedrive.live.com/:x:/g/personal/eaad892ddfe43dbc/IQAwlg5rDGisRZOQbwrUPfpFATcTWWB32t_7kwEeARQZJz0?rtime=a6MilE2P3kg&redeem=aHR0cHM6Ly8xZHJ2Lm1zL3gvYy9lYWFkODkyZGRmZTQzZGJjL0lRQXdsZzVyREdpc1JaT1Fid3JVUGZwRkFUY1RXV0IzMnRfN2t3RWVBUlFaSnowP2U9dGZDMWtD";
+// OneDrive sharing link - we use the short 1drv.ms form which works reliably with the shares API.
+// The original onedrive.live.com URL embeds this short URL inside its `redeem` (base64) parameter.
+const ONEDRIVE_SHARE_URL = "https://1drv.ms/x/c/eaad892ddfe43dbc/IQAwlg5rDGisRZOQbwrUPfpFATcTWWB32t_7kwEeARQZJz0?e=tfC1kC";
 
 function getOneDriveDownloadUrl(shareUrl: string): string {
-  // Method: Convert sharing URL to base64, then use OneDrive API
+  // Encode per Microsoft Graph "shares" rules: base64 -> url-safe -> strip padding -> prefix "u!"
   const base64 = btoa(shareUrl)
+    .replace(/=+$/, '')
     .replace(/\//g, '_')
-    .replace(/\+/g, '-')
-    .replace(/=+$/, '');
+    .replace(/\+/g, '-');
   const encodedUrl = `u!${base64}`;
-  return `https://api.onedrive.com/v1.0/shares/${encodedUrl}/root/content`;
+  // Microsoft Graph endpoint - more reliable than api.onedrive.com for personal share links
+  return `https://graph.microsoft.com/v1.0/shares/${encodedUrl}/driveItem/content`;
 }
 
 // ---- Column mappings (same as process-workbook) ----
