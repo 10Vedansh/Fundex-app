@@ -298,17 +298,6 @@ export default function Landing() {
             </div>
           </GsapReveal>
 
-          {/* Stats row */}
-          <GsapReveal delay={800}>
-            <div className="grid grid-cols-3 gap-8 mt-24 max-w-3xl mx-auto">
-              {stats.map((stat, i) => (
-                <div key={i} className="text-center">
-                  <p className="text-3xl md:text-4xl font-bold text-foreground mb-1">{stat.value}</p>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-          </GsapReveal>
         </div>
         
         {/* Scroll indicator */}
