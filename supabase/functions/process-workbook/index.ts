@@ -60,6 +60,17 @@ function parseExitLoad(val: unknown): string {
   return String(val).trim();
 }
 
+function parseLaunchDate(val: unknown): string | null {
+  if (val === null || val === undefined || val === '' || val === '--' || val === '-' || val === 'N/A') return null;
+  if (val instanceof Date && !isNaN(val.getTime())) return val.toISOString().slice(0, 10);
+  const str = String(val).replace(/,/g, '').trim();
+  const serial = Number(str);
+  if (Number.isFinite(serial) && serial > 59 && serial < 80000) {
+    return new Date(Date.UTC(1899, 11, 30) + serial * 86400000).toISOString().slice(0, 10);
+  }
+  return String(val).trim();
+}
+
 function getRiskLevel(category: string, stdDev: number | null): string {
   const cat = String(category).toLowerCase();
   if (cat.includes('liq') || cat.includes('overnht') || cat.includes('mm')) return 'Low';
@@ -128,7 +139,7 @@ function processSheet(worksheet: XLSX.WorkSheet, colMapping: string[], assetClas
       } else if (key === 'category') {
         fund.category = String(val).trim();
       } else if (key === 'launch') {
-        fund.launch = val ? String(val).trim() : null;
+        fund.launch = parseLaunchDate(val);
       } else if (key === 'fundManager') {
         fund.fundManager = val ? String(val).trim() : null;
       } else if (key === 'exitLoad') {
