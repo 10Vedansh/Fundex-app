@@ -41,20 +41,26 @@ export function computeCategoryMedians(funds: MutualFund[]): Map<string, Categor
 
   const result = new Map<string, CategoryMedians>();
   for (const [cat, catFunds] of groups) {
-    const cagrs = catFunds.map(f => safeNum(f.ret3Y ?? f.cagr3Y) ?? 0);
-    const sharpes = catFunds.map(f => safeNum(f.sharpeRatio) ?? 0);
-    const sortinos = catFunds.map(f => safeNum(f.sortinoRatio) ?? approximateSortino(f));
-    const vols = catFunds.map(f => safeNum(f.volatility) ?? safeNum(f.stdDev) ?? 0);
+    // Treat '--' / null as NA — exclude entirely from category medians instead of counting as 0
+    const cagrs = catFunds.map(f => safeNum(f.ret3Y ?? f.cagr3Y)).filter((n): n is number => n !== null);
+    const sharpes = catFunds.map(f => safeNum(f.sharpeRatio)).filter((n): n is number => n !== null);
+    const sortinos = catFunds.map(f => {
+      const s = safeNum(f.sortinoRatio);
+      if (s !== null) return s;
+      const approx = approximateSortino(f);
+      return approx; // approximateSortino can return null when source data is NA
+    }).filter((n): n is number => n !== null && !isNaN(n));
+    const vols = catFunds.map(f => safeNum(f.volatility) ?? safeNum(f.stdDev)).filter((n): n is number => n !== null);
 
-    const medianCagr = median(cagrs);
-    const cagrStdDev = stdDev(cagrs) || 1; // prevent div by 0
+    const medianCagr = cagrs.length ? median(cagrs) : 0;
+    const cagrStdDev = (cagrs.length ? stdDev(cagrs) : 0) || 1; // prevent div by 0
 
     result.set(cat, {
       cagr: medianCagr,
       cagrStdDev,
-      sharpe: median(sharpes),
-      sortino: median(sortinos),
-      volatility: median(vols),
+      sharpe: sharpes.length ? median(sharpes) : 0,
+      sortino: sortinos.length ? median(sortinos) : 0,
+      volatility: vols.length ? median(vols) : 0,
     });
   }
 
