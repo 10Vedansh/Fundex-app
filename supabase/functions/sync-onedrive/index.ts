@@ -9,7 +9,7 @@ const corsHeaders = {
 
 // OneDrive sharing link - we use the short 1drv.ms form which works reliably with the shares API.
 // The original onedrive.live.com URL embeds this short URL inside its `redeem` (base64) parameter.
-const ONEDRIVE_SHARE_URL = "https://1drv.ms/x/c/eaad892ddfe43dbc/IQAwlg5rDGisRZOQbwrUPfpFATcTWWB32t_7kwEeARQZJz0?e=tfC1kC";
+const ONEDRIVE_SHARE_URL = "https://1drv.ms/x/c/eaad892ddfe43dbc/IQAwlg5rDGisRZOQbwrUPfpFATcTWWB32t_7kwEeARQZJz0?e=O1pceH";
 
 function getOneDriveDownloadUrl(shareUrl: string): string {
   // Encode per Microsoft "shares" rules: base64 -> url-safe -> strip padding -> prefix "u!"
