@@ -107,7 +107,15 @@ export default function Onboarding() {
     } finally { setIsSaving(false); }
   };
 
-  const handleBack = () => { currentStep > 0 ? setCurrentStep(prev => prev - 1) : navigate('/auth'); };
+  const handleBack = async () => {
+    if (currentStep > 0) {
+      setCurrentStep(prev => prev - 1);
+    } else {
+      // At step 0: sign out so the auth page doesn't auto-redirect us back to /dashboard
+      await signOut();
+      navigate('/auth', { replace: true });
+    }
+  };
 
   if (authLoading) {
     return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
