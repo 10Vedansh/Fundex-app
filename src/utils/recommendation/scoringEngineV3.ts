@@ -211,37 +211,46 @@ export function scoreV3(
   const cat = (fund.category || '').trim();
   const catMedian = medians.get(cat);
 
+  // For missing ('--' / null) values: use category median so the metric is NEUTRAL (not penalized as 0)
+  const safeOrMedian = (v: number | null, fallback: number) => v === null ? fallback : v;
+
   // 1. Sortino (30%)
-  const sortino = safeNum(fund.sortinoRatio) ?? approximateSortino(fund);
+  const sortinoRaw = safeNum(fund.sortinoRatio);
+  const sortino = sortinoRaw !== null ? sortinoRaw : (catMedian?.sortino ?? approximateSortino(fund));
   const sortinoN = normalize(sortino, stats.minSortino, stats.maxSortino);
 
   // 2. Category-Relative CAGR (20%)
-  const cagr3 = safeNum(fund.ret3Y ?? fund.cagr3Y) ?? 0;
+  const cagr3Raw = safeNum(fund.ret3Y ?? fund.cagr3Y);
+  const cagr3 = safeOrMedian(cagr3Raw, catMedian?.cagr ?? 0);
   let categoryRelativeCagr = 0;
-  if (catMedian && catMedian.cagrStdDev > 0) {
+  if (catMedian && catMedian.cagrStdDev > 0 && cagr3Raw !== null) {
     categoryRelativeCagr = (cagr3 - catMedian.cagr) / catMedian.cagrStdDev;
   }
-  // Normalize to 0-1 range (z-scores typically -3 to +3)
+  // Normalize to 0-1 range (z-scores typically -3 to +3); 0.5 = neutral
   const cagrRelativeN = Math.max(0, Math.min(1, (categoryRelativeCagr + 3) / 6));
 
   // 3. Rolling Consistency (15%)
   const consistency = approximateConsistency(fund, catMedian?.cagr ?? 0);
 
   // 4. Sharpe (10%)
-  const sharpe = safeNum(fund.sharpeRatio) ?? 0;
+  const sharpeRaw = safeNum(fund.sharpeRatio);
+  const sharpe = safeOrMedian(sharpeRaw, catMedian?.sharpe ?? 0);
   const sharpeN = normalize(sharpe, stats.minSharpe, stats.maxSharpe);
 
   // 5. Low Volatility (10%)
-  const vol = safeNum(fund.volatility) ?? safeNum(fund.stdDev) ?? 0;
+  const volRaw = safeNum(fund.volatility) ?? safeNum(fund.stdDev);
+  const vol = safeOrMedian(volRaw, catMedian?.volatility ?? 0);
   const volN = 1 - normalize(vol, stats.minVol, stats.maxVol);
 
   // 6. Expense (10%)
-  const expense = safeNum(fund.expenseRatio) ?? 0;
-  const expenseN = 1 - normalize(expense, stats.minExpense, stats.maxExpense);
+  const expenseRaw = safeNum(fund.expenseRatio);
+  const expense = expenseRaw === null ? 0 : expenseRaw;
+  const expenseN = expenseRaw === null ? 0.5 : (1 - normalize(expense, stats.minExpense, stats.maxExpense));
 
   // 7. AUM Stability (5%)
-  const aum = safeNum(fund.aum) ?? 0;
-  const aumN = normalize(aum, stats.minAum, stats.maxAum);
+  const aumRaw = safeNum(fund.aum);
+  const aum = aumRaw === null ? 0 : aumRaw;
+  const aumN = aumRaw === null ? 0.5 : normalize(aum, stats.minAum, stats.maxAum);
 
   // Weighted composite
   let score =
