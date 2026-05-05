@@ -12,14 +12,14 @@ const corsHeaders = {
 const ONEDRIVE_SHARE_URL = "https://1drv.ms/x/c/eaad892ddfe43dbc/IQAwlg5rDGisRZOQbwrUPfpFATcTWWB32t_7kwEeARQZJz0?e=tfC1kC";
 
 function getOneDriveDownloadUrl(shareUrl: string): string {
-  // Encode per Microsoft Graph "shares" rules: base64 -> url-safe -> strip padding -> prefix "u!"
+  // Encode per Microsoft "shares" rules: base64 -> url-safe -> strip padding -> prefix "u!"
   const base64 = btoa(shareUrl)
     .replace(/=+$/, '')
     .replace(/\//g, '_')
     .replace(/\+/g, '-');
   const encodedUrl = `u!${base64}`;
-  // Microsoft Graph endpoint - more reliable than api.onedrive.com for personal share links
-  return `https://graph.microsoft.com/v1.0/shares/${encodedUrl}/driveItem/content`;
+  // api.onedrive.com works anonymously for personal shared links (Graph requires auth and returns 401)
+  return `https://api.onedrive.com/v1.0/shares/${encodedUrl}/root/content`;
 }
 
 // ---- Column mappings (same as process-workbook) ----

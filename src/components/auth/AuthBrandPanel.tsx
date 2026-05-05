@@ -3,7 +3,7 @@
 export function AuthBrandPanel({ 
   title = "Welcome to CIFRAA",
   subtitle = "CIFRAA helps investors discover, analyze, and build personalized mutual fund portfolios powered by intelligent algorithms.",
-  footerText = "More than 1,000+ investors trust us with their portfolio decisions."
+  footerText = ""
 }: {
   title?: string;
   subtitle?: string;
@@ -93,9 +93,11 @@ export function AuthBrandPanel({
           <p className="text-muted-foreground text-base max-w-md leading-relaxed">
             {subtitle}
           </p>
-          <p className="text-sm text-muted-foreground/70 pt-2">
-            {footerText}
-          </p>
+          {footerText && (
+            <p className="text-sm text-muted-foreground/70 pt-2">
+              {footerText}
+            </p>
+          )}
         </div>
 
         {/* Bottom card */}
