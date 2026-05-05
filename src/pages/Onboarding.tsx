@@ -64,7 +64,7 @@ function getDisabledOptions(questionId: string, answers: Record<string, string>)
 
 export default function Onboarding() {
   const navigate = useNavigate();
-  const { user, profile, updateProfile, isLoading: authLoading } = useAuth();
+  const { user, profile, updateProfile, signOut, isLoading: authLoading } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
