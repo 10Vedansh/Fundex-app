@@ -93,9 +93,11 @@ export function AuthBrandPanel({
           <p className="text-muted-foreground text-base max-w-md leading-relaxed">
             {subtitle}
           </p>
-          <p className="text-sm text-muted-foreground/70 pt-2">
-            {footerText}
-          </p>
+          {footerText && (
+            <p className="text-sm text-muted-foreground/70 pt-2">
+              {footerText}
+            </p>
+          )}
         </div>
 
         {/* Bottom card */}
