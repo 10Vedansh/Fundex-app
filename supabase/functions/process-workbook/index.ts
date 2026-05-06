@@ -201,7 +201,8 @@ serve(async (req) => {
     console.log("Parsing workbook...");
     
     const arrayBuffer = await fileData.arrayBuffer();
-    const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+    const bytes = new Uint8Array(arrayBuffer);
+    const workbook = XLSX.read(bytes, { type: 'array', dense: true, cellFormula: false, cellHTML: false, cellStyles: false });
     
     console.log(`Workbook has ${workbook.SheetNames.length} sheets: ${workbook.SheetNames.join(', ')}`);
 
