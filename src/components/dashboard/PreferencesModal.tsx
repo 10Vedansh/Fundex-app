@@ -1,109 +1,169 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Loader2, Shield, Target, TrendingUp, Clock, GraduationCap, IndianRupee, Info, AlertCircle } from 'lucide-react';
+import { Loader2, Shield, Target, TrendingUp, Clock, Wallet, AlertTriangle, PiggyBank, Info, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { validatePreferences, PreferenceSelections, ValidationResult } from '@/utils/recommendation/preferenceValidator';
 
 interface PreferencesModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const riskOptions = [
-  { value: 'conservative', label: 'Conservative', desc: 'Prefer stability over returns', icon: Shield },
-  { value: 'moderate', label: 'Moderate', desc: 'Balance risk and returns', icon: Target },
-  { value: 'aggressive', label: 'Aggressive', desc: 'Willing to take higher risks', icon: TrendingUp },
+interface PersonaField {
+  key: string;
+  label: string;
+  icon: React.ElementType;
+  hint: string;
+  options: { value: string; label: string; desc: string }[];
+}
+
+const FIELDS: PersonaField[] = [
+  {
+    key: 'investor_stage', label: 'Investor Stage', icon: Shield,
+    hint: 'Your current life stage affects risk capacity and investment approach.',
+    options: [
+      { value: 'student', label: 'Student', desc: 'Pursuing education' },
+      { value: 'early_career', label: 'Early Career', desc: 'Building foundation' },
+      { value: 'mid_career', label: 'Mid-Career', desc: 'Growing responsibilities' },
+      { value: 'business_owner', label: 'Business Owner', desc: 'Running my venture' },
+      { value: 'retired', label: 'Retired', desc: 'Steady income needs' },
+    ],
+  },
+  {
+    key: 'primary_goal', label: 'Primary Goal', icon: Target,
+    hint: 'Your main investment objective determines the fund categories recommended.',
+    options: [
+      { value: 'wealth_creation', label: 'Wealth Creation', desc: 'Long-term growth' },
+      { value: 'retirement', label: 'Retirement', desc: 'Building retirement corpus' },
+      { value: 'child_education', label: 'Family Goals', desc: 'Education & milestones' },
+      { value: 'passive_income', label: 'Passive Income', desc: 'Regular returns' },
+      { value: 'tax_saving', label: 'Tax Saving', desc: 'Tax efficiency' },
+      { value: 'capital_preservation', label: 'Preservation', desc: 'Protect capital' },
+    ],
+  },
+  {
+    key: 'investment_horizon', label: 'Investment Horizon', icon: Clock,
+    hint: 'Longer horizons allow for equity-heavy allocations and compounding.',
+    options: [
+      { value: '<3', label: '< 3 Years', desc: 'Short-term' },
+      { value: '3-5', label: '3-5 Years', desc: 'Medium-term' },
+      { value: '5-10', label: '5-10 Years', desc: 'Long-term' },
+      { value: '>10', label: '> 10 Years', desc: 'Very long-term' },
+    ],
+  },
+  {
+    key: 'market_reaction', label: 'Market Reaction', icon: TrendingUp,
+    hint: 'How you react to market downturns reveals your true risk tolerance.',
+    options: [
+      { value: 'withdraw', label: 'Withdraw', desc: 'Cut losses quickly' },
+      { value: 'wait', label: 'Wait & Watch', desc: 'Stay invested' },
+      { value: 'invest_more', label: 'Buy the Dip', desc: 'See opportunity' },
+    ],
+  },
+  {
+    key: 'experience_level', label: 'Experience', icon: AlertTriangle,
+    hint: 'Experience level controls fund complexity in recommendations.',
+    options: [
+      { value: 'first_time', label: 'First-Time', desc: 'Just starting' },
+      { value: 'some_experience', label: 'Some Experience', desc: 'Invested before' },
+      { value: 'experienced', label: 'Experienced', desc: 'Well-versed' },
+    ],
+  },
+  {
+    key: 'existing_investments', label: 'Existing Investments', icon: Wallet,
+    hint: 'Helps understand your overall financial picture and portfolio size.',
+    options: [
+      { value: 'none', label: 'None', desc: 'Starting fresh' },
+      { value: 'under_5l', label: 'Under ₹5L', desc: 'Early stage' },
+      { value: '5l_25l', label: '₹5L - ₹25L', desc: 'Building portfolio' },
+      { value: '25l_plus', label: '₹25L+', desc: 'Significant' },
+    ],
+  },
+  {
+    key: 'emergency_fund', label: 'Emergency Fund', icon: PiggyBank,
+    hint: 'A healthy emergency fund allows for higher risk investment capacity.',
+    options: [
+      { value: '<3_months', label: '< 3 Months', desc: 'Minimal buffer' },
+      { value: '3_6_months', label: '3-6 Months', desc: 'Moderate safety' },
+      { value: '>6_months', label: '> 6 Months', desc: 'Strong cushion' },
+    ],
+  },
 ];
 
-const goalOptions = [
-  { value: 'wealth', label: 'Wealth Creation', desc: 'Long-term wealth building' },
-  { value: 'income', label: 'Regular Income', desc: 'Dividend or interest income' },
-  { value: 'preservation', label: 'Capital Preservation', desc: 'Protect principal amount' },
-  { value: 'tax', label: 'Tax Saving', desc: 'ELSS and tax benefits' },
-];
+const deriveRiskFromMarketReaction = (reaction: string | null): string => {
+  switch (reaction) {
+    case 'withdraw': return 'conservative';
+    case 'wait': return 'moderate';
+    case 'invest_more': return 'aggressive';
+    default: return 'moderate';
+  }
+};
 
-const horizonOptions = [
-  { value: 'short', label: '< 3 Years', desc: 'Short-term goals' },
-  { value: 'medium', label: '3-5 Years', desc: 'Medium-term planning' },
-  { value: 'long', label: '5+ Years', desc: 'Long-term investment' },
-];
+const deriveGoalFromPrimaryGoal = (goal: string | null): string => {
+  switch (goal) {
+    case 'wealth_creation': return 'wealth';
+    case 'retirement': return 'wealth';
+    case 'child_education': return 'wealth';
+    case 'passive_income': return 'income';
+    case 'tax_saving': return 'tax';
+    case 'capital_preservation': return 'preservation';
+    default: return 'wealth';
+  }
+};
 
-const experienceOptions = [
-  { value: 'beginner', label: 'Beginner', desc: 'New to investing' },
-  { value: 'intermediate', label: 'Intermediate', desc: 'Some experience' },
-  { value: 'experienced', label: 'Experienced', desc: 'Regular investor' },
-];
+const mapHorizon = (horizon: string | null): string => {
+  switch (horizon) {
+    case '<3': return 'short';
+    case '3-5': return 'medium';
+    case '5-10': return 'long';
+    case '>10': return 'long';
+    default: return 'medium';
+  }
+};
 
-const investmentAmountOptions = [
-  { value: 'small', label: 'Under ₹50K', desc: 'Starting small' },
-  { value: 'medium', label: '₹50K - ₹5L', desc: 'Moderate investment' },
-  { value: 'large', label: '₹5L+', desc: 'Significant portfolio' },
-];
-
-const IMPACT_HINTS: Record<string, string> = {
-  risk_tolerance: 'Determines which fund categories are available — conservative limits to debt/hybrid, aggressive opens equity/sectoral.',
-  investment_goal: 'Filters funds by purpose — tax saving restricts to ELSS, preservation to low-risk debt.',
-  investment_horizon: 'Matches fund volatility to your timeline — shorter horizons prefer liquid/debt funds.',
-  experience_level: 'Controls fund complexity — beginners see large-cap/index, experienced see thematic/small-cap.',
-  investment_amount: 'Larger amounts apply quality filters — AUM minimums and expense ratio caps.',
+const mapExperience = (exp: string | null): string => {
+  switch (exp) {
+    case 'first_time': return 'beginner';
+    case 'some_experience': return 'intermediate';
+    case 'experienced': return 'experienced';
+    default: return 'beginner';
+  }
 };
 
 export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
   const { profile, updateProfile, refreshProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [preferences, setPreferences] = useState<PreferenceSelections>({
-    risk_tolerance: '',
-    investment_goal: '',
-    investment_horizon: '',
-    experience_level: '',
-    investment_amount: '',
-  });
+  const [preferences, setPreferences] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (profile) {
       setPreferences({
-        risk_tolerance: profile.risk_tolerance || '',
-        investment_goal: profile.investment_goal || '',
+        investor_stage: '',
+        primary_goal: '',
         investment_horizon: profile.investment_horizon || '',
+        market_reaction: '',
         experience_level: profile.experience_level || '',
-        investment_amount: profile.investment_amount || '',
+        existing_investments: profile.existing_investments || '',
+        emergency_fund: '',
       });
     }
   }, [profile]);
 
-  // Run validation whenever preferences change
-  const validation: ValidationResult = useMemo(
-    () => validatePreferences(preferences),
-    [preferences],
-  );
-
-  // Apply auto-resets from the validator
-  useEffect(() => {
-    const resets = validation.autoResets;
-    if (Object.keys(resets).length === 0) return;
-
-    setPreferences(prev => {
-      const next = { ...prev };
-      let changed = false;
-      for (const [key, val] of Object.entries(resets)) {
-        if (prev[key as keyof PreferenceSelections] !== val) {
-          (next as any)[key] = val;
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [validation.autoResets]);
-
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
-      await updateProfile(preferences);
+      await updateProfile({
+        investment_horizon: mapHorizon(preferences.investment_horizon),
+        experience_level: mapExperience(preferences.experience_level),
+        existing_investments: preferences.existing_investments,
+        risk_tolerance: deriveRiskFromMarketReaction(preferences.market_reaction),
+        investment_goal: deriveGoalFromPrimaryGoal(preferences.primary_goal),
+        investment_amount: 'medium',
+      });
       await refreshProfile();
       toast.success('Preferences updated! Your personalized funds will refresh.');
       onClose();
@@ -114,7 +174,7 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
     }
   };
 
-  const updateField = useCallback((field: keyof PreferenceSelections, value: string) => {
+  const updateField = useCallback((field: string, value: string) => {
     setPreferences(prev => ({ ...prev, [field]: value }));
   }, []);
 
@@ -129,121 +189,26 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          <PreferenceSection
-            label="Risk Tolerance"
-            icon={Shield}
-            hint={IMPACT_HINTS.risk_tolerance}
-            nudge={validation.nudges.risk_tolerance}
-          >
-            <div className="grid gap-2">
-              {riskOptions.map(opt => {
-                const disabledEntry = validation.disabledRisk.find(d => d.value === opt.value);
-                return (
+          {FIELDS.map(field => (
+            <PreferenceSection
+              key={field.key}
+              label={field.label}
+              icon={field.icon}
+              hint={field.hint}
+            >
+              <div className="grid grid-cols-1 gap-2">
+                {field.options.map(opt => (
                   <OptionCard
                     key={opt.value}
-                    selected={preferences.risk_tolerance === opt.value}
-                    disabled={!!disabledEntry}
-                    disabledReason={disabledEntry?.reason}
-                    onClick={() => updateField('risk_tolerance', opt.value)}
-                    label={opt.label}
-                    desc={opt.desc}
-                    icon={opt.icon}
-                  />
-                );
-              })}
-            </div>
-          </PreferenceSection>
-
-          <PreferenceSection
-            label="Investment Goal"
-            icon={Target}
-            hint={IMPACT_HINTS.investment_goal}
-            nudge={validation.nudges.investment_goal}
-          >
-            <div className="grid grid-cols-2 gap-2">
-              {goalOptions.map(opt => {
-                const disabledEntry = validation.disabledGoal.find(d => d.value === opt.value);
-                return (
-                  <OptionCard
-                    key={opt.value}
-                    selected={preferences.investment_goal === opt.value}
-                    disabled={!!disabledEntry}
-                    disabledReason={disabledEntry?.reason}
-                    onClick={() => updateField('investment_goal', opt.value)}
+                    selected={preferences[field.key] === opt.value}
+                    onClick={() => updateField(field.key, opt.value)}
                     label={opt.label}
                     desc={opt.desc}
                   />
-                );
-              })}
-            </div>
-          </PreferenceSection>
-
-          <PreferenceSection
-            label="Investment Horizon"
-            icon={Clock}
-            hint={IMPACT_HINTS.investment_horizon}
-            nudge={validation.nudges.investment_horizon}
-          >
-            <div className="grid grid-cols-3 gap-2">
-              {horizonOptions.map(opt => {
-                const disabledEntry = validation.disabledHorizon.find(d => d.value === opt.value);
-                return (
-                  <OptionCard
-                    key={opt.value}
-                    selected={preferences.investment_horizon === opt.value}
-                    disabled={!!disabledEntry}
-                    disabledReason={disabledEntry?.reason}
-                    onClick={() => updateField('investment_horizon', opt.value)}
-                    label={opt.label}
-                    desc={opt.desc}
-                  />
-                );
-              })}
-            </div>
-          </PreferenceSection>
-
-          <PreferenceSection
-            label="Experience Level"
-            icon={GraduationCap}
-            hint={IMPACT_HINTS.experience_level}
-            nudge={validation.nudges.experience_level}
-          >
-            <div className="grid grid-cols-3 gap-2">
-              {experienceOptions.map(opt => {
-                const disabledEntry = validation.disabledExperience.find(d => d.value === opt.value);
-                return (
-                  <OptionCard
-                    key={opt.value}
-                    selected={preferences.experience_level === opt.value}
-                    disabled={!!disabledEntry}
-                    disabledReason={disabledEntry?.reason}
-                    onClick={() => updateField('experience_level', opt.value)}
-                    label={opt.label}
-                    desc={opt.desc}
-                  />
-                );
-              })}
-            </div>
-          </PreferenceSection>
-
-          <PreferenceSection
-            label="Investment Amount"
-            icon={IndianRupee}
-            hint={IMPACT_HINTS.investment_amount}
-          >
-            <div className="grid grid-cols-3 gap-2">
-              {investmentAmountOptions.map(opt => (
-                <OptionCard
-                  key={opt.value}
-                  selected={preferences.investment_amount === opt.value}
-                  disabled={false}
-                  onClick={() => updateField('investment_amount', opt.value)}
-                  label={opt.label}
-                  desc={opt.desc}
-                />
-              ))}
-            </div>
-          </PreferenceSection>
+                ))}
+              </div>
+            </PreferenceSection>
+          ))}
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t">
@@ -264,13 +229,11 @@ function PreferenceSection({
   label,
   icon: Icon,
   hint,
-  nudge,
   children,
 }: {
   label: string;
   icon: React.ElementType;
   hint: string;
-  nudge?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -291,12 +254,6 @@ function PreferenceSection({
           </Tooltip>
         </TooltipProvider>
       </label>
-      {nudge && (
-        <div className="flex items-start gap-2 px-3 py-2 rounded-md bg-warning/10 border border-warning/20 text-xs text-warning">
-          <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
-          <span>{nudge}</span>
-        </div>
-      )}
       {children}
     </div>
   );
@@ -304,43 +261,24 @@ function PreferenceSection({
 
 function OptionCard({
   selected,
-  disabled,
-  disabledReason,
   onClick,
   label,
   desc,
-  icon: Icon,
 }: {
   selected: boolean;
-  disabled: boolean;
-  disabledReason?: string;
   onClick: () => void;
   label: string;
   desc: string;
-  icon?: React.ElementType;
 }) {
-  const card = (
+  return (
     <Card
       className={cn(
-        'transition-all duration-200',
-        disabled
-          ? 'opacity-40 cursor-not-allowed'
-          : 'cursor-pointer hover:border-primary/50',
-        selected && !disabled && 'border-primary bg-primary/5',
+        'transition-all duration-200 cursor-pointer hover:border-primary/50',
+        selected && 'border-primary bg-primary/5',
       )}
-      onClick={() => !disabled && onClick()}
+      onClick={onClick}
     >
       <CardContent className="p-3 flex items-center gap-3">
-        {Icon && (
-          <div
-            className={cn(
-              'h-8 w-8 rounded-lg flex items-center justify-center',
-              selected ? 'bg-primary/20 text-primary' : 'bg-secondary text-muted-foreground',
-            )}
-          >
-            <Icon className="h-4 w-4" />
-          </div>
-        )}
         <div className="flex-1 min-w-0">
           <p className={cn('font-medium text-sm', selected && 'text-primary')}>{label}</p>
           <p className="text-xs text-muted-foreground truncate">{desc}</p>
@@ -360,19 +298,5 @@ function OptionCard({
       </CardContent>
     </Card>
   );
-
-  if (disabled) {
-    return (
-      <TooltipProvider delayDuration={100}>
-        <Tooltip>
-          <TooltipTrigger asChild>{card}</TooltipTrigger>
-          <TooltipContent side="top" className="text-xs z-[9999] max-w-[260px]">
-            {disabledReason || 'This combination is not suitable'}
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-  }
-
-  return card;
 }
+

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { recommendFundsV2, RecommendationPreferences } from '@/utils/recommendation/intersectionEngine';
+import { determineInvestorPersona } from '@/utils/recommendation/personaEngine';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeaderZone } from '@/components/dashboard/DashboardHeaderZone';
@@ -110,11 +111,28 @@ const Index = () => {
     return null;
   }, [profile]);
 
+  // Compute investor persona (uses only legacy DB fields; persona defaults to Balanced Investor)
+  const personaResult = useMemo(() => {
+    if (!profile) return null;
+    return determineInvestorPersona({
+      investor_stage: null,
+      primary_goal: null,
+      investment_horizon: profile.investment_horizon,
+      market_reaction: null,
+      experience_level: profile.experience_level,
+      existing_investments: profile.existing_investments,
+      emergency_fund: null,
+    });
+  }, [profile]);
+
   // Filter funds using recommendation engine
   const personalizedFunds = useMemo(() => {
-    console.log('[CIFRAA-DASH] personalizedFunds useMemo RUNNING', { hasProfile: !!profile, fundCount: funds.length });
+    console.log('[REC] personalizedFunds useMemo START');
+    console.log('[REC] profile =', profile);
+    console.log('[REC] funds.length =', funds.length);
+    
     if (!profile || funds.length === 0) {
-      console.log('[CIFRAA-DASH] personalizedFunds EARLY RETURN', { reason: !profile ? 'profile is null' : 'funds empty', hasProfile: !!profile, fundCount: funds.length });
+      console.log('[REC] EARLY RETURN —', !profile ? 'profile null' : 'funds empty');
       return [];
     }
     
@@ -123,13 +141,15 @@ const Index = () => {
       investmentGoal: profile.investment_goal || 'wealth',
       investmentHorizon: profile.investment_horizon || 'long',
       experienceLevel: profile.experience_level || 'beginner',
-      investmentAmount: profile.investment_amount || 'medium',
+      investmentAmount: 'medium',
     };
 
-    console.log('[CIFRAA-DASH] personalizedFunds calling recommendFundsV2', { pref: prefs, fundCount: funds.length });
+    console.log('[REC] prefs =', prefs);
+
     const recommended = recommendFundsV2(funds, prefs);
+    console.log('[REC] recommendFundsV2 returned', recommended.length, 'funds');
     const result = recommended.length > 0 ? recommended.slice(0, 9) : funds.slice(0, 9);
-    console.log('[CIFRAA-DASH] personalizedFunds RESULT', { recommendedLength: recommended.length, resultLength: result.length });
+    console.log('[REC] final personalizedFunds count =', result.length);
     return result;
   }, [funds, profile]);
 
@@ -236,9 +256,7 @@ const Index = () => {
     return { type: 'continue', message: `Performance within expectations for a ${fund.category} fund. Sharpe: ${fund.sharpeRatio.toFixed(2)}, Expense: ${fund.expenseRatio.toFixed(2)}%. Continue monitoring quarterly.` };
   };
 
-  console.log('[CIFRAA-DASH] Index render check', { authLoading, hasProfile: !!profile, fundCount: funds.length, personalizedCount: personalizedFunds.length, isLoading });
   if (authLoading) {
-    console.log('[CIFRAA-DASH] Showing auth loading spinner');
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -298,19 +316,27 @@ const Index = () => {
                   {isLoading ? (
                     <DashboardLoadingState />
                   ) : personalizedFunds.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {personalizedFunds.map(fund => (
-                        <FundCard 
-                          key={fund.id}
-                          fund={fund} 
-                          onClick={() => handleFundClick(fund)}
-                          isBookmarked={isInWatchlist(fund.id)}
-                          onBookmarkToggle={() => toggleWatchlist(fund)}
-                        />
-                      ))}
-                    </div>
+                    <>
+                      {personaResult && (
+                        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20">
+                          <p className="text-sm text-muted-foreground">You are a</p>
+                          <p className="text-xl font-bold text-foreground">{personaResult.name}</p>
+                          <p className="text-sm text-muted-foreground mt-1">{personaResult.explanation}</p>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {personalizedFunds.map(fund => (
+                          <FundCard 
+                            key={fund.id}
+                            fund={fund} 
+                            onClick={() => handleFundClick(fund)}
+                            isBookmarked={isInWatchlist(fund.id)}
+                            onBookmarkToggle={() => toggleWatchlist(fund)}
+                          />
+                        ))}
+                      </div>
+                    </>
                   ) : (
-                    (() => { console.log('[CIFRAA-DASH] RENDERING EMPTY STATE', { isLoading, personalizedFundsLength: personalizedFunds.length, hasProfile: !!profile, fundCount: funds.length, profile }); return null; })(),
                     <Card className="glass-card">
                       <CardContent className="py-12 text-center">
                         <p className="text-muted-foreground mb-4">

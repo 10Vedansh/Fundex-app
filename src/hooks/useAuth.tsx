@@ -9,10 +9,11 @@ export interface UserProfile {
   email: string | null;
   full_name: string | null;
   avatar_url: string | null;
-  risk_tolerance: string | null;
   investment_horizon: string | null;
-  investment_goal: string | null;
   experience_level: string | null;
+  existing_investments: string | null;
+  risk_tolerance: string | null;
+  investment_goal: string | null;
   investment_amount: string | null;
   onboarding_completed: boolean;
   pin_set: boolean;
@@ -21,7 +22,6 @@ export interface UserProfile {
   monthly_emis: number | null;
   dependents: number | null;
   has_insurance: boolean | null;
-  existing_investments: string | null;
   risk_capacity_score: number | null;
   phone_number: string | null;
 }
@@ -50,27 +50,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    console.log('[CIFRAA-PROFILE] fetchProfile called for userId:', userId);
+    console.log('[PROFILE] userId =', userId);
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_id, email, full_name, avatar_url, risk_tolerance, investment_horizon, investment_goal, experience_level, investment_amount, onboarding_completed, pin_set, occupation, income_stability, monthly_emis, dependents, has_insurance, existing_investments, risk_capacity_score, phone_number, created_at, updated_at')
+        .select('id, user_id, email, full_name, avatar_url, investment_horizon, experience_level, existing_investments, risk_tolerance, investment_goal, investment_amount, onboarding_completed, pin_set, occupation, income_stability, monthly_emis, dependents, has_insurance, risk_capacity_score, phone_number, created_at, updated_at')
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[PROFILE FULL ERROR]', JSON.stringify(error, null, 2));
+        throw error;
+      }
 
       if (data) {
-        console.log('[CIFRAA-PROFILE] fetchProfile SUCCESS: data is', `NON-NULL (risk_tolerance=${data.risk_tolerance}, onboarding_completed=${data.onboarding_completed})`);
         setProfile(data);
         return;
       }
 
-      // Profile doesn't exist — auto-create from auth user metadata
-      console.log('[CIFRAA-PROFILE] No profile found, creating one-time fallback...');
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) {
-        console.error('[CIFRAA-PROFILE] Cannot create profile: no user data');
         return;
       }
 
@@ -82,14 +81,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: userData.user.email,
           full_name: metadata.full_name || metadata.name || '',
         })
-        .select('id, user_id, email, full_name, avatar_url, risk_tolerance, investment_horizon, investment_goal, experience_level, investment_amount, onboarding_completed, pin_set, occupation, income_stability, monthly_emis, dependents, has_insurance, existing_investments, risk_capacity_score, phone_number, created_at, updated_at')
+        .select('id, user_id, email, full_name, avatar_url, investment_horizon, experience_level, existing_investments, risk_tolerance, investment_goal, investment_amount, onboarding_completed, pin_set, occupation, income_stability, monthly_emis, dependents, has_insurance, risk_capacity_score, phone_number, created_at, updated_at')
         .maybeSingle();
 
       if (insertError) throw insertError;
-      console.log('[CIFRAA-PROFILE] Created fallback profile:', newProfile ? `id=${newProfile.id}` : 'FAILED');
       setProfile(newProfile);
     } catch (err) {
-      console.error('[CIFRAA-PROFILE] fetchProfile ERROR:', err);
+      console.error('fetchProfile ERROR:', err);
     }
   };
 

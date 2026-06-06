@@ -219,20 +219,31 @@ export function recommendFundsV2(
   prefs: RecommendationPreferences,
 ): ScoredFund[] {
   const startTime = performance.now();
+  console.log('[REC] recommendFundsV2 called');
+  console.log('[REC] input fund count =', funds.length);
+  console.log('[REC] preferences =', prefs);
 
   // Step 0: Remove excluded
   const cleanFunds = funds.filter(f => !isExcluded(f));
+  console.log('[REC] after exclude =', cleanFunds.length);
 
   // Step 1: Eligibility (hard constraints)
   let eligible = applyRiskConstraints(cleanFunds, prefs.riskTolerance);
+  console.log('[REC] after risk constraints =', eligible.length);
   eligible = applyGoalEligibility(eligible, prefs.investmentGoal);
+  console.log('[REC] after goal eligibility =', eligible.length);
   eligible = applyHorizonRules(eligible, prefs.investmentHorizon);
+  console.log('[REC] after horizon rules =', eligible.length);
   eligible = applyExperienceFilter(eligible, prefs.experienceLevel);
+  console.log('[REC] after experience filter =', eligible.length);
   eligible = applyAmountConstraints(eligible, prefs.investmentAmount);
+  console.log('[REC] after amount constraints =', eligible.length);
 
   // Step 2: Fallback if empty
   if (eligible.length === 0) {
+    console.log('[REC] eligible is 0 — applying fallback');
     eligible = applyFallback(cleanFunds, prefs);
+    console.log('[REC] after fallback =', eligible.length);
   }
 
   // Step 3: Compute category medians & V3 scoring
@@ -261,9 +272,11 @@ export function recommendFundsV2(
   });
 
   scored.sort((a, b) => b.compositeScore - a.compositeScore);
+  console.log('[REC] after scoring =', scored.length);
 
   // Step 4: Diversify
   const diversified = diversify(scored, prefs, 9);
+  console.log('[REC] final recommendations =', diversified.length);
 
   const elapsed = performance.now() - startTime;
   if (elapsed > 200) {
