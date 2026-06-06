@@ -1,0 +1,34 @@
+project_id = "jyugiihjjmecsdqcxcsi"
+
+[functions.generate-insights]
+verify_jwt = false
+
+[functions.mfapi]
+verify_jwt = false
+
+[functions.fetch-fund-data]
+verify_jwt = false
+
+[functions.process-workbook]
+verify_jwt = false
+
+[functions.fetch-news]
+verify_jwt = false
+
+[functions.ai-chat]
+verify_jwt = false
+
+[functions.parse-cams]
+verify_jwt = false
+
+[functions.send-otp]
+verify_jwt = false
+
+[functions.verify-otp]
+verify_jwt = false
+
+[functions.verify-pin]
+verify_jwt = false
+
+[functions.set-pin]
+verify_jwt = false
