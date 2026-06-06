@@ -134,6 +134,24 @@ const mapExperience = (exp: string | null): string => {
   }
 };
 
+const unmapHorizon = (horizon: string | null): string => {
+  switch (horizon) {
+    case 'short': return '<3';
+    case 'medium': return '3-5';
+    case 'long': return '5-10';
+    default: return '';
+  }
+};
+
+const unmapExperience = (exp: string | null): string => {
+  switch (exp) {
+    case 'beginner': return 'first_time';
+    case 'intermediate': return 'some_experience';
+    case 'experienced': return 'experienced';
+    default: return '';
+  }
+};
+
 export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
   const { profile, updateProfile, refreshProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -141,14 +159,18 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
 
   useEffect(() => {
     if (profile) {
+      const horizonValue = unmapHorizon(profile.investment_horizon) || profile.investment_horizon || '';
+      const experienceValue = unmapExperience(profile.experience_level) || profile.experience_level || '';
+      console.log('[PROFILE_LOAD] investment_horizon:', profile.investment_horizon, '→ form value:', horizonValue);
+      console.log('[PROFILE_LOAD] experience_level:', profile.experience_level, '→ form value:', experienceValue);
       setPreferences({
-        investor_stage: '',
-        primary_goal: '',
-        investment_horizon: profile.investment_horizon || '',
-        market_reaction: '',
-        experience_level: profile.experience_level || '',
+        investor_stage: profile.investor_stage || '',
+        primary_goal: profile.primary_goal || '',
+        investment_horizon: horizonValue,
+        market_reaction: profile.market_reaction || '',
+        experience_level: experienceValue,
         existing_investments: profile.existing_investments || '',
-        emergency_fund: '',
+        emergency_fund: profile.emergency_fund || '',
       });
     }
   }, [profile]);
@@ -156,7 +178,11 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
-      await updateProfile({
+      const { error } = await updateProfile({
+        investor_stage: preferences.investor_stage,
+        primary_goal: preferences.primary_goal,
+        market_reaction: preferences.market_reaction,
+        emergency_fund: preferences.emergency_fund,
         investment_horizon: mapHorizon(preferences.investment_horizon),
         experience_level: mapExperience(preferences.experience_level),
         existing_investments: preferences.existing_investments,
@@ -164,11 +190,16 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
         investment_goal: deriveGoalFromPrimaryGoal(preferences.primary_goal),
         investment_amount: 'medium',
       });
+      if (error) {
+        toast.error('Failed to save preferences: ' + error.message);
+        return;
+      }
       await refreshProfile();
       toast.success('Preferences updated! Your personalized funds will refresh.');
       onClose();
-    } catch {
-      toast.error('Failed to update preferences');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      toast.error('Failed to update preferences: ' + msg);
     } finally {
       setIsLoading(false);
     }

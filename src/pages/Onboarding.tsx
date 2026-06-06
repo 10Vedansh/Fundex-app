@@ -151,6 +151,10 @@ export default function Onboarding() {
     setIsSaving(true);
     try {
       const { error } = await updateProfile({
+        investor_stage: finalAnswers.investor_stage,
+        primary_goal: finalAnswers.primary_goal,
+        market_reaction: finalAnswers.market_reaction,
+        emergency_fund: finalAnswers.emergency_fund,
         investment_horizon: mapHorizon(finalAnswers.investment_horizon),
         experience_level: mapExperience(finalAnswers.experience_level),
         existing_investments: finalAnswers.existing_investments,

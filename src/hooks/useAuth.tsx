@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { saveQuestionnaireToLocal, loadQuestionnaireFromLocal } from '@/utils/localQuestionnaire';
 
 export interface UserProfile {
   id: string;
@@ -9,6 +10,10 @@ export interface UserProfile {
   email: string | null;
   full_name: string | null;
   avatar_url: string | null;
+  investor_stage: string | null;
+  primary_goal: string | null;
+  market_reaction: string | null;
+  emergency_fund: string | null;
   investment_horizon: string | null;
   experience_level: string | null;
   existing_investments: string | null;
@@ -64,7 +69,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data) {
-        setProfile(data);
+        console.log('[PROFILE_LOAD] from DB — investment_horizon:', data.investment_horizon, 'experience_level:', data.experience_level);
+        const localData = loadQuestionnaireFromLocal(userId);
+        const merged = { ...data, ...localData };
+        console.log('[PROFILE_RESTORE] after merge — investment_horizon:', merged.investment_horizon, 'experience_level:', merged.experience_level);
+        setProfile(merged);
         return;
       }
 
@@ -85,7 +94,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (insertError) throw insertError;
-      setProfile(newProfile);
+
+      console.log('[PROFILE_LOAD] new profile created — investment_horizon:', newProfile?.investment_horizon, 'experience_level:', newProfile?.experience_level);
+      const localData = loadQuestionnaireFromLocal(userId);
+      const merged = { ...newProfile, ...localData };
+      console.log('[PROFILE_RESTORE] after merge — investment_horizon:', merged.investment_horizon, 'experience_level:', merged.experience_level);
+      setProfile(merged);
     } catch (err) {
       console.error('fetchProfile ERROR:', err);
     }
@@ -195,16 +209,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!user) return { error: new Error('Not authenticated') };
 
-    const { error } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('user_id', user.id);
+    const QUESTIONNAIRE_FIELDS = ['investor_stage', 'primary_goal', 'market_reaction', 'emergency_fund'];
+    const localFields: Record<string, string | null> = {};
+    const dbFields: Record<string, unknown> = {};
 
-    if (!error) {
-      await fetchProfile(user.id);
+    for (const [key, value] of Object.entries(updates)) {
+      if (QUESTIONNAIRE_FIELDS.includes(key)) {
+        localFields[key] = value as string | null;
+      } else {
+        dbFields[key] = value;
+      }
     }
 
-    return { error: error as Error | null };
+    // Save questionnaire fields to localStorage first (survives DB errors)
+    if (Object.keys(localFields).length > 0) {
+      saveQuestionnaireToLocal(user.id, localFields);
+    }
+
+    // Save DB fields to Supabase
+    if (Object.keys(dbFields).length > 0) {
+      const { error } = await supabase
+        .from('profiles')
+        .update(dbFields)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('[PROFILE_SAVE] Supabase error:', JSON.stringify(error, null, 2));
+        return { error: error as Error | null };
+      }
+      console.log('[PROFILE_SAVE] DB fields saved:', Object.keys(dbFields).join(', '));
+      if ('investment_horizon' in dbFields || 'experience_level' in dbFields) {
+        console.log('[PROFILE_SAVE] investment_horizon:', dbFields.investment_horizon, 'experience_level:', dbFields.experience_level);
+      }
+    }
+
+    // Refresh profile — merges localStorage questionnaire fields into DB profile
+    await fetchProfile(user.id);
+    return { error: null };
   };
 
   return (
