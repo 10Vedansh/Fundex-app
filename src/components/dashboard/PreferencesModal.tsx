@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Loader2, Shield, Target, TrendingUp, Clock, Wallet, AlertTriangle, PiggyBank, Info, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getRawFieldAvailability, validateProfile, ProfileState, RawOptionState } from '@/utils/recommendation/profileRules';
 
 interface PreferencesModalProps {
   isOpen: boolean;
@@ -156,6 +157,7 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
   const { profile, updateProfile, refreshProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [preferences, setPreferences] = useState<Record<string, string>>({});
+  const [constraints, setConstraints] = useState<Partial<Record<string, RawOptionState[]>> | null>(null);
 
   useEffect(() => {
     if (profile) {
@@ -175,9 +177,40 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
     }
   }, [profile]);
 
+  // Recompute constraints whenever preferences change
+  useEffect(() => {
+    const profileState: ProfileState = {};
+    for (const [key, value] of Object.entries(preferences)) {
+      if (value) profileState[key as keyof ProfileState] = value;
+    }
+    setConstraints(getRawFieldAvailability(profileState));
+  }, [preferences]);
+
+  const getOptionState = useCallback((fieldKey: string, optionValue: string): {
+    disabled: boolean; soft: boolean; reasons: string[]
+  } => {
+    if (!constraints) return { disabled: false, soft: false, reasons: [] };
+    const fieldConstraints = constraints[fieldKey];
+    if (!fieldConstraints) return { disabled: false, soft: false, reasons: [] };
+    const c = fieldConstraints.find((c) => c.value === optionValue);
+    if (c) return { disabled: !c.enabled, soft: c.enabled && c.reasons.length > 0, reasons: c.reasons };
+    return { disabled: false, soft: false, reasons: [] };
+  }, [constraints]);
+
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
+      const profileState: ProfileState = {};
+      for (const [key, value] of Object.entries(preferences)) {
+        if (value) profileState[key as keyof ProfileState] = value;
+      }
+      const validationErrors = validateProfile(profileState);
+      if (validationErrors.length > 0) {
+        toast.error('Cannot save: ' + validationErrors[0].reason);
+        setIsLoading(false);
+        return;
+      }
+
       const { error } = await updateProfile({
         investor_stage: preferences.investor_stage,
         primary_goal: preferences.primary_goal,
@@ -228,15 +261,23 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
               hint={field.hint}
             >
               <div className="grid grid-cols-1 gap-2">
-                {field.options.map(opt => (
-                  <OptionCard
-                    key={opt.value}
-                    selected={preferences[field.key] === opt.value}
-                    onClick={() => updateField(field.key, opt.value)}
-                    label={opt.label}
-                    desc={opt.desc}
-                  />
-                ))}
+                {field.options.map(opt => {
+                  const optState = getOptionState(field.key, opt.value);
+                  return (
+                    <OptionCard
+                      key={opt.value}
+                      selected={preferences[field.key] === opt.value}
+                      onClick={() => {
+                        if (!optState.disabled) updateField(field.key, opt.value);
+                      }}
+                      label={opt.label}
+                      desc={opt.desc}
+                      disabled={optState.disabled}
+                      soft={optState.soft}
+                      reasons={optState.reasons}
+                    />
+                  );
+                })}
               </div>
             </PreferenceSection>
           ))}
@@ -295,23 +336,37 @@ function OptionCard({
   onClick,
   label,
   desc,
+  disabled = false,
+  soft = false,
+  reasons = [],
 }: {
   selected: boolean;
   onClick: () => void;
   label: string;
   desc: string;
+  disabled?: boolean;
+  soft?: boolean;
+  reasons?: string[];
 }) {
-  return (
+  const card = (
     <Card
       className={cn(
-        'transition-all duration-200 cursor-pointer hover:border-primary/50',
+        'transition-all duration-200',
+        disabled && 'opacity-40',
+        !disabled && 'cursor-pointer hover:border-primary/50',
         selected && 'border-primary bg-primary/5',
+        soft && 'border-warning/30 bg-warning/5',
       )}
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
     >
       <CardContent className="p-3 flex items-center gap-3">
         <div className="flex-1 min-w-0">
-          <p className={cn('font-medium text-sm', selected && 'text-primary')}>{label}</p>
+          <div className="flex items-center gap-2">
+            <p className={cn('font-medium text-sm', selected && 'text-primary', disabled && 'text-muted-foreground')}>
+              {label}
+            </p>
+            {soft && <AlertCircle className="h-3.5 w-3.5 text-warning shrink-0" />}
+          </div>
           <p className="text-xs text-muted-foreground truncate">{desc}</p>
         </div>
         <div
@@ -329,5 +384,33 @@ function OptionCard({
       </CardContent>
     </Card>
   );
+
+  if (disabled && reasons.length > 0) {
+    return (
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>{card}</TooltipTrigger>
+          <TooltipContent side="top" className="max-w-[260px] text-xs z-[9999]">
+            {reasons[0]}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  if (soft && reasons.length > 0) {
+    return (
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>{card}</TooltipTrigger>
+          <TooltipContent side="top" className="max-w-[260px] text-xs z-[9999]">
+            {reasons[0]}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return card;
 }
 

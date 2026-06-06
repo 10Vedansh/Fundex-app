@@ -219,32 +219,40 @@ export function recommendFundsV2(
   prefs: RecommendationPreferences,
 ): ScoredFund[] {
   const startTime = performance.now();
-  console.log('[REC] recommendFundsV2 called');
-  console.log('[REC] input fund count =', funds.length);
-  console.log('[REC] preferences =', prefs);
+  console.log('[CIFRAA-RECO] Profile Loaded — preferences:', prefs);
+  console.log('[CIFRAA-RECO] Recommendation Input — total funds:', funds.length);
 
   // Step 0: Remove excluded
   const cleanFunds = funds.filter(f => !isExcluded(f));
-  console.log('[REC] after exclude =', cleanFunds.length);
+  console.log('[CIFRAA-RECO] Step 0 — after exclusions:', cleanFunds.length);
 
   // Step 1: Eligibility (hard constraints)
   let eligible = applyRiskConstraints(cleanFunds, prefs.riskTolerance);
-  console.log('[REC] after risk constraints =', eligible.length);
+  console.log('[CIFRAA-RECO] Step 1a — after risk constraints:', eligible.length, `(riskTolerance=${prefs.riskTolerance})`);
   eligible = applyGoalEligibility(eligible, prefs.investmentGoal);
-  console.log('[REC] after goal eligibility =', eligible.length);
+  console.log('[CIFRAA-RECO] Step 1b — after goal eligibility:', eligible.length, `(goal=${prefs.investmentGoal})`);
   eligible = applyHorizonRules(eligible, prefs.investmentHorizon);
-  console.log('[REC] after horizon rules =', eligible.length);
+  console.log('[CIFRAA-RECO] Step 1c — after horizon rules:', eligible.length, `(horizon=${prefs.investmentHorizon})`);
   eligible = applyExperienceFilter(eligible, prefs.experienceLevel);
-  console.log('[REC] after experience filter =', eligible.length);
+  console.log('[CIFRAA-RECO] Step 1d — after experience filter:', eligible.length, `(experience=${prefs.experienceLevel})`);
   eligible = applyAmountConstraints(eligible, prefs.investmentAmount);
-  console.log('[REC] after amount constraints =', eligible.length);
+  console.log('[CIFRAA-RECO] Step 1e — after amount constraints:', eligible.length, `(amount=${prefs.investmentAmount})`);
 
   // Step 2: Fallback if empty
   if (eligible.length === 0) {
-    console.log('[REC] eligible is 0 — applying fallback');
+    console.log('[CIFRAA-RECO] Step 2 — eligible is 0, applying fallback');
     eligible = applyFallback(cleanFunds, prefs);
-    console.log('[REC] after fallback =', eligible.length);
+    console.log('[CIFRAA-RECO] Step 2 — after fallback:', eligible.length);
   }
+
+  // Category distribution of eligible funds
+  const catDist: Record<string, number> = {};
+  for (const f of eligible) {
+    const c = catCode(f);
+    catDist[c] = (catDist[c] || 0) + 1;
+  }
+  console.log('[CIFRAA-RECO] Candidate Funds Count:', eligible.length);
+  console.log('[CIFRAA-RECO] Category Distribution:', catDist);
 
   // Step 3: Compute category medians & V3 scoring
   const medians = computeCategoryMedians(eligible);
@@ -272,11 +280,17 @@ export function recommendFundsV2(
   });
 
   scored.sort((a, b) => b.compositeScore - a.compositeScore);
-  console.log('[REC] after scoring =', scored.length);
+  console.log('[CIFRAA-RECO] Top Scoring Funds — top 10:');
+  scored.slice(0, 10).forEach((f, i) => {
+    console.log(`  ${i + 1}. ${f.name} (${f.category}) — score: ${f.compositeScore}, reasons: [${f.reasons.join('; ')}]`);
+  });
 
   // Step 4: Diversify
   const diversified = diversify(scored, prefs, 9);
-  console.log('[REC] final recommendations =', diversified.length);
+  console.log('[CIFRAA-RECO] Final Recommendations — count:', diversified.length);
+  diversified.forEach((f, i) => {
+    console.log(`  ${i + 1}. ${f.name} (${f.category}) — score: ${f.compositeScore}, badge: ${f.suitabilityBadge}`);
+  });
 
   const elapsed = performance.now() - startTime;
   if (elapsed > 200) {

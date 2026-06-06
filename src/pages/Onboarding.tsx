@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ArrowLeft, Check, Shield, Target, Clock, TrendingUp, Wallet, PiggyBank, AlertTriangle, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { FundexLogo } from '@/components/landing/FundexLogo';
 import { AuthBrandPanel } from '@/components/auth/AuthBrandPanel';
+import { getRawFieldAvailability, validateProfile, ProfileState } from '@/utils/recommendation/profileRules';
 
 interface Question {
   id: string;
@@ -97,7 +99,29 @@ export default function Onboarding() {
   useEffect(() => { if (!authLoading && !user) navigate('/auth'); }, [user, authLoading, navigate]);
   useEffect(() => { if (profile?.onboarding_completed) navigate('/dashboard'); }, [profile, navigate]);
 
+  // Compute constraint-driven option availability from current answers
+  const rawAvailability = useMemo(() => {
+    const profileState: ProfileState = {};
+    for (const [key, value] of Object.entries(answers)) {
+      if (value) profileState[key as keyof ProfileState] = value;
+    }
+    return getRawFieldAvailability(profileState);
+  }, [answers]);
+
+  const isOptionDisabled = (fieldKey: string, optionValue: string): { disabled: boolean; reason: string } => {
+    const fa = rawAvailability[fieldKey as keyof ProfileState];
+    if (!fa) return { disabled: false, reason: '' };
+    const match = fa.find((o) => o.value === optionValue);
+    if (match && !match.enabled) return { disabled: true, reason: match.reasons[0] || '' };
+    return { disabled: false, reason: '' };
+  };
+
   const handleSelect = async (value: string) => {
+    const { disabled, reason } = isOptionDisabled(currentQuestion.id, value);
+    if (disabled) {
+      setShowWarning(reason);
+      return;
+    }
     if (showWarning) { setShowWarning(null); }
     const newAnswers = { ...answers, [currentQuestion.id]: value };
     setAnswers(newAnswers);
@@ -150,6 +174,18 @@ export default function Onboarding() {
   const completeOnboarding = async (finalAnswers: Record<string, string>) => {
     setIsSaving(true);
     try {
+      const profileState: ProfileState = {};
+      for (const [key, value] of Object.entries(finalAnswers)) {
+        if (value) profileState[key as keyof ProfileState] = value;
+      }
+      const validationErrors = validateProfile(profileState);
+      if (validationErrors.length > 0) {
+        toast.error('Invalid profile: ' + validationErrors[0].reason);
+        setIsTransitioning(false);
+        setIsSaving(false);
+        return;
+      }
+
       const { error } = await updateProfile({
         investor_stage: finalAnswers.investor_stage,
         primary_goal: finalAnswers.primary_goal,
@@ -233,30 +269,47 @@ export default function Onboarding() {
                 <p className="text-muted-foreground text-sm mb-6 ml-[52px]">{currentQuestion.description}</p>
 
                 <div className="space-y-3">
-                  {currentQuestion.options.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => handleSelect(option.value)}
-                      disabled={isSaving}
-                      className={`w-full p-4 rounded-xl border text-left transition-all duration-200 ${
-                        answers[currentQuestion.id] === option.value
-                          ? 'bg-primary/10 border-primary/50 shadow-[0_0_0_1px_hsla(217,91%,60%,0.2),0_4px_20px_-4px_hsla(217,91%,60%,0.2)]'
-                          : 'bg-secondary/30 border-border/20 hover:bg-secondary/50 hover:border-primary/30 cursor-pointer'
-                      } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold text-foreground">{option.label}</p>
-                          <p className="text-sm text-muted-foreground">{option.description}</p>
-                        </div>
-                        {answers[currentQuestion.id] === option.value && (
-                          <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center shrink-0 ml-4">
-                            <Check className="h-4 w-4 text-primary-foreground" />
+                  {currentQuestion.options.map((option) => {
+                    const { disabled: optDisabled, reason: optReason } = isOptionDisabled(currentQuestion.id, option.value);
+                    const btn = (
+                      <button
+                        key={option.value}
+                        onClick={() => handleSelect(option.value)}
+                        disabled={isSaving}
+                        className={`w-full p-4 rounded-xl border text-left transition-all duration-200 ${
+                          answers[currentQuestion.id] === option.value
+                            ? 'bg-primary/10 border-primary/50 shadow-[0_0_0_1px_hsla(217,91%,60%,0.2),0_4px_20px_-4px_hsla(217,91%,60%,0.2)]'
+                            : optDisabled
+                              ? 'bg-secondary/10 border-border/10 opacity-40'
+                              : 'bg-secondary/30 border-border/20 hover:bg-secondary/50 hover:border-primary/30 cursor-pointer'
+                        } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className={`font-semibold ${optDisabled ? 'text-muted-foreground' : 'text-foreground'}`}>
+                              {option.label}
+                            </p>
+                            <p className="text-sm text-muted-foreground">{option.description}</p>
                           </div>
-                        )}
-                      </div>
-                    </button>
-                  ))}
+                          {answers[currentQuestion.id] === option.value && (
+                            <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center shrink-0 ml-4">
+                              <Check className="h-4 w-4 text-primary-foreground" />
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                    return optDisabled && optReason ? (
+                      <TooltipProvider delayDuration={200} key={option.value}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>{btn}</TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-[260px] text-xs z-[9999]">
+                            {optReason}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : btn;
+                  })}
                 </div>
 
                 {isSaving && (
