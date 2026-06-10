@@ -53,6 +53,7 @@ function fmtVal(val: number | null | undefined, decimals = 1, suffix = ''): stri
 }
 
 export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle }: FundCardProps) {
+  console.log('[TRACE-RENDER] FundCard rendering:', fund.id, fund.name, fund.category, typeof fund.compositeScore !== 'undefined' ? 'scored:' + fund.compositeScore : 'UNSCORED');
   const handleBookmarkClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onBookmarkToggle?.(fund);

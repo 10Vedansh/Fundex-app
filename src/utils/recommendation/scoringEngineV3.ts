@@ -23,6 +23,7 @@ export interface CategoryMedians {
   sharpe: number;
   sortino: number;
   volatility: number;
+  expense: number;
 }
 
 let _medianCache: Map<string, CategoryMedians> | null = null;
@@ -51,6 +52,7 @@ export function computeCategoryMedians(funds: MutualFund[]): Map<string, Categor
       return approx; // approximateSortino can return null when source data is NA
     }).filter((n): n is number => n !== null && !isNaN(n));
     const vols = catFunds.map(f => safeNum(f.volatility) ?? safeNum(f.stdDev)).filter((n): n is number => n !== null);
+    const expenses = catFunds.map(f => safeNum(f.expenseRatio)).filter((n): n is number => n !== null);
 
     const medianCagr = cagrs.length ? median(cagrs) : 0;
     const cagrStdDev = (cagrs.length ? stdDev(cagrs) : 0) || 1; // prevent div by 0
@@ -61,6 +63,7 @@ export function computeCategoryMedians(funds: MutualFund[]): Map<string, Categor
       sharpe: sharpes.length ? median(sharpes) : 0,
       sortino: sortinos.length ? median(sortinos) : 0,
       volatility: vols.length ? median(vols) : 0,
+      expense: expenses.length ? median(expenses) : 0,
     });
   }
 
@@ -150,6 +153,7 @@ interface NormStats {
   maxVol: number; minVol: number;
   maxExpense: number; minExpense: number;
   maxAum: number; minAum: number;
+  maxCagr: number; minCagr: number;
 }
 
 export function computeNormStats(funds: MutualFund[]): NormStats {
@@ -158,19 +162,22 @@ export function computeNormStats(funds: MutualFund[]): NormStats {
   let maxVol = -Infinity, minVol = Infinity;
   let maxExp = -Infinity, minExp = Infinity;
   let maxAum = -Infinity, minAum = Infinity;
+  let maxCagr = -Infinity, minCagr = Infinity;
 
   for (const f of funds) {
-    const so = safeNum(f.sortinoRatio) ?? approximateSortino(f);
+    const so = safeNum(f.sortinoRatio) ?? 0;
     const sh = safeNum(f.sharpeRatio) ?? 0;
     const v = safeNum(f.volatility) ?? safeNum(f.stdDev) ?? 0;
     const e = safeNum(f.expenseRatio) ?? 0;
     const a = safeNum(f.aum) ?? 0;
+    const c = safeNum(f.ret3Y ?? f.cagr3Y) ?? 0;
 
     if (so > maxSortino) maxSortino = so; if (so < minSortino) minSortino = so;
     if (sh > maxSharpe) maxSharpe = sh; if (sh < minSharpe) minSharpe = sh;
     if (v > maxVol) maxVol = v; if (v < minVol) minVol = v;
     if (e > maxExp) maxExp = e; if (e < minExp) minExp = e;
     if (a > maxAum) maxAum = a; if (a < minAum) minAum = a;
+    if (c > maxCagr) maxCagr = c; if (c < minCagr) minCagr = c;
   }
 
   return {
@@ -179,6 +186,7 @@ export function computeNormStats(funds: MutualFund[]): NormStats {
     maxVol, minVol: minVol === Infinity ? 0 : minVol,
     maxExpense: maxExp, minExpense: minExp === Infinity ? 0 : minExp,
     maxAum, minAum: minAum === Infinity ? 0 : minAum,
+    maxCagr, minCagr: minCagr === Infinity ? 0 : minCagr,
   };
 }
 
@@ -186,6 +194,68 @@ function normalize(val: number, min: number, max: number): number {
   if (max === min) return 0.5;
   return Math.max(0, Math.min(1, (val - min) / (max - min)));
 }
+
+function categoryBreadthScore(category: string): number {
+  const cat = (category || '').trim();
+  const scores: Record<string, number> = {
+    'EQ-SC': 1.0,
+    'EQ-MC': 0.9,
+    'EQ-FLX': 0.9,
+    'EQ-LC': 0.7,
+    'EQ-VAL': 0.7,
+    'EQ-ELSS': 0.5,
+    'EQ-BANK': 0.4,
+    'EQ-PSU': 0.3,
+  };
+  return scores[cat] ?? 0.2;
+}
+
+// ── Profile Type Determination ──
+
+export function determineProfileType(
+  riskTolerance: string,
+  investmentGoal: string,
+  investmentHorizon: string,
+  experienceLevel: string,
+): string {
+  let type = riskTolerance;
+
+  if (type === 'conservative') {
+    if (investmentHorizon === 'long' && investmentGoal === 'wealth_creation') {
+      type = 'moderate';
+    }
+  }
+
+  if (type === 'aggressive') {
+    if (investmentHorizon === 'short' || experienceLevel === 'beginner') {
+      type = 'moderate';
+    }
+    if (investmentGoal === 'capital_preservation') {
+      type = 'moderate';
+    }
+  }
+
+  return type;
+}
+
+// ── Profile-Adaptive Weights ──
+
+interface ProfileWeights {
+  sortino: number;
+  cagrRelative: number;
+  consistency: number;
+  sharpe: number;
+  volatility: number;
+  expense: number;
+  aum: number;
+  diversificationBonus: number;
+}
+
+const PROFILE_WEIGHTS: Record<string, ProfileWeights> = {
+  conservative: { sortino: 0.40, cagrRelative: 0.10, consistency: 0.20, sharpe: 0.10, volatility: 0.15, expense: 0.05, aum: 0, diversificationBonus: 0 },
+  moderate: { sortino: 0.25, cagrRelative: 0.25, consistency: 0.15, sharpe: 0.10, volatility: 0.10, expense: 0.10, aum: 0.05, diversificationBonus: 0 },
+  aggressive: { sortino: 0.15, cagrRelative: 0.30, consistency: 0.20, sharpe: 0.15, volatility: 0.05, expense: 0.05, aum: 0.05, diversificationBonus: 0.05 },
+};
 
 // ── V3 Composite Score ──
 
@@ -195,8 +265,13 @@ export interface V3ScoreResult {
   sortinoScore: number;
   categoryRelativeScore: number;
   consistencyScore: number;
+  profileType: string;
+  diversificationBonusScore: number;
+  expenseScore: number;
   downsideRisk: 'low' | 'moderate' | 'high';
   suitabilityBadge: 'aligned' | 'adjusted' | 'limited';
+  nullFieldCount: number;
+  completenessMultiplier: number;
 }
 
 export function scoreV3(
@@ -205,62 +280,71 @@ export function scoreV3(
   medians: Map<string, CategoryMedians>,
   experienceLevel: string,
   riskTolerance: string,
-  investmentHorizon?: string,
+  investmentHorizon: string,
+  investmentGoal: string,
 ): V3ScoreResult {
   const reasons: string[] = [];
   const cat = (fund.category || '').trim();
   const catMedian = medians.get(cat);
 
-  // For missing ('--' / null) values: use category median so the metric is NEUTRAL (not penalized as 0)
-  const safeOrMedian = (v: number | null, fallback: number) => v === null ? fallback : v;
+  const profileType = determineProfileType(riskTolerance, investmentGoal, investmentHorizon, experienceLevel);
+  const w = PROFILE_WEIGHTS[profileType] || PROFILE_WEIGHTS.moderate;
 
-  // 1. Sortino (30%)
+  // 1. Sortino
   const sortinoRaw = safeNum(fund.sortinoRatio);
-  const sortino = sortinoRaw !== null ? sortinoRaw : (catMedian?.sortino ?? approximateSortino(fund));
+  const sortino = sortinoRaw ?? 0;
   const sortinoN = normalize(sortino, stats.minSortino, stats.maxSortino);
 
-  // 2. Category-Relative CAGR (20%)
+  // 2. Global CAGR
   const cagr3Raw = safeNum(fund.ret3Y ?? fund.cagr3Y);
-  const cagr3 = safeOrMedian(cagr3Raw, catMedian?.cagr ?? 0);
-  let categoryRelativeCagr = 0;
-  if (catMedian && catMedian.cagrStdDev > 0 && cagr3Raw !== null) {
-    categoryRelativeCagr = (cagr3 - catMedian.cagr) / catMedian.cagrStdDev;
-  }
-  // Normalize to 0-1 range (z-scores typically -3 to +3); 0.5 = neutral
-  const cagrRelativeN = Math.max(0, Math.min(1, (categoryRelativeCagr + 3) / 6));
+  const cagr3 = cagr3Raw ?? 0;
+  const cagrN = normalize(cagr3, stats.minCagr, stats.maxCagr);
 
-  // 3. Rolling Consistency (15%)
+  // 3. Rolling Consistency
   const consistency = approximateConsistency(fund, catMedian?.cagr ?? 0);
 
-  // 4. Sharpe (10%)
+  // 4. Sharpe
   const sharpeRaw = safeNum(fund.sharpeRatio);
-  const sharpe = safeOrMedian(sharpeRaw, catMedian?.sharpe ?? 0);
+  const sharpe = sharpeRaw ?? 0;
   const sharpeN = normalize(sharpe, stats.minSharpe, stats.maxSharpe);
 
-  // 5. Low Volatility (10%)
+  // 5. Low Volatility
   const volRaw = safeNum(fund.volatility) ?? safeNum(fund.stdDev);
-  const vol = safeOrMedian(volRaw, catMedian?.volatility ?? 0);
-  const volN = 1 - normalize(vol, stats.minVol, stats.maxVol);
+  const vol = volRaw ?? 0;
+  const volN = w.volatility > 0 ? (1 - normalize(vol, stats.minVol, stats.maxVol)) : 0.5;
 
-  // 6. Expense (10%)
+  // 6. Category-Relative Expense
   const expenseRaw = safeNum(fund.expenseRatio);
   const expense = expenseRaw === null ? 0 : expenseRaw;
-  const expenseN = expenseRaw === null ? 0.5 : (1 - normalize(expense, stats.minExpense, stats.maxExpense));
+  let expenseN: number;
+  if (expenseRaw === null) {
+    expenseN = 0.5;
+  } else if (catMedian?.expense && catMedian.expense > 0) {
+    const ratio = expenseRaw / catMedian.expense;
+    expenseN = 1 - Math.min(ratio, 2) * 0.35;
+    expenseN = Math.max(0, Math.min(1, expenseN));
+  } else {
+    expenseN = 0.5;
+  }
 
-  // 7. AUM Stability (5%)
+  // 7. AUM Stability
   const aumRaw = safeNum(fund.aum);
   const aum = aumRaw === null ? 0 : aumRaw;
   const aumN = aumRaw === null ? 0.5 : normalize(aum, stats.minAum, stats.maxAum);
 
+  // 8. Category Breadth Score (diversification)
+  const diversificationBonusN = categoryBreadthScore(fund.category);
+
   // Weighted composite
   let score =
-    (0.30 * sortinoN) +
-    (0.20 * cagrRelativeN) +
-    (0.15 * consistency) +
-    (0.10 * sharpeN) +
-    (0.10 * volN) +
-    (0.10 * expenseN) +
-    (0.05 * aumN);
+    (w.sortino * sortinoN) +
+    (w.cagrRelative * cagrN) +
+    (w.consistency * consistency) +
+    (w.sharpe * sharpeN) +
+    (w.volatility * volN) +
+    (w.expense * expenseN) +
+    (w.aum * aumN) +
+    (w.diversificationBonus * diversificationBonusN);
 
   // Credit penalty for debt
   const creditPenalty = computeCreditPenalty(fund);
@@ -285,15 +369,33 @@ export function scoreV3(
     if (expense > 1.5) score *= 0.9;
   }
 
+  // 9. Completeness penalty — missing metrics reduce final score
+  const nullSharpe = safeNum(fund.sharpeRatio) === null;
+  const nullSortino = safeNum(fund.sortinoRatio) === null;
+  const nullVol = (safeNum(fund.volatility) ?? safeNum(fund.stdDev)) === null;
+  const nullCagr = safeNum(fund.ret3Y ?? fund.cagr3Y) === null;
+  const consistencyPeriods = [
+    safeNum(fund.ret1M),
+    safeNum(fund.ret3M),
+    safeNum(fund.ret6M),
+    safeNum(fund.ret1Y),
+    safeNum(fund.ret3Y ?? fund.cagr3Y),
+    safeNum(fund.ret5Y ?? fund.cagr5Y),
+  ].filter(v => v !== null);
+  const nullConsistency = consistencyPeriods.length < 3;
+  const nullFieldCount = [nullSharpe, nullSortino, nullVol, nullCagr, nullConsistency].filter(Boolean).length;
+  const completenessMultiplier = Math.round((1 - (0.05 * nullFieldCount)) * 100) / 100;
+  score *= completenessMultiplier;
+
   // Reason generation
   if (sortino > 2) reasons.push('Excellent downside-adjusted returns');
   else if (sortino > 1.2) reasons.push('Strong risk-adjusted returns (Sortino)');
 
-  if (categoryRelativeCagr > 1) reasons.push('Outperforms category peers');
-  else if (categoryRelativeCagr > 0.5) reasons.push('Above-average category performance');
+  if (cagrN > 0.8) reasons.push('Strong absolute returns');
+  else if (cagrN > 0.5) reasons.push('Above-average absolute returns');
 
   if (consistency > 0.7) reasons.push('Consistent multi-period performer');
-  if (expense < 0.5) reasons.push('Very low expense ratio');
+  if (expenseRaw !== null && expenseRaw < catMedian?.expense * 0.7) reasons.push('Low expense for category');
   if (vol < 5) reasons.push('Stable performance history');
   if (aum > 10000) reasons.push('Large, well-established fund');
 
@@ -304,6 +406,9 @@ export function scoreV3(
     reasons.push('Low-risk debt fund for capital safety');
   }
   if (cat === 'EQ-ELSS') reasons.push('ELSS — eligible for ₹1.5L tax deduction');
+
+  if (profileType === 'aggressive' && diversificationBonusN >= 0.9) reasons.push('Broad market exposure (diversification)');
+  else if (profileType === 'aggressive' && diversificationBonusN >= 0.5) reasons.push('Moderate category diversification');
 
   // Downside risk assessment
   const maxDD = approximateMaxDrawdown(fund);
@@ -320,9 +425,14 @@ export function scoreV3(
     score: Math.round(score * 10000) / 100,
     reasons,
     sortinoScore: sortino,
-    categoryRelativeScore: categoryRelativeCagr,
+    categoryRelativeScore: Math.round(cagrN * 10000) / 100,
     consistencyScore: consistency,
+    profileType,
+    diversificationBonusScore: Math.round(diversificationBonusN * 10000) / 100,
+    expenseScore: Math.round(expenseN * 10000) / 100,
     downsideRisk,
     suitabilityBadge,
+    nullFieldCount,
+    completenessMultiplier,
   };
 }

@@ -42,10 +42,10 @@ export const ENGINE_FIELDS: Record<EngineField, EngineFieldDef> = {
   },
   investmentGoal: {
     sourceField: 'primary_goal',
-    values: ['wealth', 'income', 'tax', 'preservation'],
+    values: ['wealth', 'income', 'tax', 'preservation', 'retirement'],
     mapping: {
       wealth_creation: 'wealth',
-      retirement: 'wealth',
+      retirement: 'retirement',
       child_education: 'wealth',
       passive_income: 'income',
       tax_saving: 'tax',
@@ -55,7 +55,7 @@ export const ENGINE_FIELDS: Record<EngineField, EngineFieldDef> = {
   horizon: {
     sourceField: 'investment_horizon',
     values: ['short', 'medium', 'long'],
-    mapping: { '<3': 'short', '3-5': 'medium', '5-10': 'long', '>10': 'long' },
+    mapping: { '<3': 'short', '3-5': 'medium', '5-10': 'medium', '>10': 'long' },
   },
   experience: {
     sourceField: 'experience_level',
@@ -70,14 +70,19 @@ export const ENGINE_FIELDS: Record<EngineField, EngineFieldDef> = {
 
 // ─── Rules — single source of truth ───
 
+interface RuleRestriction {
+  engineField: EngineField;
+  values: string[];
+  reason: string;
+  soft?: boolean;
+  /** If set, only these specific raw values are disabled (not all raw values that map to values[engineField]) */
+  rawSourceField?: keyof ProfileState;
+  rawValues?: string[];
+}
+
 interface Rule {
   condition: { field: keyof ProfileState; value: string };
-  then: {
-    engineField: EngineField;
-    values: string[];
-    reason: string;
-    soft?: boolean;
-  }[];
+  then: RuleRestriction[];
 }
 
 const RULES: Rule[] = [
@@ -116,6 +121,8 @@ const RULES: Rule[] = [
       {
         engineField: 'investmentGoal',
         values: ['wealth'],
+        rawSourceField: 'primary_goal',
+        rawValues: ['wealth_creation'],
         reason: 'Wealth creation requires a longer time horizon (5+ years)',
       },
     ],
@@ -289,11 +296,47 @@ export function getEngineValue(rawField: keyof ProfileState, rawValue: string): 
   return null;
 }
 
+// ─── Raw-value-level overrides from rules ───
+// Allows rules to disable specific raw values instead of all values sharing an engine value
+
+function getRawValueOverrides(profile: ProfileState): Record<string, RawOptionState[]> {
+  const result: Record<string, Map<string, RawOptionState>> = {};
+
+  for (const rule of RULES) {
+    if (profile[rule.condition.field] === rule.condition.value) {
+      for (const restriction of rule.then) {
+        if (restriction.rawSourceField && restriction.rawValues) {
+          const sourceField = restriction.rawSourceField;
+          if (!result[sourceField]) result[sourceField] = new Map();
+          for (const rawVal of restriction.rawValues) {
+            const existing = result[sourceField].get(rawVal);
+            const newEnabled = restriction.soft ? true : false;
+            // Hard disable (enabled=false) wins over soft
+            if (existing && !existing.enabled) continue;
+            result[sourceField].set(rawVal, {
+              value: rawVal,
+              enabled: newEnabled,
+              reasons: [restriction.reason],
+            });
+          }
+        }
+      }
+    }
+  }
+
+  const output: Record<string, RawOptionState[]> = {};
+  for (const [field, map] of Object.entries(result)) {
+    output[field] = Array.from(map.values());
+  }
+  return output;
+}
+
 // ─── Pre-save validator ───
 
 export function validateProfile(profile: ProfileState): ValidationError[] {
   const errors: ValidationError[] = [];
   const constraints = getAvailableOptions(profile);
+  const rawOverrides = getRawValueOverrides(profile);
 
   for (const [engineField, options] of Object.entries(constraints)) {
     const ef = engineField as EngineField;
@@ -301,6 +344,25 @@ export function validateProfile(profile: ProfileState): ValidationError[] {
     const selectedRaw = profile[def.sourceField];
     if (!selectedRaw) continue;
 
+    // Check raw-value-level overrides first (more specific)
+    const fieldOverrides = rawOverrides[def.sourceField];
+    if (fieldOverrides) {
+      const override = fieldOverrides.find((o) => o.value === selectedRaw);
+      if (override) {
+        if (!override.enabled) {
+          errors.push({
+            engineField: ef,
+            value: selectedRaw,
+            reason: override.reasons[0],
+          });
+        }
+        continue;
+      }
+      // Raw value is NOT in overrides for this field → allowed (not affected by the rule)
+      continue;
+    }
+
+    // Fall back to engine-level check (no raw overrides for this field)
     const derivedValue = def.mapping[selectedRaw];
     if (!derivedValue) continue;
 
@@ -329,6 +391,7 @@ export function getRawFieldAvailability(
   profile: ProfileState
 ): Partial<Record<keyof ProfileState, RawOptionState[]>> {
   const constraints = getAvailableOptions(profile);
+  const rawOverrides = getRawValueOverrides(profile);
   const rawResult: Partial<Record<keyof ProfileState, RawOptionState[]>> = {};
 
   for (const [engineField, options] of Object.entries(constraints)) {
@@ -338,9 +401,24 @@ export function getRawFieldAvailability(
 
     if (disabledOptions.length === 0) continue;
 
+    const fieldOverrides = rawOverrides[def.sourceField];
+
     for (const [rawValue, engineValue] of Object.entries(def.mapping)) {
       const disabledOpt = disabledOptions.find((o) => o.value === engineValue);
-      if (disabledOpt) {
+      if (!disabledOpt) continue;
+
+      if (fieldOverrides) {
+        // Use raw overrides — only include raw values that are in the override list
+        const override = fieldOverrides.find((o) => o.value === rawValue);
+        if (!override) continue;
+        if (!rawResult[def.sourceField]) rawResult[def.sourceField] = [];
+        rawResult[def.sourceField]!.push({
+          value: rawValue,
+          enabled: override.enabled,
+          reasons: override.reasons,
+        });
+      } else {
+        // No overrides — all raw values that map to the disabled engine value
         if (!rawResult[def.sourceField]) rawResult[def.sourceField] = [];
         rawResult[def.sourceField]!.push({
           value: rawValue,

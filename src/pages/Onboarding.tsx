@@ -156,7 +156,7 @@ export default function Onboarding() {
     switch (horizon) {
       case '<3': return 'short';
       case '3-5': return 'medium';
-      case '5-10': return 'long';
+      case '5-10': return 'medium';
       case '>10': return 'long';
       default: return 'medium';
     }
@@ -166,7 +166,7 @@ export default function Onboarding() {
     switch (exp) {
       case 'first_time': return 'beginner';
       case 'some_experience': return 'intermediate';
-      case 'experienced': return 'experienced';
+      case 'experienced': return 'advanced';
       default: return 'beginner';
     }
   };
@@ -186,13 +186,24 @@ export default function Onboarding() {
         return;
       }
 
+      const uiValue = finalAnswers.experience_level;
+      const dbValue = mapExperience(uiValue);
+      console.log('[SAVE_PAYLOAD]', {
+        experience_level: dbValue,
+        investment_horizon: mapHorizon(finalAnswers.investment_horizon),
+        risk_tolerance: deriveRiskFromMarketReaction(finalAnswers.market_reaction),
+      });
+      console.log('[EXPERIENCE_LEVEL]', {
+        uiValue,
+        dbValue,
+      });
       const { error } = await updateProfile({
         investor_stage: finalAnswers.investor_stage,
         primary_goal: finalAnswers.primary_goal,
         market_reaction: finalAnswers.market_reaction,
         emergency_fund: finalAnswers.emergency_fund,
         investment_horizon: mapHorizon(finalAnswers.investment_horizon),
-        experience_level: mapExperience(finalAnswers.experience_level),
+        experience_level: dbValue,
         existing_investments: finalAnswers.existing_investments,
         risk_tolerance: deriveRiskFromMarketReaction(finalAnswers.market_reaction),
         investment_goal: deriveGoalFromPrimaryGoal(finalAnswers.primary_goal),

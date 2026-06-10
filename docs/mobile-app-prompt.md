@@ -61,8 +61,8 @@ box-shadow: 0 0 0 1px hsla(217,91%,60%,0.05), 0 4px 24px -4px hsla(222,47%,5%,0.
 ---
 
 ## Supabase Backend Configuration
-- **Project ID**: `jyugiihjjmecsdqcxcsi`
-- **Anon Key**: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5dWdpaWhqam1lY3NkcWN4Y3NpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg0MTM4ODksImV4cCI6MjA4Mzk4OTg4OX0.pXtMXkxlGgHjtYt0km0CnNSolxrTxWWCjvVv6jMVoJ0`
+- **Project ID**: `skvvltawshbphrgnqjzf`
+- **Anon Key**: `sb_publishable_nQmkXoF3DbHyYg2SNSGGtA_JaNoDFj7`
 
 ### Database Tables
 1. **profiles**: `user_id, full_name, email, avatar_url, risk_tolerance, investment_goal, investment_horizon, experience_level, investment_amount, occupation, income_stability, monthly_emis, dependents, has_insurance, existing_investments, onboarding_completed, pin_hash, pin_salt, pin_set, risk_capacity_score`

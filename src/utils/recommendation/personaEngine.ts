@@ -35,9 +35,9 @@ export function determineInvestorPersona(profile: InvestorProfile): PersonaResul
   const reaction = (profile.market_reaction || '').toLowerCase();
   const experience = (profile.experience_level || '').toLowerCase();
 
-  const isLongHorizon = horizon === '>10' || horizon === '5-10' || horizon === 'more than 10 years' || horizon === '5-10 years';
-  const isVeryLong = horizon === '>10' || horizon === 'more than 10 years';
-  const isShort = horizon === '<3' || horizon === 'less than 3 years';
+  const isLongHorizon = horizon === '>10' || horizon === '5-10' || horizon === 'more than 10 years' || horizon === '5-10 years' || horizon === 'long';
+  const isVeryLong = horizon === '>10' || horizon === 'more than 10 years' || horizon === 'long';
+  const isShort = horizon === '<3' || horizon === 'less than 3 years' || horizon === 'short';
   const isAggressive = reaction === 'invest_more' || reaction === 'invest more at lower prices';
   const isModerate = reaction === 'wait' || reaction === 'wait for recovery';
   const isConservative = reaction === 'withdraw' || reaction === 'withdraw immediately';

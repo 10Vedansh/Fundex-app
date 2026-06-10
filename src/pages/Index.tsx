@@ -111,45 +111,93 @@ const Index = () => {
     return null;
   }, [profile]);
 
-  // Compute investor persona (uses only legacy DB fields; persona defaults to Balanced Investor)
+  // Compute investor persona from actual profile fields
   const personaResult = useMemo(() => {
     if (!profile) return null;
+    const primaryGoal = profile.primary_goal || (
+      profile.investment_goal === 'wealth' ? 'wealth_creation' :
+      profile.investment_goal === 'income' ? 'passive_income' :
+      profile.investment_goal === 'tax' ? 'tax_saving' :
+      profile.investment_goal === 'preservation' ? 'capital_preservation' :
+      null
+    );
     return determineInvestorPersona({
-      investor_stage: null,
-      primary_goal: null,
+      investor_stage: profile.investor_stage,
+      primary_goal: primaryGoal,
       investment_horizon: profile.investment_horizon,
-      market_reaction: null,
+      market_reaction: profile.market_reaction,
       experience_level: profile.experience_level,
       existing_investments: profile.existing_investments,
-      emergency_fund: null,
+      emergency_fund: profile.emergency_fund,
     });
   }, [profile]);
 
+  // Log raw profile sources once (not inside useMemo)
+  console.log('[TRACE-PROFILE-RAW] DB fields:', JSON.stringify({
+    risk_tolerance: profile?.risk_tolerance,
+    investment_goal: profile?.investment_goal,
+    investment_horizon: profile?.investment_horizon,
+    experience_level: profile?.experience_level,
+    investment_amount: profile?.investment_amount,
+    primary_goal: profile?.primary_goal,
+  }));
+  const localQ = (() => { try { return JSON.parse(localStorage.getItem('fundex_questionnaire') || '{}'); } catch { return {}; } })();
+  console.log('[TRACE-PROFILE-LOCAL] localStorage questionnaire:', JSON.stringify(localQ));
+
   // Filter funds using recommendation engine
   const personalizedFunds = useMemo(() => {
-    console.log('[REC] personalizedFunds useMemo START');
-    console.log('[REC] profile =', profile);
-    console.log('[REC] funds.length =', funds.length);
-    
     if (!profile || funds.length === 0) {
-      console.log('[REC] EARLY RETURN —', !profile ? 'profile null' : 'funds empty');
+      console.log('[TRACE-PREFS] SKIP — profile or funds empty');
       return [];
     }
-    
+
+    const rawGoal = profile.primary_goal;
+    const mappedGoal = profile.investment_goal;
+    const effectiveGoal = rawGoal ||
+      (mappedGoal === 'wealth' ? 'wealth_creation' :
+       mappedGoal === 'income' ? 'passive_income' :
+       mappedGoal === 'tax' ? 'tax_saving' :
+       mappedGoal === 'preservation' ? 'capital_preservation' :
+       'wealth_creation');
+
+    const rawAmount = profile.investment_amount;
+    const effectiveAmount = rawAmount || 'medium';
+
     const prefs: RecommendationPreferences = {
       riskTolerance: profile.risk_tolerance || 'moderate',
-      investmentGoal: profile.investment_goal || 'wealth',
+      investmentGoal: effectiveGoal,
       investmentHorizon: profile.investment_horizon || 'long',
       experienceLevel: profile.experience_level || 'beginner',
-      investmentAmount: 'medium',
+      investmentAmount: effectiveAmount,
     };
 
-    console.log('[REC] prefs =', prefs);
+    console.log('[TRACE-PREFS]', JSON.stringify(prefs));
+    console.log('[TRACE-MAPPING] rawGoal=' + rawGoal + ' mappedGoal=' + mappedGoal + ' effectiveGoal=' + effectiveGoal + ' rawAmount=' + rawAmount + ' effectiveAmount=' + effectiveAmount);
+
+    console.log('[TRACE-FUND-SHAPE]', JSON.stringify(funds[0]));
+    console.log('[TRACE-CATEGORY-FIELD]', 'category=' + funds[0].category, 'typeof=' + typeof funds[0].category);
+    console.log('[TRACE-CATEGORY-FIELD-ALL]', funds.slice(0, 5).map(f => f.category));
+
+    const engineInputTarget = funds.find(f => f.name && f.name.includes('360 ONE'));
+    if (engineInputTarget) {
+      console.log('[TRACE-ENGINE-INPUT]', 'name=' + engineInputTarget.name, 'category=' + engineInputTarget.category, 'full=' + JSON.stringify(engineInputTarget));
+    } else {
+      console.log('[TRACE-ENGINE-INPUT] 360 ONE not found in funds array');
+    }
 
     const recommended = recommendFundsV2(funds, prefs);
-    console.log('[REC] recommendFundsV2 returned', recommended.length, 'funds');
+
+    console.log('[TRACE-FINAL] FINAL_RECOMMENDED_COUNT=' + recommended.length);
+
+    if (recommended.length === 0) {
+      console.log('[TRACE-FALLBACK-UI] using funds.slice(0,9) fallback — first:', funds[0]?.name, funds[1]?.name, funds[2]?.name);
+    }
+
     const result = recommended.length > 0 ? recommended.slice(0, 9) : funds.slice(0, 9);
-    console.log('[REC] final personalizedFunds count =', result.length);
+    console.log('[TRACE-OUTPUT] returning', result.length, 'funds to UI');
+    if (result.length > 0) {
+      console.log('[TRACE-OUTPUT] first:', result[0].name, 'hasScore:', 'compositeScore' in result[0]);
+    }
     return result;
   }, [funds, profile]);
 

@@ -152,6 +152,14 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      const first = cacheResult.data.data[0];
+      console.log('[TRACE-SUPABASE-READ] cache_key=' + (cacheResult.data.cache_key || 'unknown') + ' totalFunds=' + cacheResult.data.data.length);
+      console.log('[TRACE-SUPABASE-READ] firstFund=' + JSON.stringify(first));
+      const target = cacheResult.data.data.find((f: any) => f.name && f.name.includes('360 ONE'));
+      if (target) {
+        console.log('[TRACE-SUPABASE-READ] target360ONE=' + JSON.stringify(target));
+      }
       
       return new Response(JSON.stringify({ 
         funds: cacheResult.data.data,

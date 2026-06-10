@@ -139,6 +139,11 @@ function processSheet(worksheet: XLSX.WorkSheet, colMapping: string[], assetClas
     const name = String(row[0]).trim();
     if (name.includes('→') || name.includes('🔹') || name.includes('🔸')) continue;
 
+    if (name.includes('360 ONE')) {
+      console.log('[TRACE-EXCEL-ROW] name=' + name + ' sheet=' + assetClass + ' rowIndex=' + i + ' rawRow=' + JSON.stringify(row));
+      console.log('[TRACE-EXCEL-ROW] colMapping=' + JSON.stringify(colMapping));
+    }
+
     const fund: Record<string, any> = { assetClass };
 
     for (let j = 0; j < colMapping.length && j < row.length; j++) {
@@ -168,6 +173,11 @@ function processSheet(worksheet: XLSX.WorkSheet, colMapping: string[], assetClas
       fund.minInvestment = fund.minInvestment || 500;
       fund.rank = 0;
       fund.benchmark = '';
+
+      if (fund.name && fund.name.includes('360 ONE')) {
+        console.log('[TRACE-SUPABASE-WRITE] fund=' + JSON.stringify(fund));
+      }
+
       funds.push(fund);
     }
   }

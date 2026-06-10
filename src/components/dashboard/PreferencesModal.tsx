@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -120,7 +120,7 @@ const mapHorizon = (horizon: string | null): string => {
   switch (horizon) {
     case '<3': return 'short';
     case '3-5': return 'medium';
-    case '5-10': return 'long';
+    case '5-10': return 'medium';
     case '>10': return 'long';
     default: return 'medium';
   }
@@ -130,7 +130,7 @@ const mapExperience = (exp: string | null): string => {
   switch (exp) {
     case 'first_time': return 'beginner';
     case 'some_experience': return 'intermediate';
-    case 'experienced': return 'experienced';
+    case 'experienced': return 'advanced';
     default: return 'beginner';
   }
 };
@@ -138,8 +138,8 @@ const mapExperience = (exp: string | null): string => {
 const unmapHorizon = (horizon: string | null): string => {
   switch (horizon) {
     case 'short': return '<3';
-    case 'medium': return '3-5';
-    case 'long': return '5-10';
+    case 'medium': return '5-10';
+    case 'long': return '>10';
     default: return '';
   }
 };
@@ -149,33 +149,56 @@ const unmapExperience = (exp: string | null): string => {
     case 'beginner': return 'first_time';
     case 'intermediate': return 'some_experience';
     case 'experienced': return 'experienced';
+    case 'advanced': return 'experienced';
     default: return '';
   }
 };
 
 export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
-  const { profile, updateProfile, refreshProfile } = useAuth();
+  const { profile, updateProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [preferences, setPreferences] = useState<Record<string, string>>({});
   const [constraints, setConstraints] = useState<Partial<Record<string, RawOptionState[]>> | null>(null);
+  const didInitRef = useRef(false);
 
+  // Initialize form state ONLY when modal opens — never on external profile ref changes
+  // This prevents external refreshProfile calls from overwriting in-progress edits
   useEffect(() => {
-    if (profile) {
-      const horizonValue = unmapHorizon(profile.investment_horizon) || profile.investment_horizon || '';
-      const experienceValue = unmapExperience(profile.experience_level) || profile.experience_level || '';
-      console.log('[PROFILE_LOAD] investment_horizon:', profile.investment_horizon, '→ form value:', horizonValue);
-      console.log('[PROFILE_LOAD] experience_level:', profile.experience_level, '→ form value:', experienceValue);
-      setPreferences({
-        investor_stage: profile.investor_stage || '',
-        primary_goal: profile.primary_goal || '',
-        investment_horizon: horizonValue,
-        market_reaction: profile.market_reaction || '',
-        experience_level: experienceValue,
-        existing_investments: profile.existing_investments || '',
-        emergency_fund: profile.emergency_fund || '',
-      });
+    if (!isOpen) {
+      didInitRef.current = false;
+      return;
     }
-  }, [profile]);
+    if (!profile) return;
+    if (didInitRef.current) {
+      // Profile ref changed while modal is open — do NOT overwrite user's edits
+      console.log('[CIFRAA-PREF] Profile refresh detected — skipping overwrite to preserve in-progress edits');
+      return;
+    }
+    didInitRef.current = true;
+
+    const horizonValue = unmapHorizon(profile.investment_horizon) || profile.investment_horizon || '';
+    const experienceValue = unmapExperience(profile.experience_level) || profile.experience_level || '';
+    const initial = {
+      investor_stage: profile.investor_stage || '',
+      primary_goal: profile.primary_goal || '',
+      investment_horizon: horizonValue,
+      market_reaction: profile.market_reaction || '',
+      experience_level: experienceValue,
+      existing_investments: profile.existing_investments || '',
+      emergency_fund: profile.emergency_fund || '',
+    };
+    console.log('[CIFRAA-PREF] Profile loaded:', JSON.stringify({
+      investor_stage: profile.investor_stage,
+      primary_goal: profile.primary_goal,
+      investment_horizon: profile.investment_horizon,
+      market_reaction: profile.market_reaction,
+      experience_level: profile.experience_level,
+      existing_investments: profile.existing_investments,
+      emergency_fund: profile.emergency_fund,
+    }));
+    console.log('[CIFRAA-PREF] Local state initialized:', JSON.stringify(initial));
+    setPreferences(initial);
+  }, [isOpen, profile]);
 
   // Recompute constraints whenever preferences change
   useEffect(() => {
@@ -198,12 +221,19 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
   }, [constraints]);
 
   const handleSubmit = async () => {
+    console.log('[CIFRAA-PREF] Save started');
     setIsLoading(true);
     try {
       const profileState: ProfileState = {};
       for (const [key, value] of Object.entries(preferences)) {
         if (value) profileState[key as keyof ProfileState] = value;
       }
+      console.log('[SAVE_VALIDATION]', {
+        primaryGoal: profileState.primary_goal,
+        horizon: profileState.investment_horizon,
+        investorStage: profileState.investor_stage,
+        preferences: profileState,
+      });
       const validationErrors = validateProfile(profileState);
       if (validationErrors.length > 0) {
         toast.error('Cannot save: ' + validationErrors[0].reason);
@@ -211,13 +241,24 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
         return;
       }
 
+      const uiValue = preferences.experience_level;
+      const dbValue = mapExperience(uiValue);
+      console.log('[SAVE_PAYLOAD]', {
+        experience_level: dbValue,
+        investment_horizon: mapHorizon(preferences.investment_horizon),
+        risk_tolerance: deriveRiskFromMarketReaction(preferences.market_reaction),
+      });
+      console.log('[EXPERIENCE_LEVEL]', {
+        uiValue,
+        dbValue,
+      });
       const { error } = await updateProfile({
         investor_stage: preferences.investor_stage,
         primary_goal: preferences.primary_goal,
         market_reaction: preferences.market_reaction,
         emergency_fund: preferences.emergency_fund,
         investment_horizon: mapHorizon(preferences.investment_horizon),
-        experience_level: mapExperience(preferences.experience_level),
+        experience_level: dbValue,
         existing_investments: preferences.existing_investments,
         risk_tolerance: deriveRiskFromMarketReaction(preferences.market_reaction),
         investment_goal: deriveGoalFromPrimaryGoal(preferences.primary_goal),
@@ -227,7 +268,8 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
         toast.error('Failed to save preferences: ' + error.message);
         return;
       }
-      await refreshProfile();
+      // updateProfile already calls fetchProfile internally — no need for refreshProfile here
+      console.log('[CIFRAA-PREF] Save success');
       toast.success('Preferences updated! Your personalized funds will refresh.');
       onClose();
     } catch (err) {
@@ -239,6 +281,7 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
   };
 
   const updateField = useCallback((field: string, value: string) => {
+    console.log('[CIFRAA-PREF] User changed:', field, '=', value);
     setPreferences(prev => ({ ...prev, [field]: value }));
   }, []);
 
