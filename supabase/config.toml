@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.set-pin]
 verify_jwt = false
+
+[functions.sync-onedrive]
+verify_jwt = false

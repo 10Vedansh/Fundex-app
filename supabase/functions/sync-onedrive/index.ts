@@ -7,20 +7,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// OneDrive sharing link - we use the short 1drv.ms form which works reliably with the shares API.
-// The original onedrive.live.com URL embeds this short URL inside its `redeem` (base64) parameter.
-const ONEDRIVE_SHARE_URL = "https://1drv.ms/x/c/eaad892ddfe43dbc/IQAwlg5rDGisRZOQbwrUPfpFATcTWWB32t_7kwEeARQZJz0?e=O1pceH";
-
-function getOneDriveDownloadUrl(shareUrl: string): string {
-  // Encode per Microsoft "shares" rules: base64 -> url-safe -> strip padding -> prefix "u!"
-  const base64 = btoa(shareUrl)
-    .replace(/=+$/, '')
-    .replace(/\//g, '_')
-    .replace(/\+/g, '-');
-  const encodedUrl = `u!${base64}`;
-  // api.onedrive.com works anonymously for personal shared links (Graph requires auth and returns 401)
-  return `https://api.onedrive.com/v1.0/shares/${encodedUrl}/root/content`;
-}
+const STORAGE_WORKBOOK_URL =
+  "https://skvvltawshbphrgnqjzf.supabase.co/storage/v1/object/public/fund-data/Data.xlsx";
 
 // ---- Column mappings (same as process-workbook) ----
 const EQUITY_COLS = [
@@ -190,48 +178,72 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Step 1: Download Excel from OneDrive
-    console.log("Downloading workbook from OneDrive...");
-    const downloadUrl = getOneDriveDownloadUrl(ONEDRIVE_SHARE_URL);
-    
-    const response = await fetch(downloadUrl, {
-      redirect: 'follow',
-      headers: {
-        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      },
-    });
+    console.log("[SYNC] Sync started");
+    console.log("[SYNC] Downloading workbook from Supabase Storage...");
 
-    if (!response.ok) {
-      throw new Error(`Failed to download from OneDrive: ${response.status} ${response.statusText}`);
+    // Step 1: Download workbook from Supabase Storage
+    const storageResp = await fetch(STORAGE_WORKBOOK_URL);
+
+    if (!storageResp.ok) {
+      throw new Error(`Storage download failed: ${storageResp.status} ${storageResp.statusText}`);
     }
 
-    const arrayBuffer = await response.arrayBuffer();
-    console.log(`Downloaded ${(arrayBuffer.byteLength / 1024).toFixed(1)} KB from OneDrive`);
+    const workbookSize = storageResp.headers.get("content-length") || "unknown";
+    console.log("[SYNC] Workbook download completed, size:", workbookSize, "bytes");
 
-    // Step 2: Parse the workbook (same logic as process-workbook)
-    console.log("Parsing workbook...");
-    const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
-    console.log(`Sheets: ${workbook.SheetNames.join(', ')}`);
+    const arrayBuffer = await storageResp.arrayBuffer();
+    console.log("[SYNC] Workbook bytes received:", arrayBuffer.byteLength);
 
+    // Step 2: Parse the workbook
+    console.log("[SYNC] Parsing workbook...");
+    let workbook: XLSX.WorkBook;
+    try {
+      workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+    } catch (parseError) {
+      throw new Error(`XLSX parse failure: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+    }
+
+    const sheetNames = workbook.SheetNames;
+    console.log("[SYNC] Sheet count:", sheetNames.length);
+    console.log("[SYNC] Sheet names:", sheetNames.join(', '));
+
+    // Step 3: Process each configured sheet
     const allFunds: any[] = [];
+    const insertCounts: Record<string, number> = {};
 
-    for (let sheetIndex = 0; sheetIndex < Math.min(workbook.SheetNames.length, SHEET_CONFIG.length); sheetIndex++) {
-      const sheetName = workbook.SheetNames[sheetIndex];
+    for (let sheetIndex = 0; sheetIndex < Math.min(sheetNames.length, SHEET_CONFIG.length); sheetIndex++) {
+      const sheetName = sheetNames[sheetIndex];
       const config = SHEET_CONFIG[sheetIndex];
+
+      if (!workbook.Sheets[sheetName]) {
+        throw new Error(`Missing sheet: ${sheetName}`);
+      }
+
       const worksheet = workbook.Sheets[sheetName];
 
-      console.log(`Processing: ${sheetName} (${config.assetClass})`);
+      // Count raw rows before processing
+      const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }).length;
+      console.log(`[SYNC] Sheet "${sheetName}" (${config.assetClass}): ${rawRows} raw rows`);
+
       const funds = processSheet(worksheet, config.cols, config.assetClass);
-      console.log(`  → ${funds.length} funds`);
+      console.log(`[SYNC] Sheet "${sheetName}": ${funds.length} rows transformed`);
+
       allFunds.push(...funds);
+      insertCounts[config.assetClass] = funds.length;
     }
 
-    // Step 3: Rank funds by Sharpe within asset class
+    if (allFunds.length === 0) {
+      throw new Error("No funds were parsed from the workbook");
+    }
+
+    // Step 4: Rank funds by Sharpe within asset class
     const byAssetClass: Record<string, any[]> = {};
     for (const fund of allFunds) {
       if (!byAssetClass[fund.assetClass]) byAssetClass[fund.assetClass] = [];
@@ -242,29 +254,50 @@ serve(async (req) => {
       funds.forEach((fund, idx) => { fund.rank = idx + 1; });
     }
 
-    console.log(`Total funds: ${allFunds.length}`);
+    console.log(`[SYNC] Total rows: ${allFunds.length}`);
 
-    // Step 4: Save to cache (both keys for backward compat)
+    // Step 5: Save to fund_cache
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
 
-    await supabase.from('fund_cache').delete().eq('cache_key', 'workbook_data');
-    await supabase.from('fund_cache').insert({
+    // Delete existing records
+    console.log("[SYNC] Deleting existing cache entries...");
+    const { error: delError1 } = await supabase.from('fund_cache').delete().eq('cache_key', 'workbook_data');
+    if (delError1) throw new Error(`Delete workbook_data failed: ${delError1.message}`);
+
+    const { error: delError2 } = await supabase.from('fund_cache').delete().eq('cache_key', 'mf_data');
+    if (delError2) throw new Error(`Delete mf_data failed: ${delError2.message}`);
+
+    // Insert new records
+    console.log("[SYNC] Inserting workbook_data...");
+    const { error: insError1 } = await supabase.from('fund_cache').insert({
       cache_key: 'workbook_data',
       data: allFunds,
       last_updated: now.toISOString(),
       expires_at: expiresAt.toISOString(),
     });
+    if (insError1) throw new Error(`Insert workbook_data failed: ${insError1.message}`);
 
-    await supabase.from('fund_cache').delete().eq('cache_key', 'mf_data');
-    await supabase.from('fund_cache').insert({
+    console.log("[SYNC] Inserting mf_data...");
+    const { error: insError2 } = await supabase.from('fund_cache').insert({
       cache_key: 'mf_data',
       data: allFunds,
       last_updated: now.toISOString(),
       expires_at: expiresAt.toISOString(),
     });
+    if (insError2) throw new Error(`Insert mf_data failed: ${insError2.message}`);
 
-    console.log("OneDrive sync complete!");
+    // Verify row count
+    const { count: rowCount, error: countError } = await supabase
+      .from('fund_cache')
+      .select('*', { count: 'exact', head: true });
+    if (countError) {
+      console.warn("[SYNC] Could not verify row count:", countError.message);
+    }
+
+    const duration = Date.now() - startTime;
+    console.log("[SYNC] Sync completed in", duration, "ms");
+    console.log("[SYNC] Total records in fund_cache:", rowCount);
 
     return new Response(JSON.stringify({
       success: true,
@@ -272,16 +305,29 @@ serve(async (req) => {
       byAssetClass: Object.fromEntries(
         Object.entries(byAssetClass).map(([k, v]) => [k, v.length])
       ),
+      insertCounts,
+      totalCacheRecords: rowCount,
+      durationMs: duration,
       lastUpdated: now.toISOString(),
-      source: 'onedrive',
+      source: 'storage',
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
   } catch (error) {
-    console.error("OneDrive sync error:", error);
+    const duration = Date.now() - startTime;
+    console.error("[SYNC] Sync error after", duration, "ms:", error);
+
+    const message = error instanceof Error ? error.message : "Unknown error";
+    const stack = error instanceof Error ? error.stack : undefined;
+
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({
+        success: false,
+        error: message,
+        durationMs: duration,
+        ...(stack ? { stack } : {}),
+      }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
