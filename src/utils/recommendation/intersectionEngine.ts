@@ -23,6 +23,7 @@ import {
   determineProfileType,
   V3ScoreResult,
 } from './scoringEngineV3';
+import { generateExplanations } from './explainabilityEngine';
 
 export interface RecommendationPreferences {
   riskTolerance: string;
@@ -547,10 +548,17 @@ export function recommendFundsV2(
       normalizedPrefs.investmentGoal,
     );
     const confidence = computeConfidence(fund);
+    const explanations = generateExplanations({
+      fund,
+      medians,
+      categoryRelativeScore: result.categoryRelativeScore,
+      confidenceLevel: confidence.level,
+      confidenceReason: confidence.reason,
+    });
     return {
       ...fund,
       compositeScore: result.score,
-      reasons: result.reasons,
+      reasons: explanations,
       matchLevel: result.score > 70 ? 'high' : result.score > 40 ? 'medium' : 'low',
       downsideRisk: result.downsideRisk,
       suitabilityBadge: result.suitabilityBadge,
