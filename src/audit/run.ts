@@ -218,17 +218,17 @@ async function runAudit() {
 
   // ── Generate CSV ──
   let csv = 'persona_id,persona_name,goal,risk,horizon,experience,amount';
-  csv += ',rank,fund_id,fund_name,category,asset_class,score,match_level,sharpe,sortino,cagr3y,volatility,null_fields\n';
+  csv += ',rank,fund_id,fund_name,category,asset_class,score,match_level,sharpe,sortino,cagr3y,volatility,null_fields,confidence_level,confidence_reason\n';
 
   for (const r of results) {
     for (let i = 0; i < r.funds.length; i++) {
       const f = r.funds[i];
       csv += `${r.persona.id},"${r.persona.name}","${r.persona.goal}","${r.persona.riskTolerance}","${r.persona.investmentHorizon}","${r.persona.experienceLevel}","${r.persona.investmentAmount}"`;
-      csv += `,${i + 1},"${f.id}","${f.name.replace(/"/g, '""')}","${f.category || ''}","${assetClass(f.category || '')}",${f.compositeScore},"${f.matchLevel}",${f.sharpeRatio ?? ''},${f.sortinoRatio ?? ''},${f.cagr3Y ?? ''},${f.volatility ?? ''},${countNullFields(f)}\n`;
+      csv += `,${i + 1},"${f.id}","${f.name.replace(/"/g, '""')}","${f.category || ''}","${assetClass(f.category || '')}",${f.compositeScore},"${f.matchLevel}",${f.sharpeRatio ?? ''},${f.sortinoRatio ?? ''},${f.cagr3Y ?? ''},${f.volatility ?? ''},${countNullFields(f)},"${f.confidenceLevel || ''}","${(f.confidenceReason || '').replace(/"/g, '""')}"\n`;
     }
     if (r.funds.length === 0) {
       csv += `${r.persona.id},"${r.persona.name}","${r.persona.goal}","${r.persona.riskTolerance}","${r.persona.investmentHorizon}","${r.persona.experienceLevel}","${r.persona.investmentAmount}"`;
-      csv += `,0,"NO_FUNDS","","","",0,"",,,,,0\n`;
+      csv += `,0,"NO_FUNDS","","","",0,"",,,,,0,,,\n`;
     }
   }
 

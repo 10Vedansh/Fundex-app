@@ -311,7 +311,8 @@ export function scoreV3(
   // 5. Low Volatility
   const volRaw = safeNum(fund.volatility) ?? safeNum(fund.stdDev);
   const vol = volRaw ?? 0;
-  const volN = w.volatility > 0 ? (1 - normalize(vol, stats.minVol, stats.maxVol)) : 0.5;
+  let volN = w.volatility > 0 ? (1 - normalize(vol, stats.minVol, stats.maxVol)) : 0.5;
+  if (volRaw === null) volN = 0.5; // neutral when volatility is unknown
 
   // 6. Category-Relative Expense
   const expenseRaw = safeNum(fund.expenseRatio);
@@ -369,7 +370,8 @@ export function scoreV3(
     if (expense > 1.5) score *= 0.9;
   }
 
-  // 9. Completeness penalty — missing metrics reduce final score
+  // 9. Completeness penalty — missing critical metrics penalized harder (15%),
+  // optional fields penalized lightly (5%)
   const nullSharpe = safeNum(fund.sharpeRatio) === null;
   const nullSortino = safeNum(fund.sortinoRatio) === null;
   const nullVol = (safeNum(fund.volatility) ?? safeNum(fund.stdDev)) === null;
@@ -383,9 +385,29 @@ export function scoreV3(
     safeNum(fund.ret5Y ?? fund.cagr5Y),
   ].filter(v => v !== null);
   const nullConsistency = consistencyPeriods.length < 3;
-  const nullFieldCount = [nullSharpe, nullSortino, nullVol, nullCagr, nullConsistency].filter(Boolean).length;
-  const completenessMultiplier = Math.round((1 - (0.05 * nullFieldCount)) * 100) / 100;
+  const nullExpense = safeNum(fund.expenseRatio) === null;
+  const nullBenchmark = !fund.benchmark || String(fund.benchmark).trim() === '';
+  const nullFundManager = !fund.fundManager || String(fund.fundManager).trim() === '';
+  const criticalNulls = [nullSharpe, nullVol, nullCagr].filter(Boolean).length;
+  const optionalNulls = [nullSortino, nullConsistency, nullExpense, nullBenchmark, nullFundManager].filter(Boolean).length;
+  const completenessMultiplier = Math.round((1 - (0.15 * criticalNulls) - (0.05 * optionalNulls)) * 100) / 100;
   score *= completenessMultiplier;
+
+  // 10. Age-based recency penalty — younger funds are penalized
+  if (fund.launch) {
+    const launchDate = new Date(String(fund.launch));
+    const ageYears = (Date.now() - launchDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+    if (ageYears < 1) {
+      score *= 0.70;
+      reasons.push('Penalized: fund less than 1 year old');
+    } else if (ageYears < 3) {
+      score *= 0.85;
+      reasons.push('Penalized: fund less than 3 years old');
+    } else if (ageYears < 5) {
+      score *= 0.95;
+      reasons.push('Penalized: fund less than 5 years old');
+    }
+  }
 
   // Reason generation
   if (sortino > 2) reasons.push('Excellent downside-adjusted returns');
@@ -432,7 +454,7 @@ export function scoreV3(
     expenseScore: Math.round(expenseN * 10000) / 100,
     downsideRisk,
     suitabilityBadge,
-    nullFieldCount,
+    nullFieldCount: criticalNulls + optionalNulls,
     completenessMultiplier,
   };
 }

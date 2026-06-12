@@ -32,6 +32,8 @@ export interface RecommendationPreferences {
   investmentAmount: string;
 }
 
+export type ConfidenceLevel = 'high' | 'medium' | 'limited_history';
+
 export interface ScoredFund extends MutualFund {
   compositeScore: number;
   reasons: string[];
@@ -43,6 +45,39 @@ export interface ScoredFund extends MutualFund {
   profileType?: string;
   diversificationBonusScore?: number;
   expenseScore?: number;
+  confidenceLevel?: ConfidenceLevel;
+  confidenceReason?: string;
+}
+
+export function computeConfidence(fund: MutualFund): { level: ConfidenceLevel; reason: string } {
+  const safeNum = (val: number | string | null | undefined): number | null => {
+    if (val === null || val === undefined || val === '' || val === '--') return null;
+    const n = typeof val === 'string' ? parseFloat(val.replace(/,/g, '')) : Number(val);
+    return isNaN(n) ? null : n;
+  };
+
+  const nullSharpe = safeNum(fund.sharpeRatio) === null;
+  const nullVol = (safeNum(fund.volatility) ?? safeNum(fund.stdDev)) === null;
+  const nullCagr = safeNum(fund.ret3Y ?? fund.cagr3Y) === null;
+  const criticalNulls = [nullSharpe, nullVol, nullCagr].filter(Boolean).length;
+
+  let ageYears = 0;
+  if (fund.launch) {
+    const launchDate = new Date(String(fund.launch));
+    ageYears = (Date.now() - launchDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+  }
+
+  if (ageYears >= 5 && criticalNulls === 0) {
+    const label = ageYears >= 10 ? '10+ year' : `${Math.floor(ageYears)}-year`;
+    return { level: 'high', reason: `Fund has ${label} track record and complete performance history.` };
+  }
+  if (ageYears >= 3 && criticalNulls <= 1) {
+    return { level: 'medium', reason: 'Fund has sufficient track record but limited metric availability.' };
+  }
+  const reason = ageYears < 3
+    ? 'Fund is relatively new or lacks sufficient historical performance data.'
+    : 'Fund lacks sufficient historical performance data due to missing critical metrics.';
+  return { level: 'limited_history', reason };
 }
 
 function isPassiveFund(fund: MutualFund | ScoredFund): boolean {
@@ -323,61 +358,86 @@ function applyFallback(
     });
   }
 
-  const fallbackChain: FallbackStep[] = [
-    {
-      label: 'Risk+Goal+Horizon',
-      fn: (f) => applyHorizonRules(applyGoalEligibility(applyRiskConstraints(f, risk), goal), horizon),
-      dropped: '',
-    },
-    {
-      label: 'Risk+Goal+Horizon(relaxed)',
-      fn: (f) => applyHorizonRules(applyGoalEligibility(applyRiskConstraints(f, risk), goal), horizon),
-      dropped: '',
-    },
-    {
-      label: 'Risk+Goal',
-      fn: (f) => applyGoalEligibility(applyRiskConstraints(f, risk), goal),
-      dropped: 'Horizon',
-    },
-    {
-      label: 'Risk+Goal(noPrefix)',
-      fn: (f) => {
-        // Keep goal's numerical constraints but remove allowedCategoryPrefixes blocking
-        const g = goalConfig;
-        if (!g) return applyRiskConstraints(f, risk);
-        const prefixPass = applyRiskConstraints(f, risk);
-        return prefixPass.filter(fund => {
-          const cat = catCode(fund);
-          // Don't filter by allowedCategoryPrefixes — just use category-level blocked and numerical constraints
-          if (g.blockedCategories.includes(cat)) return false;
-          if (g.maxVolatility !== null) {
-            const vol = safeNum(fund.volatility) ?? safeNum(fund.stdDev);
-            if (vol !== null && vol > g.maxVolatility) return false;
-          }
-          if (g.minSharpe !== null) {
-            const sharpe = safeNum(fund.sharpeRatio);
-            if (sharpe !== null && sharpe < g.minSharpe) return false;
-          }
-          if (g.requirePositive3Y) {
-            const ret3 = safeNum(fund.ret3Y ?? fund.cagr3Y);
-            if (ret3 !== null && ret3 <= 0) return false;
-          }
-          return true;
-        });
-      },
-      dropped: 'Horizon+PrefixCheck',
-    },
-    {
-      label: 'Risk+Horizon',
-      fn: (f) => applyHorizonRules(applyRiskConstraints(f, risk), horizon),
-      dropped: 'Goal',
-    },
-    {
-      label: 'Risk-only',
-      fn: (f) => applyRiskConstraints(f, risk),
-      dropped: 'Goal+Horizon',
-    },
-  ];
+  // For locked goals (e.g., tax_saving), the fallback chain keeps goal eligibility
+  // while relaxing risk/horizon, so fallback can never bypass goal category prefixes.
+  const isLocked = goalConfig?.lockInFlag && goalConfig.allowedCategoryPrefixes !== null;
+
+  const fallbackChain: FallbackStep[] = isLocked
+    ? [
+        {
+          label: 'Risk+Goal+Horizon',
+          fn: (f) => applyHorizonRules(applyGoalEligibility(applyRiskConstraints(f, risk), goal), horizon),
+          dropped: '',
+        },
+        {
+          label: 'Goal+Horizon(relaxed risk)',
+          fn: (f) => applyHorizonRules(applyGoalEligibility(f, goal), horizon),
+          dropped: 'Risk',
+        },
+        {
+          label: 'Risk+Goal(relaxed horizon)',
+          fn: (f) => applyGoalEligibility(applyRiskConstraints(f, risk), goal),
+          dropped: 'Horizon',
+        },
+        {
+          label: 'Goal-only(relaxed risk+horizon)',
+          fn: (f) => applyGoalEligibility(f, goal),
+          dropped: 'Risk+Horizon',
+        },
+      ]
+    : [
+        {
+          label: 'Risk+Goal+Horizon',
+          fn: (f) => applyHorizonRules(applyGoalEligibility(applyRiskConstraints(f, risk), goal), horizon),
+          dropped: '',
+        },
+        {
+          label: 'Risk+Goal+Horizon(relaxed)',
+          fn: (f) => applyHorizonRules(applyGoalEligibility(applyRiskConstraints(f, risk), goal), horizon),
+          dropped: '',
+        },
+        {
+          label: 'Risk+Goal',
+          fn: (f) => applyGoalEligibility(applyRiskConstraints(f, risk), goal),
+          dropped: 'Horizon',
+        },
+        {
+          label: 'Risk+Goal(noPrefix)',
+          fn: (f) => {
+            const g = goalConfig;
+            if (!g) return applyRiskConstraints(f, risk);
+            const prefixPass = applyRiskConstraints(f, risk);
+            return prefixPass.filter(fund => {
+              const cat = catCode(fund);
+              if (g.blockedCategories.includes(cat)) return false;
+              if (g.maxVolatility !== null) {
+                const vol = safeNum(fund.volatility) ?? safeNum(fund.stdDev);
+                if (vol !== null && vol > g.maxVolatility) return false;
+              }
+              if (g.minSharpe !== null) {
+                const sharpe = safeNum(fund.sharpeRatio);
+                if (sharpe !== null && sharpe < g.minSharpe) return false;
+              }
+              if (g.requirePositive3Y) {
+                const ret3 = safeNum(fund.ret3Y ?? fund.cagr3Y);
+                if (ret3 !== null && ret3 <= 0) return false;
+              }
+              return true;
+            });
+          },
+          dropped: 'Horizon+PrefixCheck',
+        },
+        {
+          label: 'Risk+Horizon',
+          fn: (f) => applyHorizonRules(applyRiskConstraints(f, risk), horizon),
+          dropped: 'Goal',
+        },
+        {
+          label: 'Risk-only',
+          fn: (f) => applyRiskConstraints(f, risk),
+          dropped: 'Goal+Horizon',
+        },
+      ];
 
   const dropped: string[] = [];
   let firstNonEmpty = false;
@@ -486,6 +546,7 @@ export function recommendFundsV2(
       normalizedPrefs.investmentHorizon,
       normalizedPrefs.investmentGoal,
     );
+    const confidence = computeConfidence(fund);
     return {
       ...fund,
       compositeScore: result.score,
@@ -498,6 +559,8 @@ export function recommendFundsV2(
       profileType: result.profileType,
       diversificationBonusScore: result.diversificationBonusScore,
       expenseScore: result.expenseScore,
+      confidenceLevel: confidence.level,
+      confidenceReason: confidence.reason,
     };
   });
 

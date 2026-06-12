@@ -10,6 +10,8 @@ interface FundCardProps {
     downsideRisk?: 'low' | 'moderate' | 'high';
     suitabilityBadge?: 'aligned' | 'adjusted' | 'limited';
     reasons?: string[];
+    confidenceLevel?: 'high' | 'medium' | 'limited_history';
+    confidenceReason?: string;
   };
   onClick?: () => void;
   isBookmarked?: boolean;
@@ -34,6 +36,24 @@ const getRiskLabel = (category: string): string => {
   if (cat.includes('LC') || cat.includes('L&MC') || cat.includes('FLX') || cat.includes('MLC')) return 'Moderate Risk';
   if (cat.includes('MC')) return 'Moderately High Risk';
   return 'Moderate Risk';
+};
+
+const getConfidenceStyle = (level?: string): string => {
+  switch (level) {
+    case 'high': return 'bg-success/15 text-success border-success/25';
+    case 'medium': return 'bg-amber-500/15 text-amber-400 border-amber-500/25';
+    case 'limited_history': return 'bg-orange-500/15 text-orange-400 border-orange-500/25';
+    default: return 'bg-muted text-muted-foreground';
+  }
+};
+
+const getConfidenceLabel = (level?: string): string => {
+  switch (level) {
+    case 'high': return 'High Confidence';
+    case 'medium': return 'Medium Confidence';
+    case 'limited_history': return 'Limited History';
+    default: return '';
+  }
 };
 
 const getDisplayCategory = (category: string): string => {
@@ -96,6 +116,11 @@ export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle
           <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
             <span>{fund.amc}</span>
             <span className="text-xs bg-muted/50 px-2 py-0.5 rounded-full">{getRiskLabel(fund.category)}</span>
+            {fund.confidenceLevel && (
+              <Badge variant="outline" className={cn(getConfidenceStyle(fund.confidenceLevel), "text-[10px] px-1.5 py-0")}>
+                {getConfidenceLabel(fund.confidenceLevel)}
+              </Badge>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -166,19 +191,28 @@ export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle
         </div>
 
         {/* Why this fund? — Redesigned */}
-        {fund.reasons && fund.reasons.length > 0 && (
+        {((fund.reasons && fund.reasons.length > 0) || fund.confidenceReason) && (
           <div className="mt-4 p-3 rounded-xl bg-primary/5 border border-primary/10">
             <div className="flex items-center gap-1.5 mb-2">
               <Lightbulb className="h-3.5 w-3.5 text-primary" />
               <span className="text-xs font-semibold text-primary">Why this fund?</span>
             </div>
             <ul className="space-y-1">
-              {fund.reasons.slice(0, 3).map((r, i) => (
+              {fund.reasons?.slice(0, 3).map((r, i) => (
                 <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
                   <span className="text-primary/60 mt-0.5">•</span>
                   <span>{r}</span>
                 </li>
               ))}
+              {fund.confidenceReason && (
+                <li className="text-xs text-muted-foreground flex items-start gap-1.5">
+                  <span className="text-primary/60 mt-0.5">•</span>
+                  <span className={cn(
+                    fund.confidenceLevel === 'high' && 'text-success',
+                    fund.confidenceLevel === 'limited_history' && 'text-orange-400',
+                  )}>{fund.confidenceReason}</span>
+                </li>
+              )}
             </ul>
           </div>
         )}
