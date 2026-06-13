@@ -145,8 +145,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async () => {
     const { lovable } = await import('@/integrations/lovable/index');
+    // Request offline access so Google returns a refresh_token.
+    // Without it, Supabase auto-refresh fails and auth.uid() becomes NULL
+    // after the initial access token expires (~1 hour).
     const result = await lovable.auth.signInWithOAuth('google', {
       redirect_uri: window.location.origin,
+      extraParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
     });
 
     if ('error' in result && result.error) {

@@ -17,6 +17,11 @@ import { DashboardLoadingState } from '@/components/dashboard/DashboardLoadingSt
 import { AllFundsTab } from '@/components/dashboard/AllFundsTab';
 import { AIChat } from '@/components/dashboard/AIChat';
 import { CAMSUpload } from '@/components/dashboard/CAMSUpload';
+import { PortfolioAnalytics } from '@/components/dashboard/PortfolioAnalytics';
+import type { AnalyticsHolding } from '@/components/dashboard/PortfolioAnalytics';
+import { PortfolioReview } from '@/components/dashboard/PortfolioReview';
+import { PortfolioComparison } from '@/components/dashboard/PortfolioComparison';
+import { PortfolioIntelligenceHero } from '@/components/dashboard/PortfolioIntelligenceHero';
 import { BuildPortfolio } from '@/components/dashboard/BuildPortfolio';
 import { AddFundDialog } from '@/components/dashboard/AddFundDialog';
 import { Footer } from '@/components/Footer';
@@ -27,6 +32,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { MutualFund, FundSectorData } from '@/types/mutualFund';
 import { getCachedSectorData } from '@/utils/sectorDataGenerator';
+import { cn } from '@/lib/utils';
 import { 
   Plus,
   AlertTriangle,
@@ -41,6 +47,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useFundCache } from '@/hooks/useFundCache';
 import { useWatchlist } from '@/hooks/useWatchlist';
 import { usePortfolio, PortfolioItem } from '@/hooks/usePortfolio';
+import { useCamsHoldings } from '@/hooks/useCamsHoldings';
+import type { CamsHolding } from '@/hooks/useCamsHoldings';
 import {
   Dialog,
   DialogContent,
@@ -62,6 +70,13 @@ const Index = () => {
     isLoading: portfolioLoading 
   } = usePortfolio();
 
+  const { 
+    holdings: camsHoldings, 
+    isLoading: camsLoading, 
+    saveHoldings: saveCamsHoldings, 
+    clearHoldings: clearCamsHoldings 
+  } = useCamsHoldings();
+
   const [globalSearch, setGlobalSearch] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [aiResetKey, setAiResetKey] = useState(0);
@@ -82,8 +97,57 @@ const Index = () => {
   const [selectedPortfolioFund, setSelectedPortfolioFund] = useState<MutualFund | null>(null);
   const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState(false);
 
-  // CAMS uploaded flag
+  // CAMS data: directly passed from upload (immediate) AND persisted from DB (on reload)
   const [hasCamsData, setHasCamsData] = useState(false);
+
+  // Shape matching CAMSUpload's internal ParsedPortfolio for initialPortfolio
+  const [camsUploadedData, setCamsUploadedData] = useState<{
+    holdings: Array<{
+      fund_name: string;
+      amc: string;
+      folio_number?: string;
+      units?: number | null;
+      nav?: number | null;
+      current_value?: number | null;
+      cost_value?: number | null;
+      category?: string;
+    }>;
+    total_current_value?: number | null;
+    total_cost_value?: number | null;
+  } | null>(null);
+
+  // On mount, load persisted CAMS holdings from DB
+  const persistedCamsPortfolio = useMemo(() => {
+    if (camsHoldings.length === 0) return null;
+    const totalCost = camsHoldings.reduce((s, h) => s + (h.cost_value ?? 0), 0);
+    const totalCurrent = camsHoldings.reduce((s, h) => s + (h.current_value ?? 0), 0);
+    return {
+      holdings: camsHoldings.map(h => ({
+        fund_name: h.fund_name,
+        amc: h.amc || '',
+        folio_number: h.folio_number || undefined,
+        units: h.units,
+        nav: h.nav,
+        current_value: h.current_value,
+        cost_value: h.cost_value,
+        category: h.category || undefined,
+      })),
+      total_current_value: totalCurrent,
+      total_cost_value: totalCost,
+    };
+  }, [camsHoldings]);
+
+  // Set hasCamsData if persisted data exists on mount
+  useEffect(() => {
+    if (camsHoldings.length > 0) {
+      setHasCamsData(true);
+      setCamsUploadedData(null); // will use persistedCamsPortfolio via the CAMSUpload
+    }
+  }, [camsHoldings]);
+
+  // Merge: prefer just-uploaded data, fall back to persisted data
+  const camsInitialPortfolio = camsUploadedData || persistedCamsPortfolio;
+
   const [isAddFundOpen, setIsAddFundOpen] = useState(false);
 
   // Redirect if not authenticated
@@ -267,6 +331,83 @@ const Index = () => {
     setIsAddToPortfolioOpen(false);
     setPortfolioFundToAdd(null);
   };
+
+  // Compute analytics holdings from portfolio items + fund data
+  const analyticsHoldings = useMemo<AnalyticsHolding[]>(() => {
+    return portfolio.map(item => {
+      const fund = funds.find(f => f.id === item.fund_id);
+      const currentValue = (item.units && fund?.nav)
+        ? item.units * fund.nav
+        : (item.invested_amount || 0);
+      return {
+        fund_name: item.fund_name,
+        amc: fund?.amc || 'Unknown',
+        category: item.fund_category || '',
+        invested: item.invested_amount || 0,
+        currentValue,
+        assetClass: fund?.assetClass,
+        riskLevel: fund?.riskLevel,
+      };
+    });
+  }, [portfolio, funds]);
+
+  // Compute analytics holdings from CAMS data (fallback when no manual portfolio)
+  const camsAnalyticsHoldings = useMemo<AnalyticsHolding[]>(() => {
+    return camsHoldings.map(h => {
+      const fund = funds.find(f => f.name.toLowerCase() === h.fund_name.toLowerCase());
+      return {
+        fund_name: h.fund_name,
+        amc: h.amc || 'Unknown',
+        category: h.category || '',
+        invested: h.cost_value || 0,
+        currentValue: h.current_value || 0,
+        assetClass: fund?.assetClass,
+        riskLevel: fund?.riskLevel,
+      };
+    });
+  }, [camsHoldings, funds]);
+
+  // Use manual portfolio analytics when available, otherwise CAMS analytics
+  const effectiveAnalyticsHoldings = analyticsHoldings.length > 0
+    ? analyticsHoldings
+    : camsAnalyticsHoldings;
+
+  const hasAnalyticsData = portfolio.length > 0 || camsAnalyticsHoldings.length > 0;
+
+  // CAMS health-o-meter + summary (mirrors CAMSUpload logic)
+  type CamsHealthStatus = 'healthy' | 'moderate' | 'degrading';
+
+  function getCamsHealthState(holding: { cost_value?: number | null; current_value?: number | null }): CamsHealthStatus {
+    const cost = holding.cost_value ?? 0;
+    const current = holding.current_value ?? 0;
+    if (cost === 0) return 'moderate';
+    const pct = ((current - cost) / cost) * 100;
+    if (pct > 5) return 'healthy';
+    if (pct >= -5) return 'moderate';
+    return 'degrading';
+  }
+
+  const CAMS_HEALTH_LABELS: Record<CamsHealthStatus, { label: string; color: string; bg: string; barColor: string }> = {
+    healthy: { label: 'Healthy', color: 'text-success', bg: 'bg-success/15', barColor: 'bg-success' },
+    moderate: { label: 'Moderate', color: 'text-warning', bg: 'bg-warning/15', barColor: 'bg-warning' },
+    degrading: { label: 'Needs Attention', color: 'text-destructive', bg: 'bg-destructive/15', barColor: 'bg-destructive' },
+  };
+
+  const camsHealthMetrics = useMemo(() => {
+    if (!camsInitialPortfolio) return null;
+    const holdings = camsInitialPortfolio.holdings;
+    const totalCost = camsInitialPortfolio.total_cost_value ?? holdings.reduce((s, h) => s + (h.cost_value ?? 0), 0);
+    const totalCurrent = camsInitialPortfolio.total_current_value ?? holdings.reduce((s, h) => s + (h.current_value ?? 0), 0);
+    const totalReturn = totalCost > 0 ? ((totalCurrent - totalCost) / totalCost) * 100 : 0;
+    const statuses = holdings.map(getCamsHealthState);
+    const healthyCount = statuses.filter(s => s === 'healthy').length;
+    const moderateCount = statuses.filter(s => s === 'moderate').length;
+    const degradingCount = statuses.filter(s => s === 'degrading').length;
+    let overall: CamsHealthStatus = 'moderate';
+    if (degradingCount > holdings.length * 0.4) overall = 'degrading';
+    else if (healthyCount > holdings.length * 0.5) overall = 'healthy';
+    return { totalCost, totalCurrent, totalReturn, healthyCount, moderateCount, degradingCount, overall, holdings };
+  }, [camsInitialPortfolio]);
 
   // Generate educational insights for portfolio
   const getPortfolioInsight = (item: PortfolioItem): { type: 'continue' | 'review' | 'reduce'; message: string } => {
@@ -479,38 +620,8 @@ const Index = () => {
               {/* Portfolio Tab */}
               {activeTab === 'portfolio' && (
                 <div className="animate-fade-in space-y-6">
-                  {/* Portfolio Summary Cards */}
-                  {portfolio.length > 0 && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <Card className="glass-card">
-                        <CardContent className="pt-6">
-                          <p className="text-sm text-muted-foreground mb-1">Total Invested</p>
-                          <p className="text-2xl font-bold text-foreground">
-                            ₹{portfolioSummary.totalInvested.toLocaleString()}
-                          </p>
-                        </CardContent>
-                      </Card>
-                      <Card className="glass-card">
-                        <CardContent className="pt-6">
-                          <p className="text-sm text-muted-foreground mb-1">Monthly SIP</p>
-                          <p className="text-2xl font-bold text-foreground">
-                            ₹{portfolioSummary.totalSIP.toLocaleString()}
-                          </p>
-                        </CardContent>
-                      </Card>
-                      <Card className="glass-card">
-                        <CardContent className="pt-6">
-                          <p className="text-sm text-muted-foreground mb-1">Funds in Portfolio</p>
-                          <p className="text-2xl font-bold text-foreground">
-                            {portfolioSummary.fundCount}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  )}
-
-                  {/* Unified action card: Upload CAMS / Add manually */}
-                  {portfolio.length === 0 && !hasCamsData && (
+                  {/* Unified action card: Upload CAMS / Add manually (when no data) */}
+                  {portfolio.length === 0 && !hasCamsData && !camsLoading && (
                     <Card className="glass-card">
                       <CardContent className="py-8 text-center">
                         <h3 className="text-lg font-semibold text-foreground mb-2">
@@ -520,7 +631,7 @@ const Index = () => {
                           Import your full portfolio from a CAMS PDF, or add individual funds one at a time.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                          <CAMSUpload compact onDataLoaded={() => setHasCamsData(true)} />
+                          <CAMSUpload compact onDataLoaded={(holdings) => { setCamsUploadedData({ holdings, total_current_value: holdings.reduce((s, h) => s + (h.current_value ?? 0), 0), total_cost_value: holdings.reduce((s, h) => s + (h.cost_value ?? 0), 0) }); setHasCamsData(true); }} onSave={(holdings) => { saveCamsHoldings(holdings.map(h => ({ fund_name: h.fund_name, amc: h.amc, folio_number: h.folio_number, units: h.units, nav: h.nav, current_value: h.current_value, cost_value: h.cost_value, category: h.category }))); }} />
                           <Button onClick={() => setIsAddFundOpen(true)}>
                             <Plus className="h-4 w-4 mr-1" />
                             Add Mutual Fund
@@ -530,18 +641,115 @@ const Index = () => {
                     </Card>
                   )}
 
-                  {/* CAMS results (only after upload) */}
-                  {hasCamsData && (
-                    <CAMSUpload compact={false} onDataLoaded={() => setHasCamsData(true)} />
-                  )}
+                  {/* === 1. Holdings Overview === */}
+                  {/* CAMS: Health-o-Meter + Summary Cards + Holdings List */}
+                  {hasCamsData && !camsLoading && camsHealthMetrics && (() => {
+                    const m = camsHealthMetrics;
+                    const cfg = CAMS_HEALTH_LABELS[m.overall];
+                    const HealthIcon = m.overall === 'healthy' ? TrendingUp : m.overall === 'degrading' ? TrendingDown : Minus;
+                    const profitLoss = m.totalCurrent - m.totalCost;
+                    return (
+                      <>
+                        <Card className="glass-card overflow-hidden">
+                          <CardContent className="py-6">
+                            <div className="flex items-center gap-4 mb-5">
+                              <div className={cn('h-16 w-16 rounded-2xl flex items-center justify-center', cfg.bg)}>
+                                <HealthIcon className={cn('h-8 w-8', cfg.color)} />
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wider">Portfolio Health-o-Meter</p>
+                                <p className={cn('text-3xl font-bold', cfg.color)}>{cfg.label}</p>
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex gap-1 h-4 rounded-full overflow-hidden bg-muted/30">
+                                {(['healthy', 'moderate', 'degrading'] as CamsHealthStatus[]).map(status => {
+                                  const count = status === 'healthy' ? m.healthyCount : status === 'moderate' ? m.moderateCount : m.degradingCount;
+                                  const pct = (count / m.holdings.length) * 100;
+                                  return pct > 0 ? (
+                                    <div key={status} className={cn('h-full rounded-full transition-all', CAMS_HEALTH_LABELS[status].barColor)} style={{ width: `${pct}%` }} />
+                                  ) : null;
+                                })}
+                              </div>
+                              <div className="flex gap-4 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-success" /> Healthy ({m.healthyCount})</span>
+                                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-warning" /> Moderate ({m.moderateCount})</span>
+                                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-destructive" /> Needs Attention ({m.degradingCount})</span>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
 
-                  {/* Investments list (only when there are holdings) */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <Card className="glass-card">
+                            <CardContent className="pt-4 pb-3">
+                              <p className="text-xs text-muted-foreground">Total Investment</p>
+                              <p className="text-lg font-bold">₹{Math.round(m.totalCost).toLocaleString()}</p>
+                            </CardContent>
+                          </Card>
+                          <Card className="glass-card">
+                            <CardContent className="pt-4 pb-3">
+                              <p className="text-xs text-muted-foreground">Current Value</p>
+                              <p className={cn('text-lg font-bold', m.totalReturn >= 0 ? 'text-success' : 'text-destructive')}>₹{Math.round(m.totalCurrent).toLocaleString()}</p>
+                            </CardContent>
+                          </Card>
+                          <Card className="glass-card">
+                            <CardContent className="pt-4 pb-3">
+                              <p className="text-xs text-muted-foreground">Profit/Loss</p>
+                              <p className={cn('text-lg font-bold', profitLoss >= 0 ? 'text-success' : 'text-destructive')}>
+                                {profitLoss >= 0 ? '+' : ''}₹{Math.round(profitLoss).toLocaleString()}
+                              </p>
+                            </CardContent>
+                          </Card>
+                          <Card className="glass-card">
+                            <CardContent className="pt-4 pb-3">
+                              <p className="text-xs text-muted-foreground">Return</p>
+                              <p className={cn('text-lg font-bold', m.totalReturn >= 0 ? 'text-success' : 'text-destructive')}>
+                                {m.totalReturn >= 0 ? '+' : ''}{m.totalReturn.toFixed(1)}%
+                              </p>
+                            </CardContent>
+                          </Card>
+                        </div>
+
+                        <CAMSUpload compact={false} initialPortfolio={camsInitialPortfolio} onDataLoaded={(holdings) => { setCamsUploadedData({ holdings, total_current_value: holdings.reduce((s, h) => s + (h.current_value ?? 0), 0), total_cost_value: holdings.reduce((s, h) => s + (h.cost_value ?? 0), 0) }); setHasCamsData(true); }} onSave={(holdings) => { saveCamsHoldings(holdings.map(h => ({ fund_name: h.fund_name, amc: h.amc, folio_number: h.folio_number, units: h.units, nav: h.nav, current_value: h.current_value, cost_value: h.cost_value, category: h.category }))); }} />
+                      </>
+                    );
+                  })()}
+
+                  {/* Manual portfolio summary cards + holdings list */}
                   {portfolio.length > 0 && (
                     <>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Card className="glass-card">
+                          <CardContent className="pt-6">
+                            <p className="text-sm text-muted-foreground mb-1">Total Invested</p>
+                            <p className="text-2xl font-bold text-foreground">
+                              ₹{portfolioSummary.totalInvested.toLocaleString()}
+                            </p>
+                          </CardContent>
+                        </Card>
+                        <Card className="glass-card">
+                          <CardContent className="pt-6">
+                            <p className="text-sm text-muted-foreground mb-1">Monthly SIP</p>
+                            <p className="text-2xl font-bold text-foreground">
+                              ₹{portfolioSummary.totalSIP.toLocaleString()}
+                            </p>
+                          </CardContent>
+                        </Card>
+                        <Card className="glass-card">
+                          <CardContent className="pt-6">
+                            <p className="text-sm text-muted-foreground mb-1">Funds in Portfolio</p>
+                            <p className="text-2xl font-bold text-foreground">
+                              {portfolioSummary.fundCount}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      </div>
+
                       <div className="flex justify-between items-center">
                         <h3 className="text-lg font-semibold">Your Investments</h3>
                         <div className="flex gap-2">
-                          <CAMSUpload compact onDataLoaded={() => setHasCamsData(true)} />
+                          <CAMSUpload compact onDataLoaded={(holdings) => { setCamsUploadedData({ holdings, total_current_value: holdings.reduce((s, h) => s + (h.current_value ?? 0), 0), total_cost_value: holdings.reduce((s, h) => s + (h.cost_value ?? 0), 0) }); setHasCamsData(true); }} onSave={(holdings) => { saveCamsHoldings(holdings.map(h => ({ fund_name: h.fund_name, amc: h.amc, folio_number: h.folio_number, units: h.units, nav: h.nav, current_value: h.current_value, cost_value: h.cost_value, category: h.category }))); }} />
                           <Button size="sm" onClick={() => setIsAddFundOpen(true)}>
                             <Plus className="h-3.5 w-3.5 mr-1" />
                             Add Fund
@@ -615,16 +823,68 @@ const Index = () => {
                     </>
                   )}
 
-                  <Card className="bg-warning/10 border-warning/30">
-                    <CardContent className="py-4 flex items-start gap-3">
-                      <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
-                      <p className="text-sm text-muted-foreground">
-                        <strong className="text-warning">Disclaimer:</strong> Educational insights only. Not investment advice. 
-                        Past performance does not guarantee future results. Mutual fund investments are subject to market risks. 
-                        Please consult a qualified financial advisor before making investment decisions.
-                      </p>
-                    </CardContent>
-                  </Card>
+                  {/* === 2. CIFRAA Portfolio Intelligence Hero === */}
+                  {hasAnalyticsData && profile && funds.length > 0 && (
+                    <PortfolioIntelligenceHero
+                      holdings={effectiveAnalyticsHoldings}
+                      funds={funds}
+                      riskTolerance={profile.risk_tolerance || 'moderate'}
+                      investmentGoal={profile.primary_goal || (
+                        profile.investment_goal === 'wealth' ? 'wealth_creation' :
+                        profile.investment_goal === 'income' ? 'passive_income' :
+                        profile.investment_goal === 'tax' ? 'tax_saving' :
+                        profile.investment_goal === 'preservation' ? 'capital_preservation' :
+                        'wealth_creation'
+                      )}
+                      investmentHorizon={profile.investment_horizon || 'long'}
+                      experienceLevel={profile.experience_level || 'beginner'}
+                      investmentAmount={profile.investment_amount || 'medium'}
+                      onViewRecommended={() => {
+                        document.getElementById('portfolio-comparison')?.scrollIntoView({ behavior: 'smooth' });
+                      }}
+                    />
+                  )}
+
+                  {/* === 3. Portfolio Analytics === */}
+                  {hasAnalyticsData && <PortfolioAnalytics holdings={effectiveAnalyticsHoldings} />}
+
+                  {/* === 4. AI Portfolio Review === */}
+                  {hasAnalyticsData && <PortfolioReview holdings={effectiveAnalyticsHoldings} />}
+
+                  {/* === 5. Portfolio vs CIFRAA === */}
+                  <div id="portfolio-comparison">
+                    {hasAnalyticsData && profile && funds.length > 0 && (
+                      <PortfolioComparison
+                        holdings={effectiveAnalyticsHoldings}
+                        funds={funds}
+                        riskTolerance={profile.risk_tolerance || 'moderate'}
+                        investmentGoal={profile.primary_goal || (
+                          profile.investment_goal === 'wealth' ? 'wealth_creation' :
+                          profile.investment_goal === 'income' ? 'passive_income' :
+                          profile.investment_goal === 'tax' ? 'tax_saving' :
+                          profile.investment_goal === 'preservation' ? 'capital_preservation' :
+                          'wealth_creation'
+                        )}
+                        investmentHorizon={profile.investment_horizon || 'long'}
+                        experienceLevel={profile.experience_level || 'beginner'}
+                        investmentAmount={profile.investment_amount || 'medium'}
+                      />
+                    )}
+                  </div>
+
+                  {/* === 6. Disclaimer === */}
+                  {hasAnalyticsData && (
+                    <Card className="bg-warning/10 border-warning/30">
+                      <CardContent className="py-4 flex items-start gap-3">
+                        <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-muted-foreground">
+                          <strong className="text-warning">Disclaimer:</strong> Educational insights only. Not investment advice. 
+                          Past performance does not guarantee future results. Mutual fund investments are subject to market risks. 
+                          Please consult a qualified financial advisor before making investment decisions.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
               )}
 

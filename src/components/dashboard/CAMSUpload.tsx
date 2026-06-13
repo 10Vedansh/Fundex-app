@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { Upload, FileText, Loader2, AlertTriangle, TrendingUp, TrendingDown, Minus, RefreshCw, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -79,13 +79,15 @@ async function extractTextFromPDF(file: File, password?: string): Promise<string
 
 interface CAMSUploadProps {
   compact?: boolean;
-  onDataLoaded?: () => void;
+  onDataLoaded?: (holdings: HoldingData[], totalCurrent: number, totalCost: number) => void;
+  initialPortfolio?: ParsedPortfolio | null;
+  onSave?: (holdings: HoldingData[]) => void;
 }
 
 
-export function CAMSUpload({ compact = false, onDataLoaded }: CAMSUploadProps) {
+export function CAMSUpload({ compact = false, onDataLoaded, initialPortfolio, onSave }: CAMSUploadProps) {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [portfolio, setPortfolio] = useState<ParsedPortfolio | null>(null);
+  const [portfolio, setPortfolio] = useState<ParsedPortfolio | null>(initialPortfolio || null);
   const [expandedFund, setExpandedFund] = useState<number | null>(null);
   const [needsPassword, setNeedsPassword] = useState(false);
   const [pdfPassword, setPdfPassword] = useState('');
@@ -119,7 +121,10 @@ export function CAMSUpload({ compact = false, onDataLoaded }: CAMSUploadProps) {
       }
 
       setPortfolio(data);
-      onDataLoaded?.();
+      const totalCurrent = data.total_current_value ?? data.holdings.reduce((s: number, h: HoldingData) => s + (h.current_value ?? 0), 0);
+      const totalCost = data.total_cost_value ?? data.holdings.reduce((s: number, h: HoldingData) => s + (h.cost_value ?? 0), 0);
+      onDataLoaded?.(data.holdings, totalCurrent, totalCost);
+      onSave?.(data.holdings);
       setNeedsPassword(false);
       setPendingFile(null);
       setPdfPassword('');
@@ -168,6 +173,7 @@ export function CAMSUpload({ compact = false, onDataLoaded }: CAMSUploadProps) {
     setNeedsPassword(false);
     setPdfPassword('');
     setPendingFile(null);
+    onSave?.([]);
   };
 
   // Password prompt UI
@@ -277,24 +283,6 @@ export function CAMSUpload({ compact = false, onDataLoaded }: CAMSUploadProps) {
 
   if (!portfolio) return null;
 
-  // Portfolio results view
-  const overall = getOverallHealth(portfolio.holdings);
-  const overallConfig = HEALTH_CONFIG[overall];
-  const totalCurrent = portfolio.total_current_value ?? portfolio.holdings.reduce((s, h) => s + (h.current_value ?? 0), 0);
-  const totalCost = portfolio.total_cost_value ?? portfolio.holdings.reduce((s, h) => s + (h.cost_value ?? 0), 0);
-  const totalReturn = totalCost > 0 ? ((totalCurrent - totalCost) / totalCost) * 100 : 0;
-
-  // More realistic projections using category-based expected returns
-  const annualizedReturn = totalCost > 0 ? totalReturn / 100 : 0;
-  const conservativeGrowth = Math.max(0.06, Math.min(annualizedReturn * 0.7, 0.14));
-  const baseGrowth = Math.max(0.08, Math.min(annualizedReturn * 0.85, 0.16));
-  const proj1Y = totalCurrent * (1 + conservativeGrowth);
-  const proj3Y = totalCurrent * Math.pow(1 + baseGrowth, 3);
-  const proj5Y = totalCurrent * Math.pow(1 + baseGrowth, 5);
-
-  // Find replacement suggestions for degrading funds
-  const degradingHoldings = portfolio.holdings.filter(h => getHealthStatus(h) === 'degrading');
-
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -308,66 +296,6 @@ export function CAMSUpload({ compact = false, onDataLoaded }: CAMSUploadProps) {
         <Button variant="outline" size="sm" onClick={reset}>
           <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Upload New
         </Button>
-      </div>
-
-      {/* Health-o-Meter */}
-      <Card className="glass-card overflow-hidden">
-        <CardContent className="py-6">
-          <div className="flex items-center gap-4 mb-5">
-            <div className={cn('h-16 w-16 rounded-2xl flex items-center justify-center', overallConfig.bg)}>
-              <overallConfig.icon className={cn('h-8 w-8', overallConfig.color)} />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Portfolio Health-o-Meter</p>
-              <p className={cn('text-3xl font-bold', overallConfig.color)}>{overallConfig.label}</p>
-            </div>
-          </div>
-          {/* Health bar with percentages */}
-          <div className="space-y-2">
-            <div className="flex gap-1 h-4 rounded-full overflow-hidden bg-muted/30">
-              {(['healthy', 'moderate', 'degrading'] as HealthStatus[]).map(status => {
-                const count = portfolio.holdings.filter(h => getHealthStatus(h) === status).length;
-                const pct = (count / portfolio.holdings.length) * 100;
-                return pct > 0 ? (
-                  <div key={status} className={cn('h-full rounded-full transition-all', HEALTH_CONFIG[status].barColor)} style={{ width: `${pct}%` }} />
-                ) : null;
-              })}
-            </div>
-            <div className="flex gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-success" /> Healthy ({portfolio.holdings.filter(h => getHealthStatus(h) === 'healthy').length})</span>
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-warning" /> Moderate ({portfolio.holdings.filter(h => getHealthStatus(h) === 'moderate').length})</span>
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-destructive" /> Needs Attention ({portfolio.holdings.filter(h => getHealthStatus(h) === 'degrading').length})</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="glass-card">
-          <CardContent className="pt-4 pb-3">
-            <p className="text-xs text-muted-foreground">Total Investment</p>
-            <p className="text-lg font-bold">₹{Math.round(totalCost).toLocaleString()}</p>
-          </CardContent>
-        </Card>
-        <Card className="glass-card">
-          <CardContent className="pt-4 pb-3">
-            <p className="text-xs text-muted-foreground">Current Value</p>
-            <p className={cn('text-lg font-bold', totalReturn >= 0 ? 'text-success' : 'text-destructive')}>₹{Math.round(totalCurrent).toLocaleString()}</p>
-          </CardContent>
-        </Card>
-        <Card className="glass-card">
-          <CardContent className="pt-4 pb-3">
-            <p className="text-xs text-muted-foreground">Expected (3Y)</p>
-            <p className="text-lg font-bold text-foreground">₹{Math.round(proj3Y).toLocaleString()}</p>
-          </CardContent>
-        </Card>
-        <Card className="glass-card">
-          <CardContent className="pt-4 pb-3">
-            <p className="text-xs text-muted-foreground">Expected (5Y)</p>
-            <p className="text-lg font-bold text-foreground">₹{Math.round(proj5Y).toLocaleString()}</p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Individual Fund Holdings */}

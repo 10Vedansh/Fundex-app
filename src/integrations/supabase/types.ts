@@ -98,6 +98,51 @@ export type Database = {
         }
         Relationships: []
       }
+      portfolio_holdings: {
+        Row: {
+          id: string
+          user_id: string
+          fund_name: string
+          amc: string | null
+          folio_number: string | null
+          units: number | null
+          nav: number | null
+          current_value: number | null
+          cost_value: number | null
+          category: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          fund_name: string
+          amc?: string | null
+          folio_number?: string | null
+          units?: number | null
+          nav?: number | null
+          current_value?: number | null
+          cost_value?: number | null
+          category?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          fund_name?: string
+          amc?: string | null
+          folio_number?: string | null
+          units?: number | null
+          nav?: number | null
+          current_value?: number | null
+          cost_value?: number | null
+          category?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       portfolio: {
         Row: {
           created_at: string
