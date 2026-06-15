@@ -18,21 +18,25 @@ CREATE TABLE IF NOT EXISTS portfolio_holdings (
 ALTER TABLE portfolio_holdings ENABLE ROW LEVEL SECURITY;
 
 -- Users can only view their own holdings
+DROP POLICY IF EXISTS "Users can view their own portfolio holdings" ON portfolio_holdings;
 CREATE POLICY "Users can view their own portfolio holdings"
   ON portfolio_holdings FOR SELECT
   USING (auth.uid() = user_id);
 
 -- Users can insert their own holdings
+DROP POLICY IF EXISTS "Users can insert their own portfolio holdings" ON portfolio_holdings;
 CREATE POLICY "Users can insert their own portfolio holdings"
   ON portfolio_holdings FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- Users can update their own holdings
+DROP POLICY IF EXISTS "Users can update their own portfolio holdings" ON portfolio_holdings;
 CREATE POLICY "Users can update their own portfolio holdings"
   ON portfolio_holdings FOR UPDATE
   USING (auth.uid() = user_id);
 
 -- Users can delete their own holdings
+DROP POLICY IF EXISTS "Users can delete their own portfolio holdings" ON portfolio_holdings;
 CREATE POLICY "Users can delete their own portfolio holdings"
   ON portfolio_holdings FOR DELETE
   USING (auth.uid() = user_id);

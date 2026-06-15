@@ -123,7 +123,7 @@ function categoryLabel(cat: string): string {
 // ── Main Audit ──
 
 async function runAudit() {
-  const outputDir = join(__dirname, 'output');
+  const outputDir = join(__dirname, '../../reports/recommendation-engine');
   mkdirSync(outputDir, { recursive: true });
 
   // Load fund data
@@ -534,9 +534,9 @@ async function runAudit() {
   }
 
   exec += `\n## Report Files\n\n`;
-  exec += `- Full report: \`src/audit/output/audit_report.md\`\n`;
-  exec += `- Raw data: \`src/audit/output/persona_recommendations.csv\`\n`;
-  exec += `- This summary: \`src/audit/output/executive_summary.md\`\n`;
+  exec += `- Full report: \`reports/recommendation-engine/audit_report.md\`\n`;
+  exec += `- Raw data: \`reports/recommendation-engine/persona_recommendations.csv\`\n`;
+  exec += `- This summary: \`reports/recommendation-engine/executive_summary.md\`\n`;
 
   writeFileSync(join(outputDir, 'executive_summary.md'), exec, 'utf-8');
   console.log('Executive summary written');

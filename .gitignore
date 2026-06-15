@@ -22,3 +22,19 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Historical NAV database
+funds.db
+funds.db.zst
+
+# Generated metrics
+fund_metrics.csv
+nav_backfill.csv
+
+# Local environment
+.env
+.env.local
+
+# Generated reports/data
+reports/**/*.csv
+reports/**/*.db

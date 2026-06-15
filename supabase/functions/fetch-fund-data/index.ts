@@ -8,58 +8,37 @@ const corsHeaders = {
 
 const AMFI_NAV_URL = "https://www.amfiindia.com/spages/NAVAll.txt";
 
-// Parse AMFI NAV data to get latest NAVs by fund name
-async function fetchLatestNAVs(): Promise<Map<string, { nav: number; date: string }>> {
-  const navMap = new Map<string, { nav: number; date: string }>();
-  
+async function fetchLatestNAVs() {
+  const navMap = new Map();
   try {
     const response = await fetch(AMFI_NAV_URL);
     if (!response.ok) return navMap;
-    
     const text = await response.text();
-    const lines = text.split('\n');
-    
+    const lines = text.split("\n");
     for (const line of lines) {
       const trimmed = line.trim();
-      if (!trimmed || trimmed.includes('Scheme Code;') || !trimmed.includes(';')) continue;
-      
-      const parts = trimmed.split(';');
+      if (!trimmed || trimmed.includes("Scheme Code;") || !trimmed.includes(";")) continue;
+      const parts = trimmed.split(";");
       if (parts.length >= 6) {
         const schemeName = parts[3]?.trim();
         const navStr = parts[4]?.trim();
         const navDate = parts[5]?.trim();
-        
-        if (!schemeName || !navStr || navStr === 'N.A.' || navStr === '-') continue;
-        
+        if (!schemeName || !navStr || navStr === "N.A." || navStr === "-") continue;
         const nav = parseFloat(navStr);
         if (isNaN(nav) || nav <= 0) continue;
-        
-        // Store by normalized name for matching
-        const normalizedName = schemeName.toLowerCase().replace(/\s+/g, ' ').trim();
-        navMap.set(normalizedName, { nav, date: navDate });
+        navMap.set(schemeName.toLowerCase().replace(/\s+/g, " ").trim(), { nav, date: navDate });
       }
     }
-    
-    console.log(`Fetched ${navMap.size} NAVs from AMFI`);
-  } catch (err) {
-    console.error("Failed to fetch AMFI NAVs:", err);
-  }
-  
+  } catch (_err) {}
   return navMap;
 }
 
-// Enrich workbook funds with latest AMFI NAV
-function enrichWithAMFI(funds: any[], navMap: Map<string, { nav: number; date: string }>): any[] {
+function enrichWithAMFI(funds, navMap) {
   let enriched = 0;
-  
   for (const fund of funds) {
-    const normalizedName = fund.name?.toLowerCase().replace(/\s+/g, ' ').trim();
+    const normalizedName = fund.name?.toLowerCase().replace(/\s+/g, " ").trim();
     if (!normalizedName) continue;
-    
-    // Try exact match first
     let match = navMap.get(normalizedName);
-    
-    // Try partial matching if exact fails
     if (!match) {
       for (const [key, val] of navMap) {
         if (key.includes(normalizedName) || normalizedName.includes(key)) {
@@ -68,7 +47,6 @@ function enrichWithAMFI(funds: any[], navMap: Map<string, { nav: number; date: s
         }
       }
     }
-    
     if (match) {
       fund.previousNav = fund.latestNav || fund.nav;
       fund.latestNav = match.nav;
@@ -77,9 +55,97 @@ function enrichWithAMFI(funds: any[], navMap: Map<string, { nav: number; date: s
       enriched++;
     }
   }
-  
-  console.log(`Enriched ${enriched}/${funds.length} funds with AMFI NAV`);
   return funds;
+}
+
+async function handleMasterSource(supabase, url) {
+  const page = parseInt(url.searchParams.get("page") || "1", 10);
+  const perPage = parseInt(url.searchParams.get("per_page") || "200", 10);
+  const search = url.searchParams.get("search") || "";
+  const category = url.searchParams.get("category") || "";
+  const amc = url.searchParams.get("amc") || "";
+  const activeOnly = url.searchParams.get("active_only") !== "false";
+  const sortBy = url.searchParams.get("sort_by") || "scheme_code";
+  const sortDir = url.searchParams.get("sort_dir") || "asc";
+
+  const offset = (page - 1) * perPage;
+
+  let query = supabase.from("fund_master_enriched").select("*", { count: "exact" });
+
+  // Filters
+  if (search) {
+    query = query.or(`scheme_name.ilike.%${search}%,workbook_name.ilike.%${search}%,amc.ilike.%${search}%`);
+  }
+  if (category) {
+    query = query.eq("category", category);
+  }
+  if (amc) {
+    query = query.eq("amc", amc);
+  }
+  if (activeOnly) {
+    query = query.eq("is_active", true);
+  }
+
+  // Sorting
+  const allowedSortFields = ["scheme_code", "cagr_1y", "cagr_3y", "cagr_5y", "sharpe_ratio_3y", "sortino_ratio_3y", "expense_ratio", "aum", "confidence_score", "recommendation_score"];
+  const actualSort = allowedSortFields.includes(sortBy) ? sortBy : "scheme_code";
+  query = query.order(actualSort, { ascending: sortDir === "asc", nullsFirst: false });
+
+  const { data, error, count } = await query.range(offset, offset + perPage - 1);
+
+  if (error) {
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
+  return new Response(JSON.stringify({
+    funds: data || [],
+    count: count || 0,
+    page,
+    perPage,
+    totalPages: count ? Math.ceil(count / perPage) : 0,
+    source: "fund_master",
+  }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+}
+
+async function handleWorkbookSource(supabase, action) {
+  if (action === "check") {
+    let { data: cache } = await supabase.from("fund_cache").select("last_updated, expires_at").eq("cache_key", "workbook_data").single();
+    if (!cache) {
+      const { data: oldCache } = await supabase.from("fund_cache").select("last_updated, expires_at").eq("cache_key", "mf_data").single();
+      return new Response(JSON.stringify({ needsRefresh: !oldCache, lastUpdated: oldCache?.last_updated }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    return new Response(JSON.stringify({ needsRefresh: false, lastUpdated: cache.last_updated }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
+  if (action === "cached") {
+    let cacheResult = await supabase.from("fund_cache").select("data, last_updated").eq("cache_key", "workbook_data").single();
+    if (cacheResult.error || !Array.isArray(cacheResult.data?.data) || cacheResult.data.data.length === 0) {
+      cacheResult = await supabase.from("fund_cache").select("data, last_updated").eq("cache_key", "mf_data").single();
+    }
+    if (cacheResult.error || !Array.isArray(cacheResult.data?.data) || cacheResult.data.data.length === 0) {
+      return new Response(JSON.stringify({ funds: [], error: "No cache available" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    return new Response(JSON.stringify({ funds: cacheResult.data.data, lastUpdated: cacheResult.data.last_updated, source: "cache" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
+  let { data: workbookCache } = await supabase.from("fund_cache").select("data, last_updated").eq("cache_key", "workbook_data").single();
+  if (!workbookCache || !Array.isArray(workbookCache.data) || workbookCache.data.length === 0) {
+    const { data: oldCache } = await supabase.from("fund_cache").select("data, last_updated").eq("cache_key", "mf_data").single();
+    if (oldCache && Array.isArray(oldCache.data) && oldCache.data.length > 0) {
+      return new Response(JSON.stringify({ funds: oldCache.data, lastUpdated: oldCache.last_updated, source: "legacy_cache" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    return new Response(JSON.stringify({ funds: [], error: "No workbook data found. Run process-workbook first." }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+
+  let funds = workbookCache.data;
+  const navMap = await fetchLatestNAVs();
+  if (navMap.size > 0) funds = enrichWithAMFI(funds, navMap);
+
+  const now = new Date();
+  await supabase.from("fund_cache").delete().eq("cache_key", "mf_data");
+  await supabase.from("fund_cache").insert({ cache_key: "mf_data", data: funds, last_updated: now.toISOString(), expires_at: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString() });
+
+  return new Response(JSON.stringify({ funds, count: funds.length, source: "workbook+amfi", lastUpdated: now.toISOString() }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
 
 serve(async (req) => {
@@ -90,170 +156,19 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const action = url.searchParams.get("action") || "full";
-    
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const source = url.searchParams.get("source") || "workbook";
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    console.log(`Fetch fund data request: action=${action}`);
-    
-    if (action === "check") {
-      const { data: cache, error } = await supabase
-        .from('fund_cache')
-        .select('last_updated, expires_at')
-        .eq('cache_key', 'workbook_data')
-        .single();
-      
-      if (error || !cache) {
-        // Fallback to old mf_data cache
-        const { data: oldCache } = await supabase
-          .from('fund_cache')
-          .select('last_updated, expires_at')
-          .eq('cache_key', 'mf_data')
-          .single();
-        
-        return new Response(JSON.stringify({ 
-          needsRefresh: !oldCache,
-          lastUpdated: oldCache?.last_updated,
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      
-      return new Response(JSON.stringify({ 
-        needsRefresh: false,
-        lastUpdated: cache.last_updated,
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    
-    if (action === "cached") {
-      // Try workbook_data first, then fall back to mf_data
-      let cacheResult = await supabase
-        .from('fund_cache')
-        .select('data, last_updated')
-        .eq('cache_key', 'workbook_data')
-        .single();
-      
-      if (cacheResult.error || !cacheResult.data || !Array.isArray(cacheResult.data.data) || cacheResult.data.data.length === 0) {
-        cacheResult = await supabase
-          .from('fund_cache')
-          .select('data, last_updated')
-          .eq('cache_key', 'mf_data')
-          .single();
-      }
-      
-      if (cacheResult.error || !cacheResult.data || !Array.isArray(cacheResult.data.data) || cacheResult.data.data.length === 0) {
-        return new Response(JSON.stringify({ 
-          funds: [],
-          error: 'No cache available'
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
 
-      const first = cacheResult.data.data[0];
-      console.log('[TRACE-SUPABASE-READ] cache_key=' + (cacheResult.data.cache_key || 'unknown') + ' totalFunds=' + cacheResult.data.data.length);
-      console.log('[TRACE-SUPABASE-READ] firstFund=' + JSON.stringify(first));
-      const target = cacheResult.data.data.find((f: any) => f.name && f.name.includes('360 ONE'));
-      if (target) {
-        console.log('[TRACE-SUPABASE-READ] target360ONE=' + JSON.stringify(target));
-      }
-      
-      return new Response(JSON.stringify({ 
-        funds: cacheResult.data.data,
-        lastUpdated: cacheResult.data.last_updated,
-        source: 'cache'
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Dispatch to the appropriate handler based on source
+    if (source === "master") {
+      return await handleMasterSource(supabase, url);
     }
-    
-    // Full refresh: Read workbook data from cache + supplement with AMFI daily NAV
-    console.log("Starting full data refresh...");
-    
-    // Step 1: Get workbook data from cache
-    let { data: workbookCache } = await supabase
-      .from('fund_cache')
-      .select('data, last_updated')
-      .eq('cache_key', 'workbook_data')
-      .single();
-    
-    const isInvalidCache = !workbookCache || !workbookCache.data || !Array.isArray(workbookCache.data.data) || workbookCache.data.data.length === 0;
-    
-    if (isInvalidCache) {
-      // Fallback to mf_data
-      const { data: oldCache } = await supabase
-        .from('fund_cache')
-        .select('data, last_updated')
-        .eq('cache_key', 'mf_data')
-        .single();
-      
-      const mfDataIsValid = oldCache && oldCache.data && Array.isArray(oldCache.data.data) && oldCache.data.data.length > 0;
-      
-      if (mfDataIsValid) {
-        return new Response(JSON.stringify({ 
-          funds: oldCache.data.data,
-          lastUpdated: oldCache.last_updated,
-          source: 'legacy_cache'
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      
-      return new Response(JSON.stringify({ 
-        funds: [],
-        error: 'No workbook data found. Please run the process-workbook function first.'
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    
-    let funds = workbookCache.data as any[];
-    
-    // Step 2: Enrich with latest AMFI NAV data
-    try {
-      const navMap = await fetchLatestNAVs();
-      if (navMap.size > 0) {
-        funds = enrichWithAMFI(funds, navMap);
-      }
-    } catch (err) {
-      console.error("AMFI enrichment failed, using cached NAVs:", err);
-    }
-    
-    // Step 3: Update the cache with enriched data
-    const now = new Date();
-    await supabase
-      .from('fund_cache')
-      .delete()
-      .eq('cache_key', 'mf_data');
-    
-    await supabase
-      .from('fund_cache')
-      .insert({
-        cache_key: 'mf_data',
-        data: funds,
-        last_updated: now.toISOString(),
-        expires_at: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
-      });
-    
-    console.log(`Full refresh complete. ${funds.length} funds.`);
-    
-    return new Response(JSON.stringify({ 
-      funds,
-      count: funds.length,
-      source: 'workbook+amfi',
-      lastUpdated: now.toISOString(),
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
 
+    // Legacy workbook source (default for backward compatibility)
+    return await handleWorkbookSource(supabase, action);
   } catch (error) {
-    console.error("Fetch fund data error:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

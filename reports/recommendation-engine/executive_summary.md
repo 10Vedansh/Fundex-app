@@ -55,6 +55,6 @@
 
 ## Report Files
 
-- Full report: `src/audit/output/audit_report.md`
-- Raw data: `src/audit/output/persona_recommendations.csv`
-- This summary: `src/audit/output/executive_summary.md`
+- Full report: `reports/recommendation-engine/audit_report.md`
+- Raw data: `reports/recommendation-engine/persona_recommendations.csv`
+- This summary: `reports/recommendation-engine/executive_summary.md`

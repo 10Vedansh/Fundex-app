@@ -186,7 +186,7 @@ const currentMetrics = computeMetrics(
 );
 
 // ── Report ──
-const outputDir = join(__dirname, 'output');
+const outputDir = join(__dirname, '../../reports/recommendation-engine');
 mkdirSync(outputDir, { recursive: true });
 
 function makeRow(label: string, cur: any, sim: any): string {

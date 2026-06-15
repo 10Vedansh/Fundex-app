@@ -72,7 +72,7 @@ function getMissingCritical(fund: MutualFund): string[] {
 }
 
 async function runLowConfidenceAudit() {
-  const outputDir = join(__dirname, 'output');
+  const outputDir = join(__dirname, '../../reports/recommendation-engine');
   mkdirSync(outputDir, { recursive: true });
 
   const fundsData = JSON.parse(readFileSync(join(__dirname, 'funds_data.json'), 'utf-8')) as MutualFund[];

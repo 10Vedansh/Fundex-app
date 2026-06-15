@@ -38,6 +38,33 @@ export type Database = {
         }
         Relationships: []
       }
+      nav_history: {
+        Row: {
+          id: string
+          scheme_code: string
+          scheme_name: string
+          nav: number | null
+          nav_date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          scheme_code: string
+          scheme_name: string
+          nav?: number | null
+          nav_date: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          scheme_code?: string
+          scheme_name?: string
+          nav?: number | null
+          nav_date?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string

@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.sync-onedrive]
 verify_jwt = false
+
+[functions.ingest-amfi-nav]
+verify_jwt = false

@@ -291,7 +291,7 @@ for (const pid of personaIds) {
 }
 
 // ── Generate Report ──
-const outputDir = join(__dirname, 'output');
+const outputDir = join(__dirname, '../../reports/recommendation-engine');
 mkdirSync(outputDir, { recursive: true });
 
 let md = `# Candidate Pool Analysis — Filter Funnel per Persona

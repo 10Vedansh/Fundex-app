@@ -45,6 +45,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useFundCache } from '@/hooks/useFundCache';
+import { useFundMetrics } from '@/hooks/useFundMetrics';
 import { useWatchlist } from '@/hooks/useWatchlist';
 import { usePortfolio, PortfolioItem } from '@/hooks/usePortfolio';
 import { useCamsHoldings } from '@/hooks/useCamsHoldings';
@@ -62,6 +63,14 @@ const Index = () => {
   const { user, profile, isLoading: authLoading } = useAuth();
   const { funds, isLoading, refreshFunds } = useFundCache();
   const { watchlist, isInWatchlist, toggleWatchlist } = useWatchlist();
+  const {
+    allMetrics: fundMetrics,
+    activeFunds,
+    isLoading: metricsLoading,
+    stats: fundMetricsStats,
+    topByCagr,
+    topBySharpe,
+  } = useFundMetrics();
   const { 
     portfolio, 
     addToPortfolio, 
@@ -524,6 +533,61 @@ const Index = () => {
                           />
                         ))}
                       </div>
+
+                      {/* Top Funds from fund_metrics */}
+                      {!metricsLoading && fundMetricsStats && (
+                        <Card className="glass-card">
+                          <CardContent className="py-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                                CIFRAA Fund Metrics
+                              </h3>
+                              <Badge variant="outline" className="text-xs">
+                                {fundMetricsStats.total.toLocaleString()} schemes
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">Top 3Y CAGR</p>
+                                {topByCagr("3y", 5).map((m, i) => (
+                                  <p key={m.scheme_code} className="text-xs py-0.5">
+                                    <span className="text-muted-foreground">{i + 1}.</span>{" "}
+                                    {m.scheme_name || `Scheme ${m.scheme_code}`}{" "}
+                                    <span className="text-success">
+                                      {m.cagr_3y !== null ? `${(m.cagr_3y * 100).toFixed(1)}%` : "N/A"}
+                                    </span>
+                                  </p>
+                                ))}
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">Top Sharpe 3Y</p>
+                                {topBySharpe("3y", 5).map((m, i) => (
+                                  <p key={m.scheme_code} className="text-xs py-0.5">
+                                    <span className="text-muted-foreground">{i + 1}.</span>{" "}
+                                    {m.scheme_name || `Scheme ${m.scheme_code}`}{" "}
+                                    <span className="text-success">
+                                      {m.sharpe_ratio_3y !== null ? m.sharpe_ratio_3y.toFixed(2) : "N/A"}
+                                    </span>
+                                  </p>
+                                ))}
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">Active / Total</p>
+                                <p className="text-lg font-bold">
+                                  {fundMetricsStats.active.toLocaleString()}
+                                  <span className="text-sm text-muted-foreground font-normal">
+                                    {" "}/ {fundMetricsStats.total.toLocaleString()}
+                                  </span>
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-2">Categories tracked</p>
+                                <p className="text-lg font-bold">
+                                  {Object.keys(fundMetricsStats.byCategory).length}
+                                </p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
                     </>
                   ) : (
                     <Card className="glass-card">
