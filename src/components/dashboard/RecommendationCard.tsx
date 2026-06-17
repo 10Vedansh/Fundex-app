@@ -68,27 +68,27 @@ export function RecommendationCard({ recommendation, rank }: RecommendationCardP
             <p className="text-xs text-muted-foreground">1Y CAGR</p>
             <p className={cn(
               "text-sm font-bold",
-              fund.cagr1Y >= 0 ? "text-success" : "text-destructive"
+              fund.cagr1Y != null && fund.cagr1Y >= 0 ? "text-success" : "text-destructive"
             )}>
-              {fund.cagr1Y >= 0 ? '+' : ''}{fund.cagr1Y.toFixed(1)}%
+              {fund.cagr1Y != null ? `${fund.cagr1Y >= 0 ? '+' : ''}${fund.cagr1Y.toFixed(1)}%` : 'NA'}
             </p>
           </div>
           <div className="text-center">
             <p className="text-xs text-muted-foreground">3Y CAGR</p>
             <p className={cn(
               "text-sm font-bold",
-              fund.cagr3Y >= 0 ? "text-success" : "text-destructive"
+              fund.cagr3Y != null && fund.cagr3Y >= 0 ? "text-success" : "text-destructive"
             )}>
-              {fund.cagr3Y >= 0 ? '+' : ''}{fund.cagr3Y.toFixed(1)}%
+              {fund.cagr3Y != null ? `${fund.cagr3Y >= 0 ? '+' : ''}${fund.cagr3Y.toFixed(1)}%` : 'NA'}
             </p>
           </div>
           <div className="text-center">
             <p className="text-xs text-muted-foreground">Sharpe</p>
-            <p className="text-sm font-bold text-foreground">{fund.sharpeRatio.toFixed(2)}</p>
+            <p className="text-sm font-bold text-foreground">{fund.sharpeRatio != null ? fund.sharpeRatio.toFixed(2) : 'NA'}</p>
           </div>
           <div className="text-center">
             <p className="text-xs text-muted-foreground">Expense</p>
-            <p className="text-sm font-bold text-foreground">{fund.expenseRatio.toFixed(2)}%</p>
+            <p className="text-sm font-bold text-foreground">{fund.expenseRatio != null ? `${fund.expenseRatio.toFixed(2)}%` : 'NA'}</p>
           </div>
         </div>
 
@@ -107,7 +107,7 @@ export function RecommendationCard({ recommendation, rank }: RecommendationCardP
         {/* Additional Info */}
         <div className="flex justify-between text-xs text-muted-foreground pt-2">
           <span>Min: ₹{fund.minInvestment.toLocaleString()}</span>
-          <span>AUM: ₹{fund.aum.toLocaleString()}Cr</span>
+          <span>AUM: ₹{fund.aum != null ? fund.aum.toLocaleString() : 'NA'}Cr</span>
           <span className="text-foreground">{fund.category}</span>
         </div>
       </CardContent>

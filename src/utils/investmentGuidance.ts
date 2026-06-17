@@ -15,46 +15,46 @@ export function generateInvestmentGuidance(fund: MutualFund, userRiskProfile?: s
   // --- WHY INVEST ---
 
   // Returns-based
-  if (fund.cagr1Y > 20) {
+  if (fund.cagr1Y !== null && fund.cagr1Y > 20) {
     whyInvest.push(`Delivered a strong ${fund.cagr1Y.toFixed(1)}% return in the last year, significantly outperforming fixed deposits and inflation`);
-  } else if (fund.cagr1Y > 12) {
+  } else if (fund.cagr1Y !== null && fund.cagr1Y > 12) {
     whyInvest.push(`Generated ${fund.cagr1Y.toFixed(1)}% return over 1 year — a solid inflation-beating performance for ${catLabel} funds`);
-  } else if (fund.cagr1Y > 0) {
+  } else if (fund.cagr1Y !== null && fund.cagr1Y > 0) {
     whyInvest.push(`Positive 1-year return of ${fund.cagr1Y.toFixed(1)}% indicates the fund is holding steady even in volatile markets`);
   }
 
-  if (fund.cagr3Y > 15) {
+  if (fund.cagr3Y !== null && fund.cagr3Y > 15) {
     whyInvest.push(`Consistent 3-year CAGR of ${fund.cagr3Y.toFixed(1)}% shows sustained long-term wealth creation capability`);
   }
 
-  if (fund.cagr5Y > 12) {
+  if (fund.cagr5Y !== null && fund.cagr5Y > 12) {
     whyInvest.push(`5-year CAGR of ${fund.cagr5Y.toFixed(1)}% demonstrates the fund's ability to compound wealth through multiple market cycles`);
   }
 
   // Risk-adjusted metrics
-  if (fund.sharpeRatio > 1.5) {
+  if (fund.sharpeRatio !== null && fund.sharpeRatio > 1.5) {
     whyInvest.push(`Exceptional Sharpe ratio of ${fund.sharpeRatio.toFixed(2)} — this fund generates superior returns per unit of risk taken compared to peers`);
-  } else if (fund.sharpeRatio > 1.0) {
+  } else if (fund.sharpeRatio !== null && fund.sharpeRatio > 1.0) {
     whyInvest.push(`Sharpe ratio of ${fund.sharpeRatio.toFixed(2)} indicates good risk-adjusted returns, meaning you're being fairly compensated for the risk`);
   }
 
-  if (fund.alpha && fund.alpha > 2) {
+  if (fund.alpha != null && fund.alpha > 2) {
     whyInvest.push(`Alpha of ${fund.alpha.toFixed(1)} means the fund manager is consistently adding value beyond what the benchmark delivers`);
   }
 
-  if (fund.sortinoRatio && fund.sortinoRatio > 1.5) {
+  if (fund.sortinoRatio != null && fund.sortinoRatio > 1.5) {
     whyInvest.push(`High Sortino ratio (${fund.sortinoRatio.toFixed(2)}) shows the fund minimizes downside risk while capturing upside — great for risk-conscious investors`);
   }
 
   // Cost efficiency
-  if (fund.expenseRatio < 0.5) {
+  if (fund.expenseRatio !== null && fund.expenseRatio < 0.5) {
     whyInvest.push(`Ultra-low expense ratio of ${fund.expenseRatio.toFixed(2)}% ensures maximum returns reach your pocket instead of being eaten by fees`);
-  } else if (fund.expenseRatio < 1.0) {
+  } else if (fund.expenseRatio !== null && fund.expenseRatio < 1.0) {
     whyInvest.push(`Competitive expense ratio of ${fund.expenseRatio.toFixed(2)}% keeps your long-term cost of ownership low compared to category average`);
   }
 
   // AUM and stability
-  if (fund.aum > 10000) {
+  if (fund.aum !== null && fund.aum > 10000) {
     whyInvest.push(`Large AUM of ₹${(fund.aum / 1000).toFixed(0)}K Cr provides liquidity confidence — you can enter/exit without impacting the NAV`);
   }
 
@@ -68,53 +68,53 @@ export function generateInvestmentGuidance(fund: MutualFund, userRiskProfile?: s
   if (cat.includes('FLX') || cat.includes('MLC')) {
     whyInvest.push(`Flexible mandate allows the fund manager to shift between large, mid, and small caps based on market conditions and valuations`);
   }
-  if (cat.startsWith('DT-') && fund.volatility < 5) {
+  if (cat.startsWith('DT-') && fund.volatility !== null && fund.volatility < 5) {
     whyInvest.push(`Low volatility of ${fund.volatility.toFixed(1)}% makes this an excellent parking option for short-term surplus funds or emergency corpus`);
   }
 
   // Beta
-  if (fund.beta !== undefined && fund.beta < 0.8 && riskProfile === 'conservative') {
+  if (fund.beta != null && fund.beta < 0.8 && riskProfile === 'conservative') {
     whyInvest.push(`Beta of ${fund.beta.toFixed(2)} means this fund moves less than the market — ideal for your conservative risk profile`);
   }
 
   // --- WHY AVOID ---
 
   // Returns-based negatives
-  if (fund.cagr1Y < 0) {
+  if (fund.cagr1Y !== null && fund.cagr1Y < 0) {
     whyAvoid.push(`Negative 1-year return of ${fund.cagr1Y.toFixed(1)}% — the fund has been losing money recently, and recovery timeline is uncertain`);
-  } else if (fund.cagr1Y < 5 && cat.startsWith('EQ-')) {
+  } else if (fund.cagr1Y !== null && fund.cagr1Y < 5 && cat.startsWith('EQ-')) {
     whyAvoid.push(`1-year return of only ${fund.cagr1Y.toFixed(1)}% for an equity fund underperforms even a savings account — the risk isn't being rewarded`);
   }
 
-  if (fund.cagr3Y < 8 && cat.startsWith('EQ-')) {
+  if (fund.cagr3Y !== null && fund.cagr3Y < 8 && cat.startsWith('EQ-')) {
     whyAvoid.push(`3-year CAGR of ${fund.cagr3Y.toFixed(1)}% for equity is below inflation-adjusted expectations — consider stronger alternatives in the ${catLabel} category`);
   }
 
   // High risk metrics
-  if (fund.volatility > 25) {
+  if (fund.volatility !== null && fund.volatility > 25) {
     whyAvoid.push(`High volatility of ${fund.volatility.toFixed(1)}% means your investment could swing wildly — unsuitable if you can't handle 20-30% drawdowns`);
-  } else if (fund.volatility > 18 && riskProfile === 'conservative') {
+  } else if (fund.volatility !== null && fund.volatility > 18 && riskProfile === 'conservative') {
     whyAvoid.push(`Volatility of ${fund.volatility.toFixed(1)}% is too high for a conservative investor — you may panic-sell during corrections`);
   }
 
-  if (fund.sharpeRatio < 0.5) {
+  if (fund.sharpeRatio !== null && fund.sharpeRatio < 0.5) {
     whyAvoid.push(`Low Sharpe ratio of ${fund.sharpeRatio.toFixed(2)} indicates poor risk-reward balance — you're taking significant risk for mediocre returns`);
   }
 
   // Expense ratio
-  if (fund.expenseRatio > 2.0) {
+  if (fund.expenseRatio !== null && fund.expenseRatio > 2.0) {
     whyAvoid.push(`Expense ratio of ${fund.expenseRatio.toFixed(2)}% is above industry norms — over 10 years, this costs you lakhs in compounding losses`);
-  } else if (fund.expenseRatio > 1.5 && cat.includes('INDEX')) {
+  } else if (fund.expenseRatio !== null && fund.expenseRatio > 1.5 && cat.includes('INDEX')) {
     whyAvoid.push(`For an index fund, ${fund.expenseRatio.toFixed(2)}% expense ratio is unacceptably high — index funds should ideally be under 0.3%`);
   }
 
   // Beta-based
-  if (fund.beta !== undefined && fund.beta > 1.3) {
+  if (fund.beta != null && fund.beta > 1.3) {
     whyAvoid.push(`High beta of ${fund.beta.toFixed(2)} means this fund amplifies market crashes — in a 10% market fall, expect a ~${(10 * fund.beta).toFixed(0)}% decline`);
   }
 
   // Small AUM concern
-  if (fund.aum < 500 && cat.startsWith('EQ-')) {
+  if (fund.aum !== null && fund.aum < 500 && cat.startsWith('EQ-')) {
     whyAvoid.push(`Small AUM of ₹${fund.aum} Cr may lead to liquidity issues and higher impact cost during large redemptions`);
   }
 

@@ -115,26 +115,26 @@ export function PortfolioFundModal({ fund, portfolioItem, isOpen, onClose, insig
               <div className="grid grid-cols-4 gap-4">
                 <div className="text-center">
                   <p className="text-xs text-muted-foreground">1Y CAGR</p>
-                  <p className={`text-lg font-semibold ${fund.cagr1Y >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {fund.cagr1Y >= 0 ? '+' : ''}{fund.cagr1Y.toFixed(1)}%
+                  <p className={`text-lg font-semibold ${fund.cagr1Y != null && fund.cagr1Y >= 0 ? 'text-success' : fund.cagr1Y != null ? 'text-destructive' : ''}`}>
+                    {fund.cagr1Y != null ? `${fund.cagr1Y >= 0 ? '+' : ''}${fund.cagr1Y.toFixed(1)}%` : 'NA'}
                   </p>
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-muted-foreground">3Y CAGR</p>
-                  <p className={`text-lg font-semibold ${fund.cagr3Y >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {fund.cagr3Y >= 0 ? '+' : ''}{fund.cagr3Y.toFixed(1)}%
+                  <p className={`text-lg font-semibold ${fund.cagr3Y != null && fund.cagr3Y >= 0 ? 'text-success' : fund.cagr3Y != null ? 'text-destructive' : ''}`}>
+                    {fund.cagr3Y != null ? `${fund.cagr3Y >= 0 ? '+' : ''}${fund.cagr3Y.toFixed(1)}%` : 'NA'}
                   </p>
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-muted-foreground">5Y CAGR</p>
-                  <p className={`text-lg font-semibold ${fund.cagr5Y >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {fund.cagr5Y >= 0 ? '+' : ''}{fund.cagr5Y.toFixed(1)}%
+                  <p className={`text-lg font-semibold ${fund.cagr5Y != null && fund.cagr5Y >= 0 ? 'text-success' : fund.cagr5Y != null ? 'text-destructive' : ''}`}>
+                    {fund.cagr5Y != null ? `${fund.cagr5Y >= 0 ? '+' : ''}${fund.cagr5Y.toFixed(1)}%` : 'NA'}
                   </p>
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-muted-foreground">Sharpe</p>
                   <p className="text-lg font-semibold text-foreground">
-                    {fund.sharpeRatio.toFixed(2)}
+                    {fund.sharpeRatio != null ? fund.sharpeRatio.toFixed(2) : 'NA'}
                   </p>
                 </div>
               </div>

@@ -42,15 +42,15 @@ const CustomTooltip = ({ active, payload }: any) => {
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">1Y CAGR:</span>
-            <span className="text-success font-medium">{fund.cagr1Y.toFixed(1)}%</span>
+            <span className="text-success font-medium">{fund.cagr1Y != null ? `${fund.cagr1Y.toFixed(1)}%` : 'NA'}</span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Volatility:</span>
-            <span className="text-foreground">{fund.volatility.toFixed(1)}%</span>
+            <span className="text-foreground">{fund.volatility != null ? `${fund.volatility.toFixed(1)}%` : 'NA'}</span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Sharpe Ratio:</span>
-            <span className="text-foreground">{fund.sharpeRatio.toFixed(2)}</span>
+            <span className="text-foreground">{fund.sharpeRatio != null ? fund.sharpeRatio.toFixed(2) : 'NA'}</span>
           </div>
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Risk Level:</span>

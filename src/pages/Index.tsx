@@ -427,31 +427,39 @@ const Index = () => {
     const isEquity = cat.startsWith('EQ-') || cat === 'Equity';
     const isDebt = cat.startsWith('DT-') || cat === 'Debt';
 
-    if (fund.sharpeRatio >= 1.5 && fund.cagr1Y > 15 && fund.expenseRatio < 1.5) {
-      return { type: 'continue', message: `Strong risk-adjusted performance with Sharpe ${fund.sharpeRatio.toFixed(2)} and ${fund.cagr1Y.toFixed(1)}% 1Y return. Low expense ratio keeps costs efficient. Consider continuing SIP or holding.` };
+    const si = fund.sharpeRatio;
+    const c1 = fund.cagr1Y;
+    const c3 = fund.cagr3Y;
+    const c5 = fund.cagr5Y;
+    const vol = fund.volatility;
+    const exp = fund.expenseRatio;
+    const b = fund.beta;
+
+    if (si != null && c1 != null && exp != null && si >= 1.5 && c1 > 15 && exp < 1.5) {
+      return { type: 'continue', message: `Strong risk-adjusted performance with Sharpe ${si.toFixed(2)} and ${c1.toFixed(1)}% 1Y return. Low expense ratio keeps costs efficient. Consider continuing SIP or holding.` };
     }
-    if (fund.cagr1Y > 25 && fund.volatility > 20) {
-      return { type: 'review', message: `High returns (${fund.cagr1Y.toFixed(1)}%) but elevated volatility (${fund.volatility.toFixed(1)}%). The fund may be in a momentum phase. Review if it aligns with your risk capacity and rebalance if overweight.` };
+    if (c1 != null && vol != null && c1 > 25 && vol > 20) {
+      return { type: 'review', message: `High returns (${c1.toFixed(1)}%) but elevated volatility (${vol.toFixed(1)}%). The fund may be in a momentum phase. Review if it aligns with your risk capacity and rebalance if overweight.` };
     }
-    if (fund.sharpeRatio < 0.5 && fund.cagr1Y < 5 && isEquity) {
-      return { type: 'reduce', message: `Underperforming with ${fund.cagr1Y.toFixed(1)}% return and weak Sharpe ratio (${fund.sharpeRatio.toFixed(2)}) for an equity fund. Consider switching to a better-rated fund in the same category.` };
+    if (si != null && c1 != null && si < 0.5 && c1 < 5 && isEquity) {
+      return { type: 'reduce', message: `Underperforming with ${c1.toFixed(1)}% return and weak Sharpe ratio (${si.toFixed(2)}) for an equity fund. Consider switching to a better-rated fund in the same category.` };
     }
-    if (fund.expenseRatio > 2.0) {
-      return { type: 'review', message: `High expense ratio of ${fund.expenseRatio.toFixed(2)}% is eroding returns. Over 10 years, this could cost ₹${Math.round(((item.invested_amount || 50000) * 0.02) * 10 / 1000)}K+ in fees. Consider a direct plan or lower-cost alternative.` };
+    if (exp != null && exp > 2.0) {
+      return { type: 'review', message: `High expense ratio of ${exp.toFixed(2)}% is eroding returns. Over 10 years, this could cost ₹${Math.round(((item.invested_amount || 50000) * 0.02) * 10 / 1000)}K+ in fees. Consider a direct plan or lower-cost alternative.` };
     }
-    if (isDebt && fund.cagr1Y > 7) {
-      return { type: 'continue', message: `Solid ${fund.cagr1Y.toFixed(1)}% return for a debt fund with low volatility (${fund.volatility.toFixed(1)}%). Good for capital preservation and regular income goals.` };
+    if (isDebt && c1 != null && vol != null && c1 > 7) {
+      return { type: 'continue', message: `Solid ${c1.toFixed(1)}% return for a debt fund with low volatility (${vol.toFixed(1)}%). Good for capital preservation and regular income goals.` };
     }
-    if (fund.beta !== undefined && fund.beta > 1.3 && isEquity) {
-      return { type: 'review', message: `High beta (${fund.beta.toFixed(2)}) means this fund amplifies market swings. In a 10% correction, expect ~${(10 * fund.beta).toFixed(0)}% fall. Suitable only if your horizon is 5+ years.` };
+    if (b != null && b > 1.3 && isEquity) {
+      return { type: 'review', message: `High beta (${b.toFixed(2)}) means this fund amplifies market swings. In a 10% correction, expect ~${(10 * b).toFixed(0)}% fall. Suitable only if your horizon is 5+ years.` };
     }
-    if (fund.cagr3Y > 12 && fund.cagr5Y > 10) {
-      return { type: 'continue', message: `Consistent multi-year performer: ${fund.cagr3Y.toFixed(1)}% (3Y) and ${fund.cagr5Y.toFixed(1)}% (5Y) CAGR. Long-term compounding is working in your favor.` };
+    if (c3 != null && c5 != null && c3 > 12 && c5 > 10) {
+      return { type: 'continue', message: `Consistent multi-year performer: ${c3.toFixed(1)}% (3Y) and ${c5.toFixed(1)}% (5Y) CAGR. Long-term compounding is working in your favor.` };
     }
-    if (fund.cagr1Y < 0) {
-      return { type: 'review', message: `Currently in negative territory (${fund.cagr1Y.toFixed(1)}%). Evaluate if the downturn is market-wide or fund-specific. If the fund's 3Y track record is strong, consider averaging down via SIP.` };
+    if (c1 != null && c1 < 0) {
+      return { type: 'review', message: `Currently in negative territory (${c1.toFixed(1)}%). Evaluate if the downturn is market-wide or fund-specific. If the fund's 3Y track record is strong, consider averaging down via SIP.` };
     }
-    return { type: 'continue', message: `Performance within expectations for a ${fund.category} fund. Sharpe: ${fund.sharpeRatio.toFixed(2)}, Expense: ${fund.expenseRatio.toFixed(2)}%. Continue monitoring quarterly.` };
+    return { type: 'continue', message: `Performance within expectations for a ${fund.category} fund. Sharpe: ${si != null ? si.toFixed(2) : 'NA'}, Expense: ${exp != null ? exp.toFixed(2) : 'NA'}%. Continue monitoring quarterly.` };
   };
 
   if (authLoading) {

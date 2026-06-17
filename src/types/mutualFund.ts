@@ -11,15 +11,15 @@ export interface MutualFund {
   assetClass?: AssetClass;
   amc: string;
   nav: number;
-  aum: number; // Net Assets in crores
-  expenseRatio: number;
-  cagr1Y: number;
-  cagr3Y: number;
-  cagr5Y: number;
-  volatility: number;
-  sharpeRatio: number;
-  beta: number;
-  alpha: number;
+  aum: number | null; // Net Assets in crores (null = unknown)
+  expenseRatio: number | null;
+  cagr1Y: number | null;
+  cagr3Y: number | null;
+  cagr5Y: number | null;
+  volatility: number | null;
+  sharpeRatio: number | null;
+  beta: number | null;
+  alpha: number | null;
   rank: number;
   strengthBadge: StrengthBadge;
   riskLevel: RiskLevel;
