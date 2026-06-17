@@ -64,13 +64,15 @@ export function useFundMetrics(): UseFundMetricsReturn {
       threshold.setDate(threshold.getDate() - ACTIVE_THRESHOLD_DAYS);
 
       const { data, error: err } = await supabase
-        .from("fund_metrics")
+        .from("fund_master_enriched")
         .select("*")
-        .order("scheme_code");
+        .order("scheme_code")
+        .limit(100000);
 
       if (err) throw err;
 
       const rows = (data || []) as unknown as FundMetricsRow[];
+    
       setAllMetrics(rows);
     } catch (e: any) {
       console.error("[useFundMetrics] fetch error:", e);

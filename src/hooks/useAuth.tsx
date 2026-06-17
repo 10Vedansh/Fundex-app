@@ -53,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   const fetchProfile = async (userId: string) => {
     console.log('[PROFILE] userId =', userId);
@@ -125,6 +126,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }, 0);
         } else {
           setProfile(null);
+        }
+
+        // Redirect to reset-password page on password recovery
+        if (event === 'PASSWORD_RECOVERY') {
+          navigate('/reset-password');
         }
       }
     );

@@ -74,9 +74,9 @@ export default function ResetPassword() {
       setIsSuccess(true);
       toast.success('Password reset successfully!');
       
-      // Redirect to dashboard after a short delay
+      // Redirect to auth page after a short delay
       setTimeout(() => {
-        navigate('/dashboard');
+        navigate('/auth');
       }, 2000);
     } catch (err) {
       toast.error('An unexpected error occurred');
