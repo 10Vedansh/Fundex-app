@@ -67,13 +67,15 @@ const getDisplayCategory = (category: string): string => {
   return category;
 };
 
-function fmtVal(val: number | null | undefined, decimals = 1, suffix = ''): string {
-  if (val === null || val === undefined) return 'NA';
-  return `${val.toFixed(decimals)}${suffix}`;
+function fmtVal(val: number | null | undefined, decimals = 1, suffix = '', field = 'unknown', fundName = ''): string {
+  if (val === null || val === undefined) {
+    return 'NA';
+  }
+  const result = `${val.toFixed(decimals)}${suffix}`;
+  return result;
 }
 
 export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle }: FundCardProps) {
-  console.log('[TRACE-RENDER] FundCard rendering:', fund.id, fund.name, fund.category, typeof fund.compositeScore !== 'undefined' ? 'scored:' + fund.compositeScore : 'UNSCORED');
   const handleBookmarkClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onBookmarkToggle?.(fund);
@@ -168,7 +170,7 @@ export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle
               <span>Sharpe</span>
             </div>
             <p className="text-xl font-bold text-foreground">
-              {fmtVal(fund.sharpeRatio, 2)}
+              {fmtVal(fund.sharpeRatio, 2, '')}
             </p>
           </div>
 

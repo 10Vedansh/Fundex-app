@@ -188,15 +188,6 @@ export default function Onboarding() {
 
       const uiValue = finalAnswers.experience_level;
       const dbValue = mapExperience(uiValue);
-      console.log('[SAVE_PAYLOAD]', {
-        experience_level: dbValue,
-        investment_horizon: mapHorizon(finalAnswers.investment_horizon),
-        risk_tolerance: deriveRiskFromMarketReaction(finalAnswers.market_reaction),
-      });
-      console.log('[EXPERIENCE_LEVEL]', {
-        uiValue,
-        dbValue,
-      });
       const { error } = await updateProfile({
         investor_stage: finalAnswers.investor_stage,
         primary_goal: finalAnswers.primary_goal,

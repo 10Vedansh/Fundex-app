@@ -170,8 +170,6 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
     }
     if (!profile) return;
     if (didInitRef.current) {
-      // Profile ref changed while modal is open — do NOT overwrite user's edits
-      console.log('[CIFRAA-PREF] Profile refresh detected — skipping overwrite to preserve in-progress edits');
       return;
     }
     didInitRef.current = true;
@@ -187,16 +185,6 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
       existing_investments: profile.existing_investments || '',
       emergency_fund: profile.emergency_fund || '',
     };
-    console.log('[CIFRAA-PREF] Profile loaded:', JSON.stringify({
-      investor_stage: profile.investor_stage,
-      primary_goal: profile.primary_goal,
-      investment_horizon: profile.investment_horizon,
-      market_reaction: profile.market_reaction,
-      experience_level: profile.experience_level,
-      existing_investments: profile.existing_investments,
-      emergency_fund: profile.emergency_fund,
-    }));
-    console.log('[CIFRAA-PREF] Local state initialized:', JSON.stringify(initial));
     setPreferences(initial);
   }, [isOpen, profile]);
 
@@ -221,19 +209,12 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
   }, [constraints]);
 
   const handleSubmit = async () => {
-    console.log('[CIFRAA-PREF] Save started');
     setIsLoading(true);
     try {
       const profileState: ProfileState = {};
       for (const [key, value] of Object.entries(preferences)) {
         if (value) profileState[key as keyof ProfileState] = value;
       }
-      console.log('[SAVE_VALIDATION]', {
-        primaryGoal: profileState.primary_goal,
-        horizon: profileState.investment_horizon,
-        investorStage: profileState.investor_stage,
-        preferences: profileState,
-      });
       const validationErrors = validateProfile(profileState);
       if (validationErrors.length > 0) {
         toast.error('Cannot save: ' + validationErrors[0].reason);
@@ -243,15 +224,6 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
 
       const uiValue = preferences.experience_level;
       const dbValue = mapExperience(uiValue);
-      console.log('[SAVE_PAYLOAD]', {
-        experience_level: dbValue,
-        investment_horizon: mapHorizon(preferences.investment_horizon),
-        risk_tolerance: deriveRiskFromMarketReaction(preferences.market_reaction),
-      });
-      console.log('[EXPERIENCE_LEVEL]', {
-        uiValue,
-        dbValue,
-      });
       const { error } = await updateProfile({
         investor_stage: preferences.investor_stage,
         primary_goal: preferences.primary_goal,
@@ -268,8 +240,6 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
         toast.error('Failed to save preferences: ' + error.message);
         return;
       }
-      // updateProfile already calls fetchProfile internally — no need for refreshProfile here
-      console.log('[CIFRAA-PREF] Save success');
       toast.success('Preferences updated! Your personalized funds will refresh.');
       onClose();
     } catch (err) {
@@ -281,7 +251,6 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
   };
 
   const updateField = useCallback((field: string, value: string) => {
-    console.log('[CIFRAA-PREF] User changed:', field, '=', value);
     setPreferences(prev => ({ ...prev, [field]: value }));
   }, []);
 

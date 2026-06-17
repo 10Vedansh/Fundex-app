@@ -139,21 +139,6 @@ function isExcluded(fund: MutualFund): boolean {
   return false;
 }
 
-// ── Logging helpers ──
-
-function logCategoryDiff(label: string, before: MutualFund[], after: MutualFund[]): void {
-  const beforeCats = new Set(before.map(f => catCode(f)));
-  const afterCats = new Set(after.map(f => catCode(f)));
-  const removed = [...beforeCats].filter(c => !afterCats.has(c));
-  const allAllowed = [...afterCats];
-  if (removed.length > 0) {
-    console.log(`[CIFRAA-RECO] ${label} — removed categories: [${removed.join(', ')}]`);
-  }
-  if (allAllowed.length > 0) {
-    console.log(`[CIFRAA-RECO] ${label} — allowed categories: [${allAllowed.join(', ')}]`);
-  }
-}
-
 // ── STEP 1: Eligibility Engine (hard constraints) ──
 
 function applyRiskConstraints(funds: MutualFund[], risk: string): MutualFund[] {
@@ -177,7 +162,6 @@ function applyRiskConstraints(funds: MutualFund[], risk: string): MutualFund[] {
 
 function applyGoalEligibility(funds: MutualFund[], goal: string): MutualFund[] {
   const g = GOAL_ELIGIBILITY[goal];
-  console.log('[TRACE-GOAL-MAP]', 'goal=' + goal, 'lookup=' + JSON.stringify(g?.allowedCategoryPrefixes));
   if (!g) return funds;
 
   return funds.filter(f => {
@@ -256,7 +240,6 @@ function diversify(
   const MAX_ARBITRAGE_RETIREMENT = 1;
 
   const totalEtfsBefore = scored.filter(f => isPassiveFund(f)).length;
-  console.log(`[CIFRAA-DIVERSIFY] Total passive funds (ETF/Index) in scored set: ${totalEtfsBefore}`);
 
   for (const bucket of model) {
     const bucketFunds = scored
@@ -344,19 +327,9 @@ function applyFallback(
   const goalConfig = GOAL_ELIGIBILITY[goal];
   const horizonConfig = HORIZON_RULES[horizon];
 
-  // Log what we know before fallback
-  console.log(`[CIFRAA-RECO][FALLBACK] riskTolerance=${risk}, goal=${goal}, horizon=${horizon}`);
-  console.log(`[CIFRAA-RECO][FALLBACK] Total fund categories in universe: [${allFundCategories.join(', ')}]`);
-
   if (goalConfig) {
     const matchingPrefixes = (goalConfig.allowedCategoryPrefixes || [])
       .filter(p => allFundCategories.some(c => c === p || c.startsWith(p)));
-    console.log(`[CIFRAA-RECO][FALLBACK] Goal "${goal}" allowed prefixes match these categories: [${matchingPrefixes.join(', ') || 'NONE'}]. If empty, goal filter will always produce 0.`);
-    console.log('[TRACE-GOAL-DEBUG] allowedPrefixes:', goalConfig.allowedCategoryPrefixes, '| liveCategories:', allFundCategories);
-    goalConfig.allowedCategoryPrefixes?.forEach(p => {
-      const matched = allFundCategories.filter(c => c === p || c.startsWith(p));
-      console.log(`[TRACE-GOAL-DEBUG] prefix="${p}" matches=[${matched.join(', ') || 'NONE'}]`);
-    });
   }
 
   // For locked goals (e.g., tax_saving), the fallback chain keeps goal eligibility
@@ -448,9 +421,6 @@ function applyFallback(
     if (eligible.length > 0) {
       if (!firstNonEmpty) {
         firstNonEmpty = true;
-        if (dropped.length > 0 || step.dropped) {
-          console.log(`[CIFRAA-RECO][WARNING] Fallback Activated — dropped: [${step.dropped}], using "${step.label}", count: ${eligible.length}`);
-        }
         return eligible;
       }
     }
@@ -459,8 +429,6 @@ function applyFallback(
     }
   }
 
-  console.log(`[CIFRAA-RECO][WARNING] Fallback Activated — ALL filters dropped, returning all ${cleanFunds.length} funds`);
-  console.log(`[CIFRAA-RECO][WARNING] This indicates a fundamental category mapping issue. Fund categories: [${allFundCategories.join(', ')}] vs expected codes.`);
   return cleanFunds;
 }
 
@@ -478,49 +446,33 @@ export function recommendFundsV2(
     investmentHorizon: normalizeHorizon(prefs.investmentHorizon),
   };
 
-  console.log('[TRACE-PREFS]', JSON.stringify(prefs));
-  console.log('[TRACE-START] START_COUNT=' + funds.length);
-
-  const allCats = [...new Set(funds.map(f => f.category))];
-  console.log('[TRACE-CATEGORIES]', allCats);
-
   let lastCount = funds.length;
 
   // Step 0: Remove excluded
   const cleanFunds = funds.filter(f => !isExcluded(f));
-  if (cleanFunds.length !== lastCount) console.log('[TRACE-EXCLUSIONS]', lastCount, '->', cleanFunds.length);
   lastCount = cleanFunds.length;
 
   const fundCategories = [...new Set(cleanFunds.map(f => catCode(f)))];
 
   // Step 1: Eligibility (hard constraints)
   let eligible = applyRiskConstraints(cleanFunds, normalizedPrefs.riskTolerance);
-  console.log('[TRACE-RISK]', lastCount, eligible.length);
   lastCount = eligible.length;
 
   eligible = applyGoalEligibility(eligible, normalizedPrefs.investmentGoal);
-  console.log('[TRACE-GOAL]', lastCount, eligible.length);
   lastCount = eligible.length;
 
   eligible = applyHorizonRules(eligible, normalizedPrefs.investmentHorizon);
-  console.log('[TRACE-HORIZON]', lastCount, eligible.length);
   lastCount = eligible.length;
 
   eligible = applyExperienceFilter(eligible, normalizedPrefs.experienceLevel);
-  console.log('[TRACE-EXPERIENCE]', lastCount, eligible.length);
   lastCount = eligible.length;
 
   eligible = applyAmountConstraints(eligible, normalizedPrefs.investmentAmount);
-  console.log('[TRACE-AMOUNT]', lastCount, eligible.length);
 
   // Step 2: Fallback if empty
   if (eligible.length === 0) {
-    console.log('[TRACE-FALLBACK] FALLBACK_TRIGGERED: eligible=0');
     eligible = applyFallback(cleanFunds, normalizedPrefs, fundCategories);
-    console.log('[TRACE-FALLBACK] AFTER_FALLBACK:', eligible.length);
   }
-
-  console.log('[TRACE-ELIGIBLE] FINAL_ELIGIBLE:', eligible.length);
 
   const profileType = determineProfileType(
     normalizedPrefs.riskTolerance,
@@ -530,7 +482,6 @@ export function recommendFundsV2(
   );
 
   if (eligible.length === 0) {
-    console.log('[TRACE-EXIT] returning 0 — scored section skipped');
     return [];
   }
 
@@ -575,12 +526,6 @@ export function recommendFundsV2(
   scored.sort((a, b) => b.compositeScore - a.compositeScore);
 
   const diversified = diversify(scored, normalizedPrefs, 9, normalizedPrefs.investmentGoal);
-  console.log('[TRACE-OUTPUT] returning diversified:', diversified.length, 'funds');
-  if (diversified.length > 0) {
-    console.log('[TRACE-OUTPUT] first:', diversified[0].id, diversified[0].name, diversified[0].category);
-    console.log('[TRACE-OUTPUT] ids:', diversified.map(f => f.id).join(','));
-    console.log('[TRACE-OUTPUT] names:', diversified.map(f => f.name).join(' | '));
-  }
 
   return diversified;
 }

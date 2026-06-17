@@ -70,39 +70,57 @@ async function handleMasterSource(supabase, url) {
 
   const offset = (page - 1) * perPage;
 
-  let query = supabase.from("fund_master_enriched").select("*", { count: "exact" });
-
-  // Filters
-  if (search) {
-    query = query.or(`scheme_name.ilike.%${search}%,workbook_name.ilike.%${search}%,amc.ilike.%${search}%`);
+  // Build base query (without range)
+  function buildBaseQuery() {
+    let q = supabase.from("fund_master_enriched").select("*", { count: "exact" });
+    if (search) {
+      q = q.or(`scheme_name.ilike.%${search}%,workbook_name.ilike.%${search}%,amc.ilike.%${search}%`);
+    }
+    if (category) {
+      q = q.eq("category", category);
+    }
+    if (amc) {
+      q = q.eq("amc", amc);
+    }
+    if (activeOnly) {
+      q = q.eq("is_active", true);
+    }
+    const allowedSortFields = ["scheme_code", "cagr_1y", "cagr_3y", "cagr_5y", "sharpe_ratio_3y", "sortino_ratio_3y", "expense_ratio", "aum", "confidence_score", "recommendation_score"];
+    const actualSort = allowedSortFields.includes(sortBy) ? sortBy : "scheme_code";
+    q = q.order(actualSort, { ascending: sortDir === "asc", nullsFirst: false });
+    return q;
   }
-  if (category) {
-    query = query.eq("category", category);
-  }
-  if (amc) {
-    query = query.eq("amc", amc);
-  }
-  if (activeOnly) {
-    query = query.eq("is_active", true);
-  }
 
-  // Sorting
-  const allowedSortFields = ["scheme_code", "cagr_1y", "cagr_3y", "cagr_5y", "sharpe_ratio_3y", "sortino_ratio_3y", "expense_ratio", "aum", "confidence_score", "recommendation_score"];
-  const actualSort = allowedSortFields.includes(sortBy) ? sortBy : "scheme_code";
-  query = query.order(actualSort, { ascending: sortDir === "asc", nullsFirst: false });
+  // Get count first to cap the range
+  const countQuery = buildBaseQuery();
+  const { count: totalCount, error: countError } = await countQuery.select("*", { count: "exact", head: true });
+  if (countError) {
+    return new Response(JSON.stringify({ error: countError.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+  const actualTotal = totalCount || 0;
 
-  const { data, error, count } = await query.range(offset, offset + perPage - 1);
+  // PostgREST limits max rows per request to ~1000.
+  // Fetch in batches and aggregate server-side when perPage > 1000.
+  const CHUNK = 1000;
+  let allData = [];
+  const endIdx = Math.min(offset + perPage - 1, actualTotal - 1);
 
-  if (error) {
-    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  for (let start = offset; start <= endIdx; start += CHUNK) {
+    const end = Math.min(start + CHUNK - 1, endIdx);
+    const q = buildBaseQuery();
+    const { data, error } = await q.range(start, end);
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+    if (data) allData.push(...data);
   }
 
   return new Response(JSON.stringify({
-    funds: data || [],
-    count: count || 0,
+    funds: allData,
+    count: totalCount,
     page,
     perPage,
-    totalPages: count ? Math.ceil(count / perPage) : 0,
+    totalPages: totalCount ? Math.ceil(totalCount / perPage) : 0,
     source: "fund_master",
   }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }

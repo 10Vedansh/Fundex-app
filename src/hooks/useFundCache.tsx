@@ -5,10 +5,12 @@ import { fetchFundMasterFunds } from '@/utils/fundMasterAdapter';
 import { toast } from 'sonner';
 
 const LOCAL_CACHE_KEY = 'fundex_mf_cache';
+const LOCAL_CACHE_VERSION = 2; // Increment to invalidate all cached data on schema change
 
 interface LocalCache {
   funds: MutualFund[];
   lastUpdated: string;
+  version: number;
 }
 
 export function useFundCache() {
@@ -17,29 +19,36 @@ export function useFundCache() {
   const [isLiveData, setIsLiveData] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Load from local storage
+  // Load from local storage — returns null if version mismatch
   const loadFromLocalCache = (): LocalCache | null => {
     try {
       const cached = localStorage.getItem(LOCAL_CACHE_KEY);
-      if (cached) return JSON.parse(cached);
+      if (!cached) return null;
+      const parsed = JSON.parse(cached) as LocalCache;
+      if (parsed.version !== LOCAL_CACHE_VERSION) {
+        localStorage.removeItem(LOCAL_CACHE_KEY);
+        return null;
+      }
+      return parsed;
     } catch { /* ignore */ }
     return null;
   };
 
   const saveToLocalCache = (data: MutualFund[], updatedAt: string) => {
     try {
-      localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify({ funds: data, lastUpdated: updatedAt }));
+      localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify({ funds: data, lastUpdated: updatedAt, version: LOCAL_CACHE_VERSION }));
     } catch { /* ignore */ }
   };
 
-  // Primary: fetch from fund_master (source=master)
+  // Primary: fetch from fund_master (source=master) — loads ALL funds
   const fetchFromFundMaster = async (): Promise<{ funds: MutualFund[]; lastUpdated: string } | null> => {
     try {
-      const result = await fetchFundMasterFunds({ perPage: 4000, activeOnly: false });
+      const result = await fetchFundMasterFunds({ perPage: 100000, activeOnly: false });
       if (result.funds.length > 0) {
         return { funds: result.funds, lastUpdated: new Date().toISOString() };
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+    }
     return null;
   };
 
@@ -79,40 +88,37 @@ export function useFundCache() {
     setIsLoading(true);
 
     try {
-      // Load local cache for instant display
+      // Show cached data instantly for perceived performance (only on initial non-force load)
       const localCache = loadFromLocalCache();
       if (localCache && localCache.funds.length > 0 && !forceRefresh) {
         setFunds(localCache.funds);
         setLastUpdated(new Date(localCache.lastUpdated));
         setIsLiveData(true);
+        // Don't return — continue to fetch fresh data in background
+      }
+
+      // Primary: fund_master_enriched (always fetch from server)
+      let result: { funds: MutualFund[]; lastUpdated: string } | null = null;
+
+      result = await fetchFromFundMaster();
+      if (result) {
+        setFunds(result.funds);
+        setLastUpdated(new Date(result.lastUpdated));
+        saveToLocalCache(result.funds, result.lastUpdated);
+        setIsLiveData(true);
         setIsLoading(false);
         return;
       }
 
-      // Primary: fund_master
-      let result: { funds: MutualFund[]; lastUpdated: string } | null = null;
-
-      if (!forceRefresh) {
-        result = await fetchFromFundMaster();
-        if (result) {
-          setFunds(result.funds);
-          setLastUpdated(new Date(result.lastUpdated));
-          saveToLocalCache(result.funds, result.lastUpdated);
-          setIsLiveData(true);
-          setIsLoading(false);
-          return;
-        }
-
-        // Fallback: workbook cache
-        result = await fetchCachedData();
-        if (result) {
-          setFunds(result.funds);
-          setLastUpdated(new Date(result.lastUpdated));
-          saveToLocalCache(result.funds, result.lastUpdated);
-          setIsLiveData(true);
-          setIsLoading(false);
-          return;
-        }
+      // Fallback: workbook cache
+      result = await fetchCachedData();
+      if (result) {
+        setFunds(result.funds);
+        setLastUpdated(new Date(result.lastUpdated));
+        saveToLocalCache(result.funds, result.lastUpdated);
+        setIsLiveData(true);
+        setIsLoading(false);
+        return;
       }
 
       // Force refresh or no cache found

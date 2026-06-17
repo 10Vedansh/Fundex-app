@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.ingest-amfi-nav]
 verify_jwt = false
+
+[functions.calculate-fund-metrics]
+verify_jwt = false

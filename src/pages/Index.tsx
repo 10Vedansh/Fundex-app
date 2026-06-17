@@ -205,22 +205,9 @@ const Index = () => {
     });
   }, [profile]);
 
-  // Log raw profile sources once (not inside useMemo)
-  console.log('[TRACE-PROFILE-RAW] DB fields:', JSON.stringify({
-    risk_tolerance: profile?.risk_tolerance,
-    investment_goal: profile?.investment_goal,
-    investment_horizon: profile?.investment_horizon,
-    experience_level: profile?.experience_level,
-    investment_amount: profile?.investment_amount,
-    primary_goal: profile?.primary_goal,
-  }));
-  const localQ = (() => { try { return JSON.parse(localStorage.getItem('fundex_questionnaire') || '{}'); } catch { return {}; } })();
-  console.log('[TRACE-PROFILE-LOCAL] localStorage questionnaire:', JSON.stringify(localQ));
-
   // Filter funds using recommendation engine
   const personalizedFunds = useMemo(() => {
     if (!profile || funds.length === 0) {
-      console.log('[TRACE-PREFS] SKIP — profile or funds empty');
       return [];
     }
 
@@ -244,33 +231,9 @@ const Index = () => {
       investmentAmount: effectiveAmount,
     };
 
-    console.log('[TRACE-PREFS]', JSON.stringify(prefs));
-    console.log('[TRACE-MAPPING] rawGoal=' + rawGoal + ' mappedGoal=' + mappedGoal + ' effectiveGoal=' + effectiveGoal + ' rawAmount=' + rawAmount + ' effectiveAmount=' + effectiveAmount);
-
-    console.log('[TRACE-FUND-SHAPE]', JSON.stringify(funds[0]));
-    console.log('[TRACE-CATEGORY-FIELD]', 'category=' + funds[0].category, 'typeof=' + typeof funds[0].category);
-    console.log('[TRACE-CATEGORY-FIELD-ALL]', funds.slice(0, 5).map(f => f.category));
-
-    const engineInputTarget = funds.find(f => f.name && f.name.includes('360 ONE'));
-    if (engineInputTarget) {
-      console.log('[TRACE-ENGINE-INPUT]', 'name=' + engineInputTarget.name, 'category=' + engineInputTarget.category, 'full=' + JSON.stringify(engineInputTarget));
-    } else {
-      console.log('[TRACE-ENGINE-INPUT] 360 ONE not found in funds array');
-    }
-
     const recommended = recommendFundsV2(funds, prefs);
 
-    console.log('[TRACE-FINAL] FINAL_RECOMMENDED_COUNT=' + recommended.length);
-
-    if (recommended.length === 0) {
-      console.log('[TRACE-FALLBACK-UI] using funds.slice(0,9) fallback — first:', funds[0]?.name, funds[1]?.name, funds[2]?.name);
-    }
-
     const result = recommended.length > 0 ? recommended.slice(0, 9) : funds.slice(0, 9);
-    console.log('[TRACE-OUTPUT] returning', result.length, 'funds to UI');
-    if (result.length > 0) {
-      console.log('[TRACE-OUTPUT] first:', result[0].name, 'hasScore:', 'compositeScore' in result[0]);
-    }
     return result;
   }, [funds, profile]);
 

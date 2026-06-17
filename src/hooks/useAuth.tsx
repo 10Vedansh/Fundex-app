@@ -56,7 +56,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
 
   const fetchProfile = async (userId: string) => {
-    console.log('[PROFILE] userId =', userId);
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -65,15 +64,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       if (error) {
-        console.error('[PROFILE FULL ERROR]', JSON.stringify(error, null, 2));
         throw error;
       }
 
       if (data) {
-        console.log('[PROFILE_LOAD] from DB — investment_horizon:', data.investment_horizon, 'experience_level:', data.experience_level);
         const localData = loadQuestionnaireFromLocal(userId);
         const merged = { ...data, ...localData };
-        console.log('[PROFILE_RESTORE] after merge — investment_horizon:', merged.investment_horizon, 'experience_level:', merged.experience_level);
         setProfile(merged);
         return;
       }
@@ -96,10 +92,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (insertError) throw insertError;
 
-      console.log('[PROFILE_LOAD] new profile created — investment_horizon:', newProfile?.investment_horizon, 'experience_level:', newProfile?.experience_level);
       const localData = loadQuestionnaireFromLocal(userId);
       const merged = { ...newProfile, ...localData };
-      console.log('[PROFILE_RESTORE] after merge — investment_horizon:', merged.investment_horizon, 'experience_level:', merged.experience_level);
       setProfile(merged);
     } catch (err) {
       console.error('fetchProfile ERROR:', err);
@@ -247,12 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', user.id);
 
       if (error) {
-        console.error('[PROFILE_SAVE] Supabase error:', JSON.stringify(error, null, 2));
         return { error: error as Error | null };
-      }
-      console.log('[PROFILE_SAVE] DB fields saved:', Object.keys(dbFields).join(', '));
-      if ('investment_horizon' in dbFields || 'experience_level' in dbFields) {
-        console.log('[PROFILE_SAVE] investment_horizon:', dbFields.investment_horizon, 'experience_level:', dbFields.experience_level);
       }
     }
 

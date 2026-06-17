@@ -128,8 +128,6 @@ function processSheet(worksheet: XLSX.WorkSheet, colMapping: string[], assetClas
     if (name.includes('→') || name.includes('🔹') || name.includes('🔸')) continue;
 
     if (name.includes('360 ONE')) {
-      console.log('[TRACE-EXCEL-ROW] name=' + name + ' sheet=' + assetClass + ' rowIndex=' + i + ' rawRow=' + JSON.stringify(row));
-      console.log('[TRACE-EXCEL-ROW] colMapping=' + JSON.stringify(colMapping));
     }
 
     const fund: Record<string, any> = { assetClass };
@@ -163,7 +161,6 @@ function processSheet(worksheet: XLSX.WorkSheet, colMapping: string[], assetClas
       fund.benchmark = '';
 
       if (fund.name && fund.name.includes('360 ONE')) {
-        console.log('[TRACE-SUPABASE-WRITE] fund=' + JSON.stringify(fund));
       }
 
       funds.push(fund);
