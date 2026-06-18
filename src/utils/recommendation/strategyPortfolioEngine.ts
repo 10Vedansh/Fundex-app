@@ -16,6 +16,7 @@
 import { MutualFund, CATEGORY_LABELS } from '@/types/mutualFund';
 import { ScoredFund, recommendFundsV2, RecommendationPreferences } from './intersectionEngine';
 import { computeRiskCapacity, RiskCapacityInputs, RiskCapacityResult } from './riskCapacity';
+import { toCategoryCode } from './categoryMappings';
 
 // ── Types ──
 
@@ -201,8 +202,8 @@ function generateJustification(
   goal: string,
   horizon: string,
 ): string {
-  const cat = (fund.category || '').trim();
-  const catLabel = CATEGORY_LABELS[cat] || cat;
+  const cat = toCategoryCode(fund.category || '');
+  const catLabel = CATEGORY_LABELS[fund.category || ''] || cat;
   const cagr3 = safeNum(fund.ret3Y ?? fund.cagr3Y);
   const sharpe = safeNum(fund.sharpeRatio);
   const vol = safeNum(fund.volatility) || safeNum(fund.stdDev);
@@ -310,7 +311,7 @@ function selectFundsForTemplate(
       selected.push({
         fund,
         allocationPercent: 0, // will be computed after
-        assetClass: getAssetClass((fund.category || '').trim()),
+        assetClass: getAssetClass(toCategoryCode(fund.category || '')),
         justification: generateJustification(fund, bucket.label, riskTolerance, goal, horizon),
       });
 

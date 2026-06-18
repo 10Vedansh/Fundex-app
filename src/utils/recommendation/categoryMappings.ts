@@ -33,6 +33,72 @@ export const SECTORAL_CATEGORIES = [
   'EQ-TBC', 'EQ-Manufacturing', 'EQ-Innovation',
 ];
 
+// Maps production category names (full English) to internal short codes.
+// The recommendation engine operates on short codes; production data from
+// fund_master_enriched stores long-form names like "Equity - Large Cap".
+export const CATEGORY_NAME_TO_CODE: Record<string, string> = {
+  'Equity - Large Cap': 'EQ-LC',
+  'Equity - Flexi Cap': 'EQ-FLX',
+  'Equity - Mid Cap': 'EQ-MC',
+  'Equity - Small Cap': 'EQ-SC',
+  'Equity - Large & Mid Cap': 'EQ-L&MC',
+  'Equity - Multi Cap': 'EQ-MLC',
+  'Equity - Value': 'EQ-VAL',
+  'Equity - ELSS': 'EQ-ELSS',
+  'Equity - Dividend Yield': 'EQ-DIV Y',
+  'Equity - Focused': 'EQ-Focused',
+  'Equity - Index': 'Index',
+  'Equity - Thematic': 'EQ-THEMATIC',
+  'Equity - Sectoral - Banking': 'EQ-BANK',
+  'Equity - Sectoral - Technology': 'EQ-IT',
+  'Equity - Sectoral - Pharma': 'EQ-Pharma',
+  'Equity - Sectoral - Infrastructure': 'EQ-INFRA',
+  'Equity - Sectoral - PSU': 'EQ-PSU',
+  'Equity - Sectoral - Consumption': 'EQ-Consumption',
+  'Equity - Sectoral - Manufacturing': 'EQ-Manufacturing',
+  'Other - International': 'EQ-INTL',
+  'Other - Fund of Funds': 'EQ-FOF',
+  'Other - Solution Oriented': 'EQ-SOLUTION',
+  'Other - Unclassified': 'Unknown',
+  'Commodity - Gold': 'Gold-Funds',
+  'Debt - Income': 'DT-IN',
+  'Debt - Liquid': 'DT-LIQ',
+  'Debt - Overnight': 'DT-OS',
+  'Debt - Money Market': 'DT-MM',
+  'Debt - Gilt': 'DT-GSEC',
+  'Debt - Dynamic Bond': 'DT-DB',
+  'Debt - Long Duration': 'DT-LONG D',
+  'Debt - Short Duration': 'DT-SD',
+  'Debt - Medium Duration': 'DT-MD',
+  'Debt - Low Duration': 'DT-LD',
+  'Debt - Corporate Bond': 'DT-CB',
+  'Debt - Banking and PSU': 'DT-BK & PSU',
+  'Debt - Floater': 'DT-Floater',
+  'Debt - Credit Risk': 'DT-CR',
+  'Debt - IDF': 'DT-IDF',
+  'Hybrid - Aggressive': 'HY-AH',
+  'Hybrid - Conservative': 'HY-CH',
+  'Hybrid - Arbitrage': 'HY-AR',
+  'Hybrid - Balanced': 'HY-DAA',
+  'Hybrid - Equity Savings': 'HY-EQ S',
+  'Hybrid - Multi Asset Allocation': 'HY-MAA',
+};
+
+export function toCategoryCode(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed || trimmed === 'Unknown') return trimmed;
+  const mapped = CATEGORY_NAME_TO_CODE[trimmed];
+  if (mapped) return mapped;
+  // Fallback: extract first word as plain-text code
+  const firstWord = trimmed.split(' - ')[0];
+  if (firstWord === 'Equity') return PLAIN_EQUITY;
+  if (firstWord === 'Debt') return PLAIN_DEBT;
+  if (firstWord === 'Hybrid') return PLAIN_HYBRID;
+  if (firstWord === 'Commodity') return trimmed.split(' - ').slice(1).join(' - ') + '-Funds';
+  if (firstWord === 'Other') return 'Unknown';
+  return trimmed;
+}
+
 // Full list of all expected category codes for logging
 export const ALL_EQUITY = EQUITY_CATEGORIES;
 export const ALL_DEBT = DEBT_CATEGORIES;
@@ -91,7 +157,7 @@ export interface GoalEligibility {
 export const GOAL_ELIGIBILITY: Record<string, GoalEligibility> = {
   wealth_creation: {
     allowedCategoryPrefixes: ['EQ-', PLAIN_EQUITY, PLAIN_INDEX],
-    blockedCategories: ['EQ-DIV Y', 'EQ-INTL', 'EQ-T-ESG'],
+    blockedCategories: ['EQ-DIV Y', 'EQ-INTL', 'EQ-T-ESG', 'EQ-FOF'],
     maxVolatility: null,
     minSharpe: null,
     requirePositive3Y: false,
@@ -103,7 +169,7 @@ export const GOAL_ELIGIBILITY: Record<string, GoalEligibility> = {
       'EQ-SC', 'EQ-DIV Y',
       ...SECTORAL_CATEGORIES,
       'EQ-Quant',
-      'EQ-INTL', 'EQ-T-ESG',
+      'EQ-INTL', 'EQ-T-ESG', 'EQ-FOF',
       'HY-AH',
       'DT-CR',
     ],
@@ -118,7 +184,7 @@ export const GOAL_ELIGIBILITY: Record<string, GoalEligibility> = {
       'EQ-SC', 'EQ-DIV Y',
       ...SECTORAL_CATEGORIES,
       'EQ-Quant',
-      'EQ-INTL', 'EQ-T-ESG',
+      'EQ-INTL', 'EQ-T-ESG', 'EQ-FOF',
       'HY-AH',
     ],
     maxVolatility: 10,
@@ -213,6 +279,12 @@ export const EXPERIENCE_MODIFIERS: Record<string, ExperienceModifier> = {
     aumBonusMultiplier: 0.5,
     allowSectoral: true,
   },
+  advanced: {
+    volatilityPenaltyMultiplier: 0.5,
+    expensePenaltyMultiplier: 0.7,
+    aumBonusMultiplier: 0.5,
+    allowSectoral: true,
+  },
 };
 
 // ── 5. Investment Amount → Constraints ──
@@ -234,7 +306,7 @@ export const AMOUNT_CONSTRAINTS: Record<string, AmountConstraint> = {
 };
 
 // ── Categories excluded by business policy (e.g., International, ESG) ──
-export const BUSINESS_EXCLUDED_CATEGORIES = ['EQ-INTL', 'EQ-T-ESG', 'Gold-Funds', 'Silver-Funds'];
+export const BUSINESS_EXCLUDED_CATEGORIES = ['EQ-INTL', 'EQ-T-ESG', 'EQ-FOF', 'Gold-Funds', 'Silver-Funds'];
 
 // ── Permanently excluded funds ──
 export const EXCLUDED_FUND_NAMES = ['bharat 22 etf', 'children', 'child', 'kids', 'bal bhavishya'];

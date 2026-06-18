@@ -41,7 +41,7 @@ export function determineInvestorPersona(profile: InvestorProfile): PersonaResul
   const isAggressive = reaction === 'invest_more' || reaction === 'invest more at lower prices';
   const isModerate = reaction === 'wait' || reaction === 'wait for recovery';
   const isConservative = reaction === 'withdraw' || reaction === 'withdraw immediately';
-  const isExperienced = experience === 'experienced' || experience === 'experienced investor';
+  const isExperienced = experience === 'experienced' || experience === 'advanced' || experience === 'experienced investor';
   const isBeginner = experience === 'first_time' || experience === 'first-time investor';
 
   // 1. Capital Preservation Investor

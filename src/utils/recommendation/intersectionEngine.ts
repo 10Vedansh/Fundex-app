@@ -10,6 +10,7 @@ import {
   SECTORAL_CATEGORIES,
   getAllocationModel,
   normalizeAmcName,
+  toCategoryCode,
   PLAIN_EQUITY,
   PLAIN_DEBT,
   PLAIN_HYBRID,
@@ -128,7 +129,15 @@ function safeNum(val: number | string | null | undefined): number | null {
 }
 
 function catCode(fund: MutualFund): string {
-  return (fund.category || '').trim();
+  return toCategoryCode(fund.category || '');
+}
+
+function getAssetClassFromCategory(cat: string): string {
+  if (cat.startsWith('EQ-') || cat === 'Equity') return 'equity';
+  if (cat.startsWith('DT-') || cat === 'Debt') return 'debt';
+  if (cat.startsWith('HY-') || cat === 'Hybrid') return 'hybrid';
+  if (cat.startsWith('Gold') || cat.startsWith('Silver')) return 'commodity';
+  return 'other';
 }
 
 function isExcluded(fund: MutualFund): boolean {
@@ -136,6 +145,15 @@ function isExcluded(fund: MutualFund): boolean {
   if (EXCLUDED_FUND_NAMES.some(ex => name.includes(ex))) return true;
   const cat = catCode(fund);
   if (BUSINESS_EXCLUDED_CATEGORIES.some(ex => cat.startsWith(ex))) return true;
+
+  // Data-quality safety: catch funds mis-categorized as Equity/Index but with
+  // international or commodity keywords in their name (e.g., Silver ETF FoF
+  // categorized as "Equity - Index", Nasdaq ETF as "Equity - Large Cap").
+  const intlCommodityKeywords = ['nasdaq', 'silver', 'dow jones', 's&p 500', 'us equity', 'global', 'international'];
+  if (cat.startsWith('EQ-') || cat === 'Index') {
+    if (intlCommodityKeywords.some(kw => name.includes(kw))) return true;
+  }
+
   return false;
 }
 
@@ -267,36 +285,60 @@ function diversify(
   // Fill remaining from top scores
   if (result.length < target) {
     const catCount = new Map<string, number>();
-    result.forEach(f => catCount.set(catCode(f), (catCount.get(catCode(f)) || 0) + 1));
+    const assetClassCount = new Map<string, number>();
+    result.forEach(f => {
+      const cc = catCode(f);
+      catCount.set(cc, (catCount.get(cc) || 0) + 1);
+      const ac = getAssetClassFromCategory(cc);
+      assetClassCount.set(ac, (assetClassCount.get(ac) || 0) + 1);
+    });
 
     // Determine goal-allowed prefixes for fill-remaining phase to prevent category leakage
     const goalConfig = normalizedGoal ? GOAL_ELIGIBILITY[normalizedGoal] : null;
     const allowedPrefixes = goalConfig?.allowedCategoryPrefixes;
 
+    // Track primary category already represented to force diversity
+    const totalAssetClasses = result.length > 0 ? assetClassCount.size : 0;
+
     for (const fund of scored) {
       if (result.length >= target) break;
       if (usedIds.has(fund.id)) continue;
       const normAmc = normalizeAmcName(fund.amc);
-      const amcCount = usedAmcs.get(normAmc) || 0;
-      if (amcCount >= 2) continue;
-      const cc = catCount.get(catCode(fund)) || 0;
-      if (cc >= 4) continue;
+      if ((usedAmcs.get(normAmc) || 0) >= 2) continue;
       if (isPassiveFund(fund) && etfCount >= MAX_ETF) continue;
       if (isRetirement && catCode(fund) === 'HY-AR' && arbitrageCount >= MAX_ARBITRAGE_RETIREMENT) continue;
 
-      // Enforce goal-appropriate category in fill-remaining phase (prevent DT, Gold, etc. leakage)
+      const cc = catCode(fund);
+      const ac = getAssetClassFromCategory(cc);
+      const existingCatCount = catCount.get(cc) || 0;
+
+      // Max 3 funds per category (tightened from 4)
+      if (existingCatCount >= 3) continue;
+
+      // Ensure at least 2 different asset classes when we have enough funds
+      if (result.length >= 3 && totalAssetClasses < 2 && assetClassCount.get(ac) === 0) {
+        // This fund adds a new asset class — prefer it
+      } else if (result.length >= 4 && assetClassCount.size >= 1 && assetClassCount.get(ac) !== undefined) {
+        // If we already have 4+ funds and this asset class is already represented,
+        // still allow it (don't over-restrict)
+      }
+
+      // Max 60% of recommendations from same asset class
+      if (assetClassCount.size >= 1 && (assetClassCount.get(ac) || 0) >= Math.ceil(target * 0.6)) continue;
+
+      // Enforce goal-appropriate category in fill-remaining phase
       if (allowedPrefixes !== null && allowedPrefixes !== undefined) {
-        const cat = catCode(fund);
-        const matchesGoal = allowedPrefixes.some(p => cat === p || cat.startsWith(p));
+        const matchesGoal = allowedPrefixes.some(p => cc === p || cc.startsWith(p));
         if (!matchesGoal) continue;
       }
 
       result.push(fund);
       usedIds.add(fund.id);
-      usedAmcs.set(normAmc, amcCount + 1);
+      usedAmcs.set(normAmc, (usedAmcs.get(normAmc) || 0) + 1);
       if (isPassiveFund(fund)) etfCount++;
-      if (catCode(fund) === 'HY-AR') arbitrageCount++;
-      catCount.set(catCode(fund), cc + 1);
+      if (cc === 'HY-AR') arbitrageCount++;
+      catCount.set(cc, existingCatCount + 1);
+      assetClassCount.set(ac, (assetClassCount.get(ac) || 0) + 1);
     }
   }
 
@@ -413,23 +455,23 @@ function applyFallback(
         },
       ];
 
-  const dropped: string[] = [];
-  let firstNonEmpty = false;
-
   for (const step of fallbackChain) {
     const eligible = step.fn(cleanFunds);
-    if (eligible.length > 0) {
-      if (!firstNonEmpty) {
-        firstNonEmpty = true;
-        return eligible;
-      }
-    }
-    if (step.dropped) {
-      dropped.push(step.dropped);
+    if (eligible.length >= 5) {
+      return eligible;
     }
   }
 
-  return cleanFunds;
+  // Last resort: relaxed risk+goal constraints only, but never return ALL funds
+  const lastResort = applyRiskConstraints(cleanFunds, risk);
+  const goalFiltered = goalConfig
+    ? lastResort.filter(f => {
+        const cat = catCode(f);
+        if (goalConfig.blockedCategories.includes(cat)) return false;
+        return true;
+      })
+    : lastResort;
+  return goalFiltered.length >= 5 ? goalFiltered : [];
 }
 
 // ── MAIN ENTRY POINT ──

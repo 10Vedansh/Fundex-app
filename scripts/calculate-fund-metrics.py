@@ -300,6 +300,13 @@ def main():
         cagr_3y = calc_cagr(nav_dates_list, latest_nav, 365 * 3, 3)
         cagr_5y = calc_cagr(nav_dates_list, latest_nav, 365 * 5, 5)
 
+        # Sanitize: reject impossible CAGR from unadjusted corporate actions
+        def _sanitize_cagr(v):
+            return None if v is not None and (v > 5 or v < -1) else v
+        cagr_1y = _sanitize_cagr(cagr_1y)
+        cagr_3y = _sanitize_cagr(cagr_3y)
+        cagr_5y = _sanitize_cagr(cagr_5y)
+
         if cagr_1y is not None:
             with_1y += 1
         if cagr_3y is not None:
@@ -354,6 +361,8 @@ def main():
             ("sortino_ratio_5y", sortino_5y),
             ("consistency_score", consistency),
             ("confidence_score", confidence),
+            # recommendation_score will be computed by the enrichment pipeline
+            # when expense_ratio becomes available via recommendation_universe
             ("recommendation_score", None),
             ("first_nav_date", dates[0].isoformat()),
             ("last_nav_date", dates[-1].isoformat()),

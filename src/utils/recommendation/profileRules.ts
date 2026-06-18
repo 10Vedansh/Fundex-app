@@ -59,11 +59,12 @@ export const ENGINE_FIELDS: Record<EngineField, EngineFieldDef> = {
   },
   experience: {
     sourceField: 'experience_level',
-    values: ['beginner', 'intermediate', 'experienced'],
+    values: ['beginner', 'intermediate', 'experienced', 'advanced'],
     mapping: {
       first_time: 'beginner',
       some_experience: 'intermediate',
       experienced: 'experienced',
+      advanced: 'advanced',
     },
   },
 };

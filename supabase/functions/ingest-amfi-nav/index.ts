@@ -8,12 +8,55 @@ const corsHeaders = {
 
 const AMFI_NAV_URL = "https://www.amfiindia.com/spages/NAVAll.txt";
 const INSERT_BATCH_SIZE = 500;
+const FETCH_TIMEOUT_MS = 30_000;
+const MAX_RETRIES = 3;
+const RETRY_DELAYS_MS = [5_000, 10_000, 20_000];
 
 interface NavRecord {
   scheme_code: string;
   scheme_name: string;
   nav: number | null;
   nav_date: string;
+}
+
+async function fetchAmfiNavData(url: string): Promise<string> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    console.log(`[AMFI] Fetch attempt ${attempt}/${MAX_RETRIES} started`);
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+      }
+
+      const text = await response.text();
+      console.log(`[AMFI] Fetch attempt ${attempt}/${MAX_RETRIES} succeeded (${(text.length / 1024 / 1024).toFixed(1)} MB)`);
+      return text;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+
+      if (lastError.name === "AbortError") {
+        console.error(`[AMFI] Fetch attempt ${attempt}/${MAX_RETRIES} failed: timeout after ${FETCH_TIMEOUT_MS}ms`);
+      } else {
+        console.error(`[AMFI] Fetch attempt ${attempt}/${MAX_RETRIES} failed: ${lastError.message}`);
+      }
+
+      if (attempt < MAX_RETRIES) {
+        const delay = RETRY_DELAYS_MS[attempt - 1];
+        console.log(`[AMFI] Retrying in ${delay / 1000}s...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError ?? new Error("All AMFI fetch attempts failed");
 }
 
 serve(async (req) => {
@@ -28,15 +71,12 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log("Fetching AMFI NAV data...");
-    const response = await fetch(AMFI_NAV_URL);
-    if (!response.ok) {
-      throw new Error(`AMFI fetch failed: ${response.status} ${response.statusText}`);
-    }
+    console.log("[AMFI] Fetch started");
+    const text = await fetchAmfiNavData(AMFI_NAV_URL);
+    console.log("[AMFI] Fetch succeeded");
 
-    const text = await response.text();
     const lines = text.split("\n");
-    console.log(`Downloaded ${lines.length} lines from AMFI`);
+    console.log(`[AMFI] Downloaded ${lines.length} lines`);
 
     const records: NavRecord[] = [];
     // Track distinct schemes for logging
@@ -116,11 +156,12 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
-    console.error("Ingestion error:", error);
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    console.error(`[AMFI] Final failure: ${msg}`);
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: msg,
         executionTimeMs: Date.now() - startTime,
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },

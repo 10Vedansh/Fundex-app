@@ -1,5 +1,6 @@
 import { MutualFund } from '@/types/mutualFund';
 import { CategoryMedians } from './scoringEngineV3';
+import { toCategoryCode } from './categoryMappings';
 
 type ConfidenceLevel = 'high' | 'medium' | 'limited_history';
 
@@ -20,7 +21,7 @@ function safeNum(val: number | string | null | undefined): number | null {
 export function generateExplanations(input: ExplanationInput): string[] {
   const { fund, medians, categoryRelativeScore, confidenceLevel, confidenceReason } = input;
   const bullets: string[] = [];
-  const cat = (fund.category || '').trim();
+  const cat = toCategoryCode(fund.category || '');
   const catMedian = medians.get(cat);
 
   // 1. Performance — CAGR vs category average
@@ -107,9 +108,43 @@ export function generateExplanations(input: ExplanationInput): string[] {
     }
   }
 
-  // 9. Goal-specific
+  // 9. Risk profile alignment
+  const volScore = safeNum(fund.volatility) ?? safeNum(fund.stdDev);
+  if (volScore !== null) {
+    if (volScore < 4) bullets.push('Matches conservative risk profile with very low volatility');
+    else if (volScore < 8) bullets.push('Suitable for moderate risk profile with controlled volatility');
+    else if (volScore > 20) bullets.push('High growth potential aligned with aggressive risk profile');
+  }
+
+  // 10. Fund manager track record
+  if (fund.fundManager && String(fund.fundManager).trim()) {
+    bullets.push(`Managed by experienced fund management team`);
+  }
+
+  // 11. AUM stability indicator
+  if (aum !== null && aum > 0) {
+    if (aum < 100) {
+      bullets.push('Small but nimble fund — monitor for AUM growth sustainability');
+    } else if (aum > 10000) {
+      bullets.push('Large AUM provides liquidity and institutional stability');
+    }
+  }
+
+  // 12. Drawdown awareness
+  const maxDD = fund.maxDrawdown !== undefined ? safeNum(fund.maxDrawdown) : null;
+  if (maxDD !== null && maxDD < 10) {
+    bullets.push('Historically limited downside with peak-to-trough recovery within acceptable range');
+  }
+
+  // 13. Goal-specific
   if (cat === 'EQ-ELSS') {
     bullets.push('Eligible for ₹1.5L tax deduction under Section 80C');
+  }
+  if (cat.startsWith('DT-') && cat !== 'DT-CR') {
+    bullets.push('Debt allocation provides portfolio stability and regular income potential');
+  }
+  if (cat.startsWith('HY-')) {
+    bullets.push('Balanced hybrid structure adjusts equity-debt exposure dynamically');
   }
 
   // Deduplicate (some conditions may overlap)

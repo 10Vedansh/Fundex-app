@@ -6,6 +6,7 @@
  */
 
 import { MutualFund } from '@/types/mutualFund';
+import { toCategoryCode } from './categoryMappings';
 
 // ── Helpers ──
 
@@ -35,7 +36,8 @@ export function computeCategoryMedians(funds: MutualFund[]): Map<string, Categor
 
   const groups = new Map<string, MutualFund[]>();
   for (const f of funds) {
-    const cat = (f.category || '').trim();
+    const cat = toCategoryCode(f.category || '');
+    if (!cat) continue;
     if (!groups.has(cat)) groups.set(cat, []);
     groups.get(cat)!.push(f);
   }
@@ -126,7 +128,7 @@ function approximateMaxDrawdown(fund: MutualFund): number {
 // ── Credit Risk Penalty (Debt Only) ──
 
 function computeCreditPenalty(fund: MutualFund): number {
-  const cat = (fund.category || '').trim();
+  const cat = toCategoryCode(fund.category || '');
   if (!cat.startsWith('DT-')) return 0;
 
   let penalty = 0;
@@ -218,24 +220,19 @@ export function determineProfileType(
   investmentHorizon: string,
   experienceLevel: string,
 ): string {
-  let type = riskTolerance;
+  // Conservative stays conservative — do not promote to moderate
+  // The scoring weights already account for horizon/goal alignment
+  if (riskTolerance === 'conservative') return 'conservative';
 
-  if (type === 'conservative') {
-    if (investmentHorizon === 'long' && investmentGoal === 'wealth_creation') {
-      type = 'moderate';
-    }
+  // Aggressive only demoted when strong conflicts exist
+  if (riskTolerance === 'aggressive') {
+    if (investmentGoal === 'capital_preservation') return 'moderate';
+    if (investmentHorizon === 'short' && experienceLevel === 'beginner') return 'moderate';
+    // Allow aggressive + short horizon if experienced (user knows risks)
+    return 'aggressive';
   }
 
-  if (type === 'aggressive') {
-    if (investmentHorizon === 'short' || experienceLevel === 'beginner') {
-      type = 'moderate';
-    }
-    if (investmentGoal === 'capital_preservation') {
-      type = 'moderate';
-    }
-  }
-
-  return type;
+  return 'moderate';
 }
 
 // ── Profile-Adaptive Weights ──
@@ -284,7 +281,7 @@ export function scoreV3(
   investmentGoal: string,
 ): V3ScoreResult {
   const reasons: string[] = [];
-  const cat = (fund.category || '').trim();
+  const cat = toCategoryCode(fund.category || '');
   const catMedian = medians.get(cat);
 
   const profileType = determineProfileType(riskTolerance, investmentGoal, investmentHorizon, experienceLevel);
@@ -321,8 +318,9 @@ export function scoreV3(
   if (expenseRaw === null) {
     expenseN = 0.5;
   } else if (catMedian?.expense && catMedian.expense > 0) {
+    // expense at median = 0.75, 20% below median = 1.0, 60% above median = 0.0
     const ratio = expenseRaw / catMedian.expense;
-    expenseN = 1 - Math.min(ratio, 2) * 0.35;
+    expenseN = 1 - (ratio - 0.8) / 1.2;
     expenseN = Math.max(0, Math.min(1, expenseN));
   } else {
     expenseN = 0.5;
@@ -334,7 +332,7 @@ export function scoreV3(
   const aumN = aumRaw === null ? 0.5 : normalize(aum, stats.minAum, stats.maxAum);
 
   // 8. Category Breadth Score (diversification)
-  const diversificationBonusN = categoryBreadthScore(fund.category);
+  const diversificationBonusN = categoryBreadthScore(cat);
 
   // Weighted composite
   let score =
@@ -351,23 +349,24 @@ export function scoreV3(
   const creditPenalty = computeCreditPenalty(fund);
   score *= (1 - creditPenalty);
 
-  // Credit Risk category suppression: 20% reduction unless Very High risk + long horizon
-  if (cat === 'DT-CR') {
-    const isVeryHighRisk = riskTolerance === 'aggressive';
-    const isLongHorizon = investmentHorizon === 'long';
-    if (!(isVeryHighRisk && isLongHorizon)) {
-      score *= 0.80;
-      reasons.push('Credit Risk fund: score reduced');
-    }
-  }
-
-  // Experience modifier
+  // Experience modifier — all levels now handled
   if (experienceLevel === 'beginner') {
     if (vol > 15) {
       score *= 0.7;
       reasons.push('Penalized: high volatility for beginner');
     }
     if (expense > 1.5) score *= 0.9;
+  } else if (experienceLevel === 'intermediate') {
+    if (vol > 25) {
+      score *= 0.85;
+      reasons.push('Moderate volatility penalty for intermediate investor');
+    }
+  } else if (experienceLevel === 'experienced' || experienceLevel === 'advanced') {
+    if (vol > 10 && vol < 25) {
+      score *= 1.05;
+      reasons.push('Experienced investor can utilize moderate volatility');
+    }
+    // No expense penalty for experienced (they can select direct plans)
   }
 
   // 9. Completeness penalty — missing critical metrics penalized harder (15%),

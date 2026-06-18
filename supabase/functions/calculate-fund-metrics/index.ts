@@ -228,9 +228,12 @@ function computeSchemeMetrics(schemeCode: string, schemeName: string, navRows: N
   const return_1m = calcSimpleReturn(navDatesList, latestNav, 30);
   const return_3m = calcSimpleReturn(navDatesList, latestNav, 90);
   const return_6m = calcSimpleReturn(navDatesList, latestNav, 180);
-  const cagr_1y = calcCagr(navDatesList, latestNav, 365, 1);
-  const cagr_3y = calcCagr(navDatesList, latestNav, 365 * 3, 3);
-  const cagr_5y = calcCagr(navDatesList, latestNav, 365 * 5, 5);
+  const sanitizeCagr = (v: number | null): number | null =>
+    v !== null && (v > 5 || v < -1) ? null : v;
+
+  const cagr_1y = sanitizeCagr(calcCagr(navDatesList, latestNav, 365, 1));
+  const cagr_3y = sanitizeCagr(calcCagr(navDatesList, latestNav, 365 * 3, 3));
+  const cagr_5y = sanitizeCagr(calcCagr(navDatesList, latestNav, 365 * 5, 5));
 
   const vol_1y = calcAnnualizedVol(logReturns, TRADING_DAYS_PER_YEAR);
   const vol_3y = calcAnnualizedVol(logReturns, TRADING_DAYS_PER_YEAR * 3);
@@ -253,12 +256,16 @@ function computeSchemeMetrics(schemeCode: string, schemeName: string, navRows: N
   const consistency = calcConsistency(navs, dates);
   const confidence = calcConfidence(navs.length, dates[0], dates[dates.length - 1]);
 
+  // Note: expense_ratio not available in NAV data pipeline.
+  // Will be updated separately by the enrichment pipeline in recommendation_universe.
+  // Use 0.015 (1.5%) as default — industry average expense ratio for active funds.
+  const defaultExpense = 0.015;
   const recommendation_score = calcRecommendationScore({
     cagr_1y,
     sharpe_1y,
     sortino_1y,
     volatility_1y: vol_1y,
-    expense_ratio: null,
+    expense_ratio: null, // null triggers weight redistribution below
   });
 
   return {
@@ -306,31 +313,68 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log("[METRICS] Starting fund metrics calculation from nav_history...");
+    // Parse request body for full_rebuild mode
+    let fullRebuild = false;
+    try {
+      const body = await req.json();
+      fullRebuild = body.full_rebuild === true;
+    } catch {
+      // No body or invalid JSON; default to incremental
+    }
+
+    console.log(`[METRICS] Starting fund metrics calculation (mode: ${fullRebuild ? "full_rebuild" : "incremental"})...`);
 
     // Step 1: Get distinct scheme codes from nav_history
-    const { data: schemes, error: schemesError } = await supabase
-      .rpc("get_distinct_nav_schemes" as any);
+    let schemeCodes: { scheme_code: string; scheme_name: string }[];
 
-    // Fallback: query nav_history directly if RPC doesn't exist
-    let schemeCodes: { scheme_code: string; scheme_name: string; count: number }[];
+    if (fullRebuild) {
+      // Full rebuild: try RPC first, fallback to paginated query
+      const { data: schemes, error: schemesError } = await supabase
+        .rpc("get_distinct_nav_schemes" as any);
 
-    if (schemesError || !schemes) {
-      console.log("[METRICS] RPC not found, querying nav_history directly...");
-      const { data: raw } = await supabase
-        .from("nav_history")
-        .select("scheme_code, scheme_name")
-        .limit(1);
+      if (schemesError || !schemes) {
+        console.log("[METRICS] RPC not found, querying nav_history directly...");
+        const { data: raw } = await supabase
+          .from("nav_history")
+          .select("scheme_code, scheme_name")
+          .limit(1);
 
-      if (!raw || raw.length === 0) {
-        console.log("[METRICS] No schemes found in nav_history");
-        return new Response(
-          JSON.stringify({ success: true, schemesProcessed: 0, message: "No data in nav_history" }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        if (!raw || raw.length === 0) {
+          console.log("[METRICS] No schemes found in nav_history");
+          return new Response(
+            JSON.stringify({ success: true, processed_funds_count: 0, updated_funds_count: 0, execution_time: 0 }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const allSchemes: { scheme_code: string; scheme_name: string }[] = [];
+        let offset = 0;
+        const pageSize = 1000;
+        while (true) {
+          const { data: page } = await supabase
+            .from("nav_history")
+            .select("scheme_code, scheme_name")
+            .range(offset, offset + pageSize - 1)
+            .limit(pageSize);
+          if (!page || page.length === 0) break;
+          for (const row of page) {
+            if (!allSchemes.find(s => s.scheme_code === row.scheme_code)) {
+              allSchemes.push(row);
+            }
+          }
+          offset += pageSize;
+        }
+        schemeCodes = allSchemes;
+      } else {
+        schemeCodes = (schemes as any[]).map(s => ({
+          scheme_code: s.scheme_code,
+          scheme_name: s.scheme_name || "",
+        }));
       }
-
-      // Use a paginated distinct query via select
+    } else {
+      // Incremental: only schemes with nav_history updated in last 24 hours
+      console.log("[METRICS] Incremental mode: querying schemes updated in last 24 hours...");
+      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const allSchemes: { scheme_code: string; scheme_name: string }[] = [];
       let offset = 0;
       const pageSize = 1000;
@@ -338,6 +382,7 @@ serve(async (req) => {
         const { data: page } = await supabase
           .from("nav_history")
           .select("scheme_code, scheme_name")
+          .gte("created_at", cutoff)
           .range(offset, offset + pageSize - 1)
           .limit(pageSize);
         if (!page || page.length === 0) break;
@@ -348,13 +393,7 @@ serve(async (req) => {
         }
         offset += pageSize;
       }
-      schemeCodes = allSchemes.map(s => ({ ...s, count: 0 }));
-    } else {
-      schemeCodes = (schemes as any[]).map(s => ({
-        scheme_code: s.scheme_code,
-        scheme_name: s.scheme_name || "",
-        count: (s as any).count || 0,
-      }));
+      schemeCodes = allSchemes;
     }
 
     console.log(`[METRICS] Found ${schemeCodes.length} distinct schemes in nav_history`);
@@ -455,12 +494,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        totalSchemes: schemeCodes.length,
-        processed,
-        updated,
-        skipped,
-        errors,
-        executionTimeMs: executionTime,
+        processed_funds_count: processed,
+        updated_funds_count: updated,
+        execution_time: executionTime,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
@@ -470,7 +506,7 @@ serve(async (req) => {
       JSON.stringify({
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
-        executionTimeMs: Date.now() - startTime,
+        execution_time: Date.now() - startTime,
       }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );

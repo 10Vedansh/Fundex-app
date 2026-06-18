@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { recommendFundsV2, RecommendationPreferences } from '@/utils/recommendation/intersectionEngine';
 import { determineInvestorPersona } from '@/utils/recommendation/personaEngine';
+import { deriveRiskFromProfile } from '@/utils/recommendation/riskCapacity';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { DashboardHeaderZone } from '@/components/dashboard/DashboardHeaderZone';
@@ -223,8 +224,18 @@ const Index = () => {
     const rawAmount = profile.investment_amount;
     const effectiveAmount = rawAmount || 'medium';
 
+    // Multi-factor risk derivation using ALL profile fields
+    const riskResult = deriveRiskFromProfile({
+      market_reaction: profile.market_reaction,
+      investor_stage: profile.investor_stage,
+      emergency_fund: profile.emergency_fund,
+      existing_investments: profile.existing_investments,
+      investment_horizon: profile.investment_horizon,
+    });
+    const effectiveRisk = riskResult.riskTolerance;
+
     const prefs: RecommendationPreferences = {
-      riskTolerance: profile.risk_tolerance || 'moderate',
+      riskTolerance: effectiveRisk,
       investmentGoal: effectiveGoal,
       investmentHorizon: profile.investment_horizon || 'long',
       experienceLevel: profile.experience_level || 'beginner',
