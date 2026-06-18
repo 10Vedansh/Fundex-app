@@ -25,6 +25,7 @@ import {
   V3ScoreResult,
 } from './scoringEngineV3';
 import { generateExplanations } from './explainabilityEngine';
+import { constructPortfolio, FundWithReason } from './portfolioConstructor';
 
 export interface RecommendationPreferences {
   riskTolerance: string;
@@ -49,6 +50,7 @@ export interface ScoredFund extends MutualFund {
   expenseScore?: number;
   confidenceLevel?: ConfidenceLevel;
   confidenceReason?: string;
+  selectionReason?: string;
 }
 
 export function computeConfidence(fund: MutualFund): { level: ConfidenceLevel; reason: string } {
@@ -240,114 +242,7 @@ function applyAmountConstraints(funds: MutualFund[], amount: string): MutualFund
 }
 
 // ── STEP 2: Diversification Engine ──
-
-function diversify(
-  scored: ScoredFund[],
-  prefs: RecommendationPreferences,
-  target: number,
-  normalizedGoal?: string,
-): ScoredFund[] {
-  const model = getAllocationModel(prefs.riskTolerance, prefs.investmentGoal);
-  const result: ScoredFund[] = [];
-  const usedAmcs = new Map<string, number>();
-  const usedIds = new Set<string>();
-  let etfCount = 0;
-  const MAX_ETF = 3;
-  const isRetirement = normalizedGoal === 'retirement';
-  let arbitrageCount = 0;
-  const MAX_ARBITRAGE_RETIREMENT = 1;
-
-  const totalEtfsBefore = scored.filter(f => isPassiveFund(f)).length;
-
-  for (const bucket of model) {
-    const bucketFunds = scored
-      .filter(f => bucket.categories.includes(catCode(f)) && !usedIds.has(f.id))
-      .sort((a, b) => b.compositeScore - a.compositeScore);
-
-    let count = 0;
-    for (const fund of bucketFunds) {
-      if (count >= bucket.maxFunds || result.length >= target) break;
-      const normAmc = normalizeAmcName(fund.amc);
-      const amcCount = usedAmcs.get(normAmc) || 0;
-      if (amcCount >= 2) continue;
-      if (isPassiveFund(fund) && etfCount >= MAX_ETF) continue;
-      if (isRetirement && catCode(fund) === 'HY-AR' && arbitrageCount >= MAX_ARBITRAGE_RETIREMENT) continue;
-
-      result.push(fund);
-      usedIds.add(fund.id);
-      usedAmcs.set(normAmc, amcCount + 1);
-      if (isPassiveFund(fund)) etfCount++;
-      if (catCode(fund) === 'HY-AR') arbitrageCount++;
-      count++;
-    }
-  }
-
-  // Fill remaining from top scores
-  if (result.length < target) {
-    const catCount = new Map<string, number>();
-    const assetClassCount = new Map<string, number>();
-    result.forEach(f => {
-      const cc = catCode(f);
-      catCount.set(cc, (catCount.get(cc) || 0) + 1);
-      const ac = getAssetClassFromCategory(cc);
-      assetClassCount.set(ac, (assetClassCount.get(ac) || 0) + 1);
-    });
-
-    // Determine goal-allowed prefixes for fill-remaining phase to prevent category leakage
-    const goalConfig = normalizedGoal ? GOAL_ELIGIBILITY[normalizedGoal] : null;
-    const allowedPrefixes = goalConfig?.allowedCategoryPrefixes;
-
-    // Track primary category already represented to force diversity
-    const totalAssetClasses = result.length > 0 ? assetClassCount.size : 0;
-
-    for (const fund of scored) {
-      if (result.length >= target) break;
-      if (usedIds.has(fund.id)) continue;
-      const normAmc = normalizeAmcName(fund.amc);
-      if ((usedAmcs.get(normAmc) || 0) >= 2) continue;
-      if (isPassiveFund(fund) && etfCount >= MAX_ETF) continue;
-      if (isRetirement && catCode(fund) === 'HY-AR' && arbitrageCount >= MAX_ARBITRAGE_RETIREMENT) continue;
-
-      const cc = catCode(fund);
-      const ac = getAssetClassFromCategory(cc);
-      const existingCatCount = catCount.get(cc) || 0;
-
-      // Max 3 funds per category (tightened from 4)
-      if (existingCatCount >= 3) continue;
-
-      // Ensure at least 2 different asset classes when we have enough funds
-      if (result.length >= 3 && totalAssetClasses < 2 && assetClassCount.get(ac) === 0) {
-        // This fund adds a new asset class — prefer it
-      } else if (result.length >= 4 && assetClassCount.size >= 1 && assetClassCount.get(ac) !== undefined) {
-        // If we already have 4+ funds and this asset class is already represented,
-        // still allow it (don't over-restrict)
-      }
-
-      // Max 60% of recommendations from same asset class
-      if (assetClassCount.size >= 1 && (assetClassCount.get(ac) || 0) >= Math.ceil(target * 0.6)) continue;
-
-      // Enforce goal-appropriate category in fill-remaining phase
-      if (allowedPrefixes !== null && allowedPrefixes !== undefined) {
-        const matchesGoal = allowedPrefixes.some(p => cc === p || cc.startsWith(p));
-        if (!matchesGoal) continue;
-      }
-
-      result.push(fund);
-      usedIds.add(fund.id);
-      usedAmcs.set(normAmc, (usedAmcs.get(normAmc) || 0) + 1);
-      if (isPassiveFund(fund)) etfCount++;
-      if (cc === 'HY-AR') arbitrageCount++;
-      catCount.set(cc, existingCatCount + 1);
-      assetClassCount.set(ac, (assetClassCount.get(ac) || 0) + 1);
-    }
-  }
-
-  const finalEtfCount = result.filter(f => isPassiveFund(f)).length;
-  console.log(`[CIFRAA-RECO] ETF_COUNT=${finalEtfCount}`);
-  console.log(`[CIFRAA-RECO] ACTIVE_COUNT=${result.length - finalEtfCount}`);
-
-  return result;
-}
+// (replaced by constructPortfolio in portfolioConstructor.ts)
 
 // ── STEP 3: Fallback Strategy ──
 
@@ -567,7 +462,7 @@ export function recommendFundsV2(
 
   scored.sort((a, b) => b.compositeScore - a.compositeScore);
 
-  const diversified = diversify(scored, normalizedPrefs, 9, normalizedPrefs.investmentGoal);
+  const diversified = constructPortfolio(scored, normalizedPrefs, 9, normalizedPrefs.investmentGoal);
 
   return diversified;
 }

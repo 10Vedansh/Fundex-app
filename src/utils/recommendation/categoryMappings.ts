@@ -75,6 +75,7 @@ export const CATEGORY_NAME_TO_CODE: Record<string, string> = {
   'Debt - Banking and PSU': 'DT-BK & PSU',
   'Debt - Floater': 'DT-Floater',
   'Debt - Credit Risk': 'DT-CR',
+  'Debt - Ultra Short Duration': 'DT-USD',
   'Debt - IDF': 'DT-IDF',
   'Hybrid - Aggressive': 'HY-AH',
   'Hybrid - Conservative': 'HY-CH',
@@ -82,6 +83,8 @@ export const CATEGORY_NAME_TO_CODE: Record<string, string> = {
   'Hybrid - Balanced': 'HY-DAA',
   'Hybrid - Equity Savings': 'HY-EQ S',
   'Hybrid - Multi Asset Allocation': 'HY-MAA',
+  'Hybrid - Dynamic Asset Allocation': 'HY-DAA',
+  'Other - ETF': 'EQ-ETF',
 };
 
 export function toCategoryCode(name: string): string {
@@ -133,7 +136,7 @@ export const RISK_CONSTRAINTS: Record<string, RiskConstraint> = {
       ...SECTORAL_CATEGORIES.filter(c => !['EQ-BANK', 'EQ-IT', 'EQ-Pharma'].includes(c)),
       'EQ-Quant',
       'DT-CR',
-      'HY-AH', 'HY-MAA',
+      'HY-AH',
     ],
   },
   aggressive: {
@@ -156,7 +159,7 @@ export interface GoalEligibility {
 
 export const GOAL_ELIGIBILITY: Record<string, GoalEligibility> = {
   wealth_creation: {
-    allowedCategoryPrefixes: ['EQ-', PLAIN_EQUITY, PLAIN_INDEX],
+    allowedCategoryPrefixes: ['EQ-', 'HY-', 'DT-', PLAIN_EQUITY, PLAIN_INDEX, PLAIN_HYBRID, PLAIN_DEBT],
     blockedCategories: ['EQ-DIV Y', 'EQ-INTL', 'EQ-T-ESG', 'EQ-FOF'],
     maxVolatility: null,
     minSharpe: null,
@@ -455,9 +458,9 @@ export function getAllocationModel(risk: string, goal: string): AllocationBucket
         { categories: ['HY-DAA'], maxFunds: 1 },             // Balanced Advantage
         { categories: ['EQ-FLX', 'EQ-MLC'], maxFunds: 2 },   // Flexi Cap
         { categories: ['EQ-LC'], maxFunds: 1 },               // Large Cap
-        { categories: ['EQ-VAL'], maxFunds: 1 },              // Value
+        { categories: ['HY-MAA'], maxFunds: 1 },              // Multi Asset Allocation
         { categories: ['HY-CH'], maxFunds: 1 },               // Conservative Hybrid
-        { categories: ['DT-CB', 'DT-BK & PSU', PLAIN_DEBT], maxFunds: 1 }, // Corporate Bond
+        { categories: ['DT-CB', 'DT-BK & PSU', 'DT-SD', PLAIN_DEBT], maxFunds: 1 }, // Corporate Bond + Short Duration
         { categories: ['HY-AR'], maxFunds: 1 },               // Arbitrage (max 1)
         { categories: ['HY-EQ S'], maxFunds: 1 },             // Equity Savings
       ];
@@ -466,22 +469,35 @@ export function getAllocationModel(risk: string, goal: string): AllocationBucket
       return [
         { categories: ['EQ-FLX', 'EQ-MLC', PLAIN_EQUITY], maxFunds: 2 },
         { categories: ['EQ-LC', 'EQ-L&MC', PLAIN_INDEX], maxFunds: 2 },
-        { categories: ['EQ-VAL', 'EQ-ELSS'], maxFunds: 2 },
-        { categories: ['HY-BH', 'HY-DAA', 'HY-MAA', PLAIN_HYBRID], maxFunds: 2 },
-        { categories: ['DT-SD', 'DT-CB', PLAIN_DEBT], maxFunds: 1 },
+        { categories: ['EQ-VAL', 'EQ-ELSS'], maxFunds: 1 },
+        { categories: ['HY-CH', 'HY-EQ S', PLAIN_HYBRID], maxFunds: 2 },
+        { categories: ['DT-CB', 'DT-SD', PLAIN_DEBT], maxFunds: 2 },
       ];
     }
     return [
       { categories: ['EQ-LC', 'EQ-L&MC', PLAIN_EQUITY, PLAIN_INDEX], maxFunds: 2 },
       { categories: ['EQ-FLX', 'EQ-MLC'], maxFunds: 2 },
       { categories: ['EQ-VAL', 'EQ-DIV Y'], maxFunds: 1 },
-      { categories: ['HY-BH', 'HY-DAA', PLAIN_HYBRID], maxFunds: 2 },
+      { categories: ['HY-CH', 'HY-AR', 'HY-EQ S', PLAIN_HYBRID], maxFunds: 2 },
       { categories: ['DT-CB', 'DT-SD', PLAIN_DEBT], maxFunds: 1 },
       { categories: ['EQ-ELSS'], maxFunds: 1 },
     ];
   }
 
   // Aggressive
+  if (g === 'retirement') {
+    return [
+      { categories: ['EQ-FLX', 'EQ-MLC'], maxFunds: 2 },   // Flexi/Multi Cap
+      { categories: ['EQ-LC', 'EQ-L&MC', PLAIN_INDEX], maxFunds: 1 }, // Large Cap
+      { categories: ['EQ-MC'], maxFunds: 1 },               // Mid Cap
+      { categories: ['HY-DAA'], maxFunds: 1 },              // Balanced Advantage
+      { categories: ['HY-MAA'], maxFunds: 1 },              // Multi Asset Allocation
+      { categories: ['HY-CH'], maxFunds: 1 },               // Conservative Hybrid
+      { categories: ['DT-CB', 'DT-BK & PSU', 'DT-SD', PLAIN_DEBT], maxFunds: 1 }, // Debt
+      { categories: ['HY-AR'], maxFunds: 1 },               // Arbitrage
+      { categories: ['HY-EQ S'], maxFunds: 1 },             // Equity Savings
+    ];
+  }
   if (g === 'wealth') {
     return [
       { categories: ['EQ-SC', PLAIN_EQUITY], maxFunds: 2 },

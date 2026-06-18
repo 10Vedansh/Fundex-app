@@ -301,8 +301,14 @@ def main():
         cagr_5y = calc_cagr(nav_dates_list, latest_nav, 365 * 5, 5)
 
         # Sanitize: reject impossible CAGR from unadjusted corporate actions
+        # Segregated portfolios (credit event side pockets) can show CAGR 300-400%
+        # because NAV starts near zero then partially recovers.
         def _sanitize_cagr(v):
-            return None if v is not None and (v > 5 or v < -1) else v
+            return None if v is not None and (v > 1 or v < -1) else v
+
+        def _sanitize_bound(v, mx, mn):
+            return None if v is not None and (v > mx or v < mn) else v
+
         cagr_1y = _sanitize_cagr(cagr_1y)
         cagr_3y = _sanitize_cagr(cagr_3y)
         cagr_5y = _sanitize_cagr(cagr_5y)
@@ -315,26 +321,32 @@ def main():
             with_5y += 1
 
         # Volatility
-        vol_1y = calc_annualized_vol(log_returns, TRADING_DAYS_PER_YEAR)
-        vol_3y = calc_annualized_vol(log_returns, TRADING_DAYS_PER_YEAR * 3)
-        vol_5y = calc_annualized_vol(log_returns, TRADING_DAYS_PER_YEAR * 5)
+        vol_1y = _sanitize_bound(calc_annualized_vol(log_returns, TRADING_DAYS_PER_YEAR), 2, 0)
+        vol_3y = _sanitize_bound(calc_annualized_vol(log_returns, TRADING_DAYS_PER_YEAR * 3), 2, 0)
+        vol_5y = _sanitize_bound(calc_annualized_vol(log_returns, TRADING_DAYS_PER_YEAR * 5), 2, 0)
 
         # Max drawdown
         max_dd = calc_max_drawdown(navs)
 
         # Sharpe
-        sharpe_1y = calc_sharpe(cagr_1y, vol_1y, rf_rate) if cagr_1y is not None else None
-        sharpe_3y = calc_sharpe(cagr_3y, vol_3y, rf_rate) if cagr_3y is not None else None
-        sharpe_5y = calc_sharpe(cagr_5y, vol_5y, rf_rate) if cagr_5y is not None else None
+        _sharpe_1y = calc_sharpe(cagr_1y, vol_1y, rf_rate) if cagr_1y is not None else None
+        _sharpe_3y = calc_sharpe(cagr_3y, vol_3y, rf_rate) if cagr_3y is not None else None
+        _sharpe_5y = calc_sharpe(cagr_5y, vol_5y, rf_rate) if cagr_5y is not None else None
+        sharpe_1y = _sanitize_bound(_sharpe_1y, 10, -10)
+        sharpe_3y = _sanitize_bound(_sharpe_3y, 10, -10)
+        sharpe_5y = _sanitize_bound(_sharpe_5y, 10, -10)
 
         # Sortino
         dd_1y = calc_downside_dev(log_returns, TRADING_DAYS_PER_YEAR)
         dd_3y = calc_downside_dev(log_returns, TRADING_DAYS_PER_YEAR * 3)
         dd_5y = calc_downside_dev(log_returns, TRADING_DAYS_PER_YEAR * 5)
 
-        sortino_1y = calc_sortino(cagr_1y, dd_1y, rf_rate) if cagr_1y is not None else None
-        sortino_3y = calc_sortino(cagr_3y, dd_3y, rf_rate) if cagr_3y is not None else None
-        sortino_5y = calc_sortino(cagr_5y, dd_5y, rf_rate) if cagr_5y is not None else None
+        _sortino_1y = calc_sortino(cagr_1y, dd_1y, rf_rate) if cagr_1y is not None else None
+        _sortino_3y = calc_sortino(cagr_3y, dd_3y, rf_rate) if cagr_3y is not None else None
+        _sortino_5y = calc_sortino(cagr_5y, dd_5y, rf_rate) if cagr_5y is not None else None
+        sortino_1y = _sanitize_bound(_sortino_1y, 20, -20)
+        sortino_3y = _sanitize_bound(_sortino_3y, 20, -20)
+        sortino_5y = _sanitize_bound(_sortino_5y, 20, -20)
 
         # Quality
         consistency = calc_consistency(navs, dates)

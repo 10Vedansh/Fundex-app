@@ -229,29 +229,31 @@ function computeSchemeMetrics(schemeCode: string, schemeName: string, navRows: N
   const return_3m = calcSimpleReturn(navDatesList, latestNav, 90);
   const return_6m = calcSimpleReturn(navDatesList, latestNav, 180);
   const sanitizeCagr = (v: number | null): number | null =>
-    v !== null && (v > 5 || v < -1) ? null : v;
+    v !== null && (v > 1 || v < -1) ? null : v;
+  const sanitizeBound = (v: number | null, max: number, min: number): number | null =>
+    v !== null && (v > max || v < min) ? null : v;
 
   const cagr_1y = sanitizeCagr(calcCagr(navDatesList, latestNav, 365, 1));
   const cagr_3y = sanitizeCagr(calcCagr(navDatesList, latestNav, 365 * 3, 3));
   const cagr_5y = sanitizeCagr(calcCagr(navDatesList, latestNav, 365 * 5, 5));
 
-  const vol_1y = calcAnnualizedVol(logReturns, TRADING_DAYS_PER_YEAR);
-  const vol_3y = calcAnnualizedVol(logReturns, TRADING_DAYS_PER_YEAR * 3);
-  const vol_5y = calcAnnualizedVol(logReturns, TRADING_DAYS_PER_YEAR * 5);
+  const vol_1y = sanitizeBound(calcAnnualizedVol(logReturns, TRADING_DAYS_PER_YEAR), 2, 0);
+  const vol_3y = sanitizeBound(calcAnnualizedVol(logReturns, TRADING_DAYS_PER_YEAR * 3), 2, 0);
+  const vol_5y = sanitizeBound(calcAnnualizedVol(logReturns, TRADING_DAYS_PER_YEAR * 5), 2, 0);
 
   const max_dd = calcMaxDrawdown(navs);
 
-  const sharpe_1y = calcSharpe(cagr_1y, vol_1y, RISK_FREE_RATE);
-  const sharpe_3y = calcSharpe(cagr_3y, vol_3y, RISK_FREE_RATE);
-  const sharpe_5y = calcSharpe(cagr_5y, vol_5y, RISK_FREE_RATE);
+  const sharpe_1y = sanitizeBound(calcSharpe(cagr_1y, vol_1y, RISK_FREE_RATE), 10, -10);
+  const sharpe_3y = sanitizeBound(calcSharpe(cagr_3y, vol_3y, RISK_FREE_RATE), 10, -10);
+  const sharpe_5y = sanitizeBound(calcSharpe(cagr_5y, vol_5y, RISK_FREE_RATE), 10, -10);
 
   const dd_1y = calcDownsideDev(logReturns, TRADING_DAYS_PER_YEAR);
   const dd_3y = calcDownsideDev(logReturns, TRADING_DAYS_PER_YEAR * 3);
   const dd_5y = calcDownsideDev(logReturns, TRADING_DAYS_PER_YEAR * 5);
 
-  const sortino_1y = calcSortino(cagr_1y, dd_1y, RISK_FREE_RATE);
-  const sortino_3y = calcSortino(cagr_3y, dd_3y, RISK_FREE_RATE);
-  const sortino_5y = calcSortino(cagr_5y, dd_5y, RISK_FREE_RATE);
+  const sortino_1y = sanitizeBound(calcSortino(cagr_1y, dd_1y, RISK_FREE_RATE), 20, -20);
+  const sortino_3y = sanitizeBound(calcSortino(cagr_3y, dd_3y, RISK_FREE_RATE), 20, -20);
+  const sortino_5y = sanitizeBound(calcSortino(cagr_5y, dd_5y, RISK_FREE_RATE), 20, -20);
 
   const consistency = calcConsistency(navs, dates);
   const confidence = calcConfidence(navs.length, dates[0], dates[dates.length - 1]);
@@ -298,7 +300,7 @@ function computeSchemeMetrics(schemeCode: string, schemeName: string, navRows: N
 }
 
 // ---------------------------------------------------------------------------
-// Main handler
+// Main handler -- v2 sanitization: CAGR<100%, Sharpe<10, Sortino<20, Vol<200%
 // ---------------------------------------------------------------------------
 
 serve(async (req) => {
