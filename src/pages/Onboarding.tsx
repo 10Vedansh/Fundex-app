@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { FundexLogo } from '@/components/landing/FundexLogo';
 import { AuthBrandPanel } from '@/components/auth/AuthBrandPanel';
 import { getRawFieldAvailability, validateProfile, ProfileState } from '@/utils/recommendation/profileRules';
+import { deriveRiskFromProfile } from '@/utils/recommendation/riskCapacity';
 
 interface Question {
   id: string;
@@ -131,15 +132,6 @@ export default function Onboarding() {
     else await completeOnboarding(newAnswers);
   };
 
-  const deriveRiskFromMarketReaction = (reaction: string): string => {
-    switch (reaction) {
-      case 'withdraw': return 'conservative';
-      case 'wait': return 'moderate';
-      case 'invest_more': return 'aggressive';
-      default: return 'moderate';
-    }
-  };
-
   const deriveGoalFromPrimaryGoal = (goal: string): string => {
     switch (goal) {
       case 'wealth_creation': return 'wealth';
@@ -196,7 +188,14 @@ export default function Onboarding() {
         investment_horizon: mapHorizon(finalAnswers.investment_horizon),
         experience_level: dbValue,
         existing_investments: finalAnswers.existing_investments,
-        risk_tolerance: deriveRiskFromMarketReaction(finalAnswers.market_reaction),
+        risk_tolerance: deriveRiskFromProfile({
+          market_reaction: finalAnswers.market_reaction,
+          investor_stage: finalAnswers.investor_stage,
+          emergency_fund: finalAnswers.emergency_fund,
+          existing_investments: finalAnswers.existing_investments,
+          investment_horizon: mapHorizon(finalAnswers.investment_horizon),
+          primary_goal: finalAnswers.primary_goal,
+        }).riskTolerance,
         investment_goal: deriveGoalFromPrimaryGoal(finalAnswers.primary_goal),
         investment_amount: 'medium',
         onboarding_completed: true,

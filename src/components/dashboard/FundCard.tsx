@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MutualFund, CATEGORY_LABELS } from '@/types/mutualFund';
-import { TrendingUp, TrendingDown, BarChart3, Percent, Bookmark, Lightbulb } from 'lucide-react';
+import { TrendingUp, TrendingDown, BarChart3, Percent, Bookmark, Lightbulb, PieChart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FundCardProps {
@@ -12,6 +12,7 @@ interface FundCardProps {
     reasons?: string[];
     confidenceLevel?: 'high' | 'medium' | 'limited_history';
     confidenceReason?: string;
+    allocationPercent?: number;
   };
   onClick?: () => void;
   isBookmarked?: boolean;
@@ -191,6 +192,19 @@ export function FundCard({ fund, onClick, isBookmarked = false, onBookmarkToggle
           <span>NAV: {fund.nav ? `₹${fund.nav.toFixed(2)}` : 'NA'}</span>
           <span>AUM: {fund.aum ? `₹${fund.aum.toLocaleString()}Cr` : 'NA'}</span>
         </div>
+
+        {/* Portfolio Allocation */}
+        {fund.allocationPercent !== undefined && (
+          <div className="mt-4 p-3 rounded-xl bg-secondary/10 border border-secondary/20">
+            <div className="flex items-center gap-1.5 mb-1">
+              <PieChart className="h-3.5 w-3.5 text-secondary" />
+              <span className="text-xs font-semibold text-secondary">Portfolio Allocation</span>
+            </div>
+            <p className="text-lg font-bold text-foreground">
+              {fund.allocationPercent.toFixed(1)}%
+            </p>
+          </div>
+        )}
 
         {/* Why this fund? — Redesigned */}
         {((fund.reasons && fund.reasons.length > 0) || fund.confidenceReason) && (

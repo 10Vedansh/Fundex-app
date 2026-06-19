@@ -279,6 +279,12 @@ export function scoreV3(
   riskTolerance: string,
   investmentHorizon: string,
   investmentGoal: string,
+  profileOverrides?: {
+    market_reaction?: string;
+    emergency_fund?: string;
+    existing_investments?: string;
+    investor_stage?: string;
+  },
 ): V3ScoreResult {
   const reasons: string[] = [];
   const cat = toCategoryCode(fund.category || '');
@@ -367,6 +373,77 @@ export function scoreV3(
       reasons.push('Experienced investor can utilize moderate volatility');
     }
     // No expense penalty for experienced (they can select direct plans)
+  }
+
+  // ── V2 Preference Score Adjustments ──
+  // Goal preference: +10% for fund categories matching goal's natural duration
+  if (investmentGoal === 'retirement' && cat.startsWith('HY-')) {
+    score *= 1.10;
+    reasons.push('Hybrid fund aligned with retirement goal — +10% bonus');
+  }
+  if (investmentGoal === 'capital_preservation' && cat.startsWith('DT-')) {
+    score *= 1.10;
+    reasons.push('Debt fund aligned with capital preservation — +10% bonus');
+  }
+  if (investmentGoal === 'tax_saving' && cat === 'EQ-ELSS') {
+    score *= 1.10;
+    reasons.push('ELSS aligned with tax-saving goal — +10% bonus');
+  }
+  if (investmentGoal === 'wealth_creation' && cat.startsWith('EQ-') && investmentHorizon !== 'short') {
+    score *= 1.05;
+    reasons.push('Equity fund aligned with wealth creation — +5% bonus');
+  }
+
+  // Horizon fit: +5% for funds matching horizon, -10% for mismatch
+  if (investmentHorizon === 'short' && (cat.startsWith('DT-') || cat.startsWith('HY-AR'))) {
+    score *= 1.05;
+    reasons.push('Short-duration fund fit for short horizon — +5% bonus');
+  }
+  if (investmentHorizon === 'short' && cat.startsWith('EQ-') && cat !== 'HY-AR') {
+    score *= 0.90;
+    reasons.push('Equity fund penalized for short horizon — -10% penalty');
+  }
+  if (investmentHorizon === 'long' && cat.startsWith('EQ-')) {
+    score *= 1.05;
+    reasons.push('Equity fund benefits from long horizon — +5% bonus');
+  }
+
+  // Market reaction: volatility alignment ±5%
+  const marketReaction = profileOverrides?.market_reaction;
+  if (marketReaction === 'withdraw' && vol > 15) {
+    score *= 0.95;
+    reasons.push('High volatility penalized for loss-averse investor — -5%');
+  }
+  if (marketReaction === 'invest_more' && vol > 15) {
+    score *= 1.05;
+    reasons.push('Moderate volatility accepted by opportunistic investor — +5%');
+  }
+
+  // Emergency fund: overconservative penalty (-10% for low-vol on low emergency fund)
+  const emergencyFund = profileOverrides?.emergency_fund;
+  if (emergencyFund === '<3_months' && vol < 5) {
+    score *= 0.90;
+    reasons.push('Overly conservative for limited emergency fund — -10% penalty');
+  }
+
+  // Existing investments: high-risk penalty for beginners with no existing portfolio
+  const existingInv = profileOverrides?.existing_investments;
+  if ((existingInv === 'none' || existingInv === 'under_5l') && vol > 20 && riskTolerance === 'aggressive') {
+    score *= 0.95;
+    reasons.push('High-risk fund penalized for limited existing portfolio — -5%');
+  }
+
+  // Investor stage: retired debt bonus +10%, equity penalty -10%
+  const stage = profileOverrides?.investor_stage;
+  if (stage === 'retired') {
+    if (cat.startsWith('DT-')) {
+      score *= 1.10;
+      reasons.push('Debt fund preferred for retired investor — +10% bonus');
+    }
+    if (cat.startsWith('EQ-') && !cat.startsWith('EQ-LC') && cat !== 'EQ-FLX') {
+      score *= 0.90;
+      reasons.push('Non-core equity penalized for retired investor — -10%');
+    }
   }
 
   // 9. Completeness penalty — missing critical metrics penalized harder (15%),

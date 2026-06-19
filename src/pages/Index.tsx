@@ -241,6 +241,10 @@ const Index = () => {
       investmentHorizon: profile.investment_horizon || 'long',
       experienceLevel: profile.experience_level || 'beginner',
       investmentAmount: effectiveAmount,
+      market_reaction: profile.market_reaction || undefined,
+      emergency_fund: profile.emergency_fund || undefined,
+      existing_investments: profile.existing_investments || undefined,
+      investor_stage: profile.investor_stage || undefined,
     };
 
     const recommended = recommendFundsV2(funds, prefs);
@@ -248,6 +252,49 @@ const Index = () => {
     const result = recommended.length > 0 ? recommended.slice(0, 9) : funds.slice(0, 9);
     return result;
   }, [funds, profile]);
+
+  // Allocation summary from weighted model
+  const allocationSummary = useMemo(() => {
+    let totalAlloc = 0;
+    let equityAlloc = 0;
+    let debtAlloc = 0;
+    let hybridAlloc = 0;
+    let hasAllocation = false;
+
+    for (const fund of personalizedFunds) {
+      const alloc = (fund as { allocationPercent?: number }).allocationPercent;
+      if (alloc === undefined || alloc === null) continue;
+      hasAllocation = true;
+      totalAlloc += alloc;
+      const cat = fund.category?.toUpperCase() || '';
+      if (cat.startsWith('EQ-')) equityAlloc += alloc;
+      else if (cat.startsWith('DT-')) debtAlloc += alloc;
+      else if (cat.startsWith('HY-')) hybridAlloc += alloc;
+    }
+
+    return {
+      totalAlloc: Math.round(totalAlloc * 10) / 10,
+      equityAlloc: Math.round(equityAlloc * 10) / 10,
+      debtAlloc: Math.round(debtAlloc * 10) / 10,
+      hybridAlloc: Math.round(hybridAlloc * 10) / 10,
+      hasAllocation,
+    };
+  }, [personalizedFunds]);
+
+  // Verification output for retirement portfolio
+  useEffect(() => {
+    if (!allocationSummary.hasAllocation) return;
+    console.log('[Portfolio Weight Verification]');
+    console.log(`  Total allocation: ${allocationSummary.totalAlloc}%`);
+    console.log(`  Equity: ${allocationSummary.equityAlloc}%`);
+    console.log(`  Debt: ${allocationSummary.debtAlloc}%`);
+    console.log(`  Hybrid: ${allocationSummary.hybridAlloc}%`);
+    if (Math.abs(allocationSummary.totalAlloc - 100) > 1) {
+      console.warn(`  WARNING: Total (${allocationSummary.totalAlloc}%) deviates from 100% by >1pp`);
+    } else {
+      console.log('  Total sums to 100% -- PASS');
+    }
+  }, [allocationSummary]);
 
   // Global search results
   const globalFilteredFunds = useMemo(() => {
@@ -504,6 +551,19 @@ const Index = () => {
                           <p className="text-xl font-bold text-foreground">{personaResult.name}</p>
                           <p className="text-sm text-muted-foreground mt-1">{personaResult.explanation}</p>
                         </div>
+                      )}
+                      {allocationSummary.hasAllocation && (
+                        <Card className="glass-card border-primary/10">
+                          <CardContent className="py-3 px-5">
+                            <div className="flex items-center gap-4 flex-wrap">
+                              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Portfolio Allocation</span>
+                              <span className="text-sm"><span className="font-bold text-primary">Equity</span>: {allocationSummary.equityAlloc}%</span>
+                              <span className="text-sm"><span className="font-bold text-blue-400">Debt</span>: {allocationSummary.debtAlloc}%</span>
+                              <span className="text-sm"><span className="font-bold text-amber-400">Hybrid</span>: {allocationSummary.hybridAlloc}%</span>
+                              <span className="text-xs text-muted-foreground ml-auto">Total: {allocationSummary.totalAlloc}%</span>
+                            </div>
+                          </CardContent>
+                        </Card>
                       )}
                       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                         {personalizedFunds.map(fund => (

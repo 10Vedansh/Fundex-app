@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MutualFund, CATEGORY_LABELS } from '@/types/mutualFund';
-import { RiskCapacityInputs } from '@/utils/recommendation/riskCapacity';
 import {
   generateStrategyPortfolios,
   StrategyGenerationResult,
@@ -20,7 +19,7 @@ import * as Recharts from 'recharts';
 import {
   Shield, TrendingUp, Target, AlertTriangle,
   ArrowRight, Loader2, Info, ChevronRight,
-  BarChart3, Clock, Gauge,
+  BarChart3, Clock, Gauge, Wallet,
 } from 'lucide-react';
 
 interface BuildPortfolioProps {
@@ -31,12 +30,10 @@ interface BuildPortfolioProps {
     investment_horizon?: string | null;
     experience_level?: string | null;
     investment_amount?: string | null;
-    occupation?: string | null;
-    income_stability?: string | null;
-    monthly_emis?: number | null;
-    dependents?: number | null;
-    has_insurance?: boolean | null;
     existing_investments?: string | null;
+    market_reaction?: string | null;
+    investor_stage?: string | null;
+    emergency_fund?: string | null;
   } | null;
 }
 
@@ -375,11 +372,6 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
   const [experience, setExperience] = useState('');
   const [investmentMode, setInvestmentMode] = useState<'lumpsum' | 'sip'>('lumpsum');
   const [amount, setAmount] = useState('');
-  const [occupation, setOccupation] = useState('');
-  const [incomeStability, setIncomeStability] = useState('');
-  const [emis, setEmis] = useState('');
-  const [dependents, setDependents] = useState('');
-  const [hasInsurance, setHasInsurance] = useState(false);
   const [existingInvestments, setExistingInvestments] = useState('');
 
   const [wantCommodities, setWantCommodities] = useState(false);
@@ -390,7 +382,7 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
   const [selectedDebtSubs, setSelectedDebtSubs] = useState<string[]>([]);
   const [selectedHybridSubs, setSelectedHybridSubs] = useState<string[]>([]);
 
-  const allFieldsFilled = risk && goal && horizon && experience && amount && occupation && incomeStability && emis && dependents && existingInvestments;
+  const allFieldsFilled = risk && goal && horizon && experience && amount;
 
   const handleFundClick = (fund: MutualFund) => {
     const fullFund = funds.find(f => f.id === fund.id) || fund;
@@ -403,16 +395,11 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
     setIsBuilding(true);
 
     setTimeout(() => {
-      const capacityInputs: RiskCapacityInputs = {
-        occupation: occupation || 'salaried',
-        incomeStability: incomeStability || 'stable',
-        monthlyEmis: parseFloat(emis) || 0,
-        dependents: parseInt(dependents) || 0,
-        hasInsurance,
-        existingInvestments: existingInvestments || 'none',
-      };
-
       const investmentAmount = parseFloat(amount) || 100000;
+
+      // Map profile fields for deriveRiskFromProfile
+      const marketReaction = userProfile?.market_reaction ||
+        (risk === 'conservative' ? 'withdraw' : risk === 'aggressive' ? 'invest_more' : 'wait');
 
       const generationResult = generateStrategyPortfolios(
         funds,
@@ -421,7 +408,12 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
         horizon,
         experience,
         investmentAmount,
-        capacityInputs,
+        {
+          market_reaction: marketReaction,
+          investor_stage: userProfile?.investor_stage || 'mid_career',
+          emergency_fund: userProfile?.emergency_fund || '>6_months',
+          existing_investments: existingInvestments || 'none',
+        },
       );
 
       setResult(generationResult);
@@ -440,36 +432,28 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
 
     return (
       <div className="animate-fade-in space-y-5">
-        {/* Risk capacity adjustment warning */}
-        {result.capacityResult.wasAdjusted && (
-          <Card className="bg-warning/10 border-warning/30">
-            <CardContent className="py-4 flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-warning">Risk Capacity Adjustment</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {result.capacityResult.reasons.find(r => r.includes('adjusted')) || 'Your risk has been adjusted based on your financial profile.'}
-                </p>
+        {/* Risk Profile Summary */}
+        {result.riskProfile.reasons.length > 0 && (
+          <Card className="glass-card">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <Gauge className="h-5 w-5 text-primary flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground mb-1">Your Risk Profile</p>
+                  <div className="flex items-center gap-2">
+                    <RiskCapacityMeter score={result.riskProfile.score} />
+                    <Badge variant="outline" className="text-xs capitalize">
+                      {result.riskProfile.riskTolerance}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {result.riskProfile.reasons[result.riskProfile.reasons.length - 1]}
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
         )}
-
-        {/* Risk Capacity Score */}
-        <Card className="glass-card">
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3">
-              <Gauge className="h-5 w-5 text-primary flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-xs text-muted-foreground mb-1">Your Risk Capacity Score</p>
-                <RiskCapacityMeter score={result.capacityResult.capacityScore} />
-              </div>
-              <Badge variant="outline" className="text-xs">
-                {result.capacityResult.capacityLabel}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Strategy Selector */}
         <div className="space-y-2">
@@ -741,68 +725,24 @@ export function BuildPortfolio({ funds, userProfile }: BuildPortfolioProps) {
             </div>
           )}
 
-          {/* Financial Profile */}
+          {/* Existing Investments */}
           <div className="pt-4 border-t border-border/50">
             <h4 className="font-medium text-sm mb-4 flex items-center gap-2">
-              <Shield className="h-4 w-4 text-primary" />
-              Financial Risk Profile
-              <span className="text-xs text-muted-foreground">(all fields required)</span>
+              <Wallet className="h-4 w-4 text-primary" />
+              Existing Investments
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
               <div className="space-y-2">
-                <Label>Occupation <span className="text-destructive">*</span></Label>
-                <Select value={occupation} onValueChange={setOccupation}>
-                  <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="salaried">Salaried</SelectItem>
-                    <SelectItem value="business_owner">Business Owner</SelectItem>
-                    <SelectItem value="freelancer">Freelancer</SelectItem>
-                    <SelectItem value="student">Student</SelectItem>
-                    <SelectItem value="retired">Retired</SelectItem>
-                    <SelectItem value="homemaker">Homemaker</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Income Stability <span className="text-destructive">*</span></Label>
-                <Select value={incomeStability} onValueChange={setIncomeStability}>
-                  <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="very_stable">Very Stable</SelectItem>
-                    <SelectItem value="stable">Stable</SelectItem>
-                    <SelectItem value="moderate">Moderate</SelectItem>
-                    <SelectItem value="variable">Variable</SelectItem>
-                    <SelectItem value="unstable">Unstable</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Existing Investments <span className="text-destructive">*</span></Label>
+                <Label>Existing Investments</Label>
                 <Select value={existingInvestments} onValueChange={setExistingInvestments}>
-                  <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select (if known)..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="fd_only">FD Only</SelectItem>
-                    <SelectItem value="mixed">Mixed (FD + MF)</SelectItem>
-                    <SelectItem value="diversified">Diversified</SelectItem>
-                    <SelectItem value="advanced">Stocks + MF + Others</SelectItem>
+                    <SelectItem value="under_5l">Under ₹5L</SelectItem>
+                    <SelectItem value="5l_25l">₹5L - ₹25L</SelectItem>
+                    <SelectItem value="25l_plus">₹25L+</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Monthly EMIs (₹) <span className="text-destructive">*</span></Label>
-                <Input type="number" value={emis} onChange={e => setEmis(e.target.value)} placeholder="e.g. 15000" />
-              </div>
-              <div className="space-y-2">
-                <Label>Number of Dependents <span className="text-destructive">*</span></Label>
-                <Input type="number" value={dependents} onChange={e => setDependents(e.target.value)} placeholder="e.g. 2" />
-              </div>
-              <div className="space-y-2">
-                <Label>Insurance Coverage</Label>
-                <div className="flex items-center gap-3 h-10">
-                  <Checkbox id="insurance" checked={hasInsurance} onCheckedChange={(v) => setHasInsurance(!!v)} />
-                  <Label htmlFor="insurance" className="text-sm cursor-pointer">I have health/life insurance</Label>
-                </div>
               </div>
             </div>
           </div>

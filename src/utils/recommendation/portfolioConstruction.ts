@@ -7,7 +7,17 @@
 
 import { MutualFund } from '@/types/mutualFund';
 import { ScoredFund } from './intersectionEngine';
-import { getEquityAllocation } from './riskCapacity';
+
+function getEquityAllocation(riskScore: number): number {
+  switch (riskScore) {
+    case 1: return 20;
+    case 2: return 35;
+    case 3: return 60;
+    case 4: return 80;
+    case 5: return 95;
+    default: return 60;
+  }
+}
 
 export interface PortfolioAllocation {
   fund: ScoredFund;

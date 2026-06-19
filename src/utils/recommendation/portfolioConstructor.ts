@@ -5,12 +5,36 @@ import {
   normalizeAmcName,
   toCategoryCode,
   GOAL_ELIGIBILITY,
+  SECTORAL_CATEGORIES,
 } from './categoryMappings';
 import {
   getStrategyGroup,
   getProfileTypeForCoreSatellite,
   CORE_SATELLITE_MODELS,
 } from './strategyGroups';
+import {
+  buildAllocationFromPreferences,
+  computeCategoryBudgets,
+  selectWeightedFunds,
+  buildTaxSaverPortfolio,
+  RETIREMENT_EQ_SLOTS,
+  RETIREMENT_HY_SLOTS,
+  DEBT_SLOTS,
+  WEALTH_EQ_SLOTS,
+  WEALTH_DT_SLOTS,
+  WEALTH_HY_SLOTS,
+  PRESERVATION_EQ_SLOTS,
+  PRESERVATION_DT_SLOTS,
+  PRESERVATION_HY_SLOTS,
+  PASSIVE_EQ_SLOTS,
+  PASSIVE_DT_SLOTS,
+  PASSIVE_HY_SLOTS,
+  CHILD_EDUCATION_EQ_SLOTS,
+  CHILD_EDUCATION_DT_SLOTS,
+  CHILD_EDUCATION_HY_SLOTS,
+  WeightedFund,
+  PortfolioAllocation,
+} from './allocationEngine';
 
 // ── Helpers ──
 
@@ -44,6 +68,7 @@ export interface SelectionReason {
 }
 export interface FundWithReason extends ScoredFund {
   selectionReason: string;
+  allocationPercent?: number;
 }
 
 // ── Retirement Model Portfolio ──
@@ -226,6 +251,351 @@ function buildRetirementPortfolio(
   return result;
 }
 
+// ── Dynamic Retirement Portfolio (allocation-engine based) ──
+
+function buildDynamicRetirementPortfolio(
+  scored: ScoredFund[],
+  prefs: RecommendationPreferences,
+  target: number,
+): FundWithReason[] {
+  const allocation = buildAllocationFromPreferences({
+    investmentGoal: 'retirement',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+
+  const eqBudgets = computeCategoryBudgets(allocation.eqPct, RETIREMENT_EQ_SLOTS, {
+    investmentGoal: 'retirement',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+  const dtBudgets = computeCategoryBudgets(allocation.dtPct, DEBT_SLOTS, {
+    investmentGoal: 'retirement',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+  const hyBudgets = computeCategoryBudgets(allocation.hyPct, RETIREMENT_HY_SLOTS, {
+    investmentGoal: 'retirement',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+
+  const weighted = selectWeightedFunds(scored, eqBudgets, dtBudgets, hyBudgets, {
+    investmentGoal: 'retirement',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  }, target);
+
+  console.log(`[DYNAMIC-RET] eq=${allocation.eqPct}% dt=${allocation.dtPct}% hy=${allocation.hyPct}% funds=${weighted.length}`);
+  return weighted.map(f => ({
+    ...f,
+    selectionReason: f.selectionReason || `Allocation: ${f.category}`,
+    allocationPercent: f.allocationPercent,
+  })) as unknown as FundWithReason[];
+}
+
+// ── Dynamic Wealth Creation Portfolio (allocation-engine based) ──
+
+function buildDynamicWealthPortfolio(
+  scored: ScoredFund[],
+  prefs: RecommendationPreferences,
+  target: number,
+): FundWithReason[] {
+  const allocation = buildAllocationFromPreferences({
+    investmentGoal: 'wealth_creation',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+
+  const eqBudgets = computeCategoryBudgets(allocation.eqPct, WEALTH_EQ_SLOTS, {
+    investmentGoal: 'wealth_creation',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+  const dtBudgets = computeCategoryBudgets(allocation.dtPct, WEALTH_DT_SLOTS, {
+    investmentGoal: 'wealth_creation',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+  const hyBudgets = computeCategoryBudgets(allocation.hyPct, WEALTH_HY_SLOTS, {
+    investmentGoal: 'wealth_creation',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+
+  const weighted = selectWeightedFunds(scored, eqBudgets, dtBudgets, hyBudgets, {
+    investmentGoal: 'wealth_creation',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  }, target);
+
+  // Sectoral/Thematic supplementation (conditional)
+  const canAddSectoral =
+    (prefs.experienceLevel === 'experienced' || prefs.experienceLevel === 'advanced') &&
+    prefs.market_reaction === 'invest_more';
+
+  let result = weighted;
+  if (canAddSectoral) {
+    const usedAmcsSectoral = new Set(weighted.map(f => normalizeAmcName(f.amc)));
+    const usedIdsSectoral = new Set(weighted.map(f => f.id));
+    const sectoralFund = scored
+      .filter(f => {
+        const code = toCategoryCode(f.category || '');
+        return SECTORAL_CATEGORIES.includes(code) &&
+          !usedIdsSectoral.has(f.id) &&
+          !usedAmcsSectoral.has(normalizeAmcName(f.amc));
+      })
+      .sort((a, b) => b.compositeScore - a.compositeScore)[0] ?? null;
+
+    if (sectoralFund && result.length < target + 2) {
+      const sectoralPct = 5;
+      const factor = (100 - sectoralPct) / 100;
+      result.forEach(f => { f.allocationPercent = Math.round(f.allocationPercent * factor * 100) / 100; });
+      result.push({
+        ...sectoralFund,
+        allocationPercent: sectoralPct,
+        selectionReason: 'Sectoral/Thematic supplement',
+      } as unknown as WeightedFund);
+    }
+  }
+
+  console.log(`[DYNAMIC-WLTH] eq=${allocation.eqPct}% dt=${allocation.dtPct}% hy=${allocation.hyPct}% funds=${result.length}`);
+  return result.map(f => ({
+    ...f,
+    selectionReason: f.selectionReason || `Allocation: ${f.category}`,
+    allocationPercent: f.allocationPercent,
+  })) as unknown as FundWithReason[];
+}
+
+// ── Dynamic Capital Preservation Portfolio (allocation-engine based) ──
+
+function buildDynamicCapitalPreservationPortfolio(
+  scored: ScoredFund[],
+  prefs: RecommendationPreferences,
+  target: number,
+): FundWithReason[] {
+  const allocation = buildAllocationFromPreferences({
+    investmentGoal: 'capital_preservation',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+
+  const eqBudgets = computeCategoryBudgets(allocation.eqPct, PRESERVATION_EQ_SLOTS, {
+    investmentGoal: 'capital_preservation',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+  const dtBudgets = computeCategoryBudgets(allocation.dtPct, PRESERVATION_DT_SLOTS, {
+    investmentGoal: 'capital_preservation',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+  const hyBudgets = computeCategoryBudgets(allocation.hyPct, PRESERVATION_HY_SLOTS, {
+    investmentGoal: 'capital_preservation',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+
+  const weighted = selectWeightedFunds(scored, eqBudgets, dtBudgets, hyBudgets, {
+    investmentGoal: 'capital_preservation',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  }, target);
+
+  console.log(`[DYNAMIC-PRES] eq=${allocation.eqPct}% dt=${allocation.dtPct}% hy=${allocation.hyPct}% funds=${weighted.length}`);
+  return weighted.map(f => ({
+    ...f,
+    selectionReason: f.selectionReason || `Allocation: ${f.category}`,
+    allocationPercent: f.allocationPercent,
+  })) as unknown as FundWithReason[];
+}
+
+// ── Dynamic Passive Income Portfolio (allocation-engine based) ──
+
+function buildDynamicPassiveIncomePortfolio(
+  scored: ScoredFund[],
+  prefs: RecommendationPreferences,
+  target: number,
+): FundWithReason[] {
+  const allocation = buildAllocationFromPreferences({
+    investmentGoal: 'passive_income',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+
+  const eqBudgets = computeCategoryBudgets(allocation.eqPct, PASSIVE_EQ_SLOTS, {
+    investmentGoal: 'passive_income',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+  const dtBudgets = computeCategoryBudgets(allocation.dtPct, PASSIVE_DT_SLOTS, {
+    investmentGoal: 'passive_income',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+  const hyBudgets = computeCategoryBudgets(allocation.hyPct, PASSIVE_HY_SLOTS, {
+    investmentGoal: 'passive_income',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+
+  const weighted = selectWeightedFunds(scored, eqBudgets, dtBudgets, hyBudgets, {
+    investmentGoal: 'passive_income',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  }, target);
+
+  console.log(`[DYNAMIC-PASSIVE] eq=${allocation.eqPct}% dt=${allocation.dtPct}% hy=${allocation.hyPct}% funds=${weighted.length}`);
+  return weighted.map(f => ({
+    ...f,
+    selectionReason: f.selectionReason || `Allocation: ${f.category}`,
+    allocationPercent: f.allocationPercent,
+  })) as unknown as FundWithReason[];
+}
+
+// ── Dynamic Child Education Portfolio (allocation-engine based) ──
+
+function buildDynamicChildEducationPortfolio(
+  scored: ScoredFund[],
+  prefs: RecommendationPreferences,
+  target: number,
+): FundWithReason[] {
+  const allocation = buildAllocationFromPreferences({
+    investmentGoal: 'child_education',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+
+  const eqBudgets = computeCategoryBudgets(allocation.eqPct, CHILD_EDUCATION_EQ_SLOTS, {
+    investmentGoal: 'child_education',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+  const dtBudgets = computeCategoryBudgets(allocation.dtPct, CHILD_EDUCATION_DT_SLOTS, {
+    investmentGoal: 'child_education',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+  const hyBudgets = computeCategoryBudgets(allocation.hyPct, CHILD_EDUCATION_HY_SLOTS, {
+    investmentGoal: 'child_education',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  });
+
+  const weighted = selectWeightedFunds(scored, eqBudgets, dtBudgets, hyBudgets, {
+    investmentGoal: 'child_education',
+    investmentHorizon: prefs.investmentHorizon,
+    experienceLevel: prefs.experienceLevel,
+    market_reaction: prefs.market_reaction,
+    investor_stage: prefs.investor_stage,
+    emergency_fund: prefs.emergency_fund,
+    existing_investments: prefs.existing_investments,
+  }, target);
+
+  console.log(`[DYNAMIC-CHILD] eq=${allocation.eqPct}% dt=${allocation.dtPct}% hy=${allocation.hyPct}% funds=${weighted.length}`);
+  return weighted.map(f => ({
+    ...f,
+    selectionReason: f.selectionReason || `Allocation: ${f.category}`,
+    allocationPercent: f.allocationPercent,
+  })) as unknown as FundWithReason[];
+}
+
 // ── Generic Portfolio Constructor ──
 
 export function constructPortfolio(
@@ -235,10 +605,43 @@ export function constructPortfolio(
   normalizedGoal: string,
 ): FundWithReason[] {
   const isRetirement = normalizedGoal === 'retirement';
+  const isTaxSaver = normalizedGoal === 'tax_saving';
+  const isWealth = normalizedGoal === 'wealth_creation';
+  const isPreservation = normalizedGoal === 'capital_preservation';
+  const isPassiveIncome = normalizedGoal === 'passive_income';
 
-  // Dedicated retirement model portfolio for moderate risk
-  if (isRetirement && prefs.riskTolerance === 'moderate') {
-    return buildRetirementPortfolio(scored, prefs, target, normalizedGoal);
+  // Tax Saver mode: 5 ELSS funds with tiered weights
+  if (isTaxSaver) {
+    return buildTaxSaverPortfolio(scored).map(f => ({
+      ...f,
+      selectionReason: f.selectionReason || 'Tax Saver ELSS',
+      allocationPercent: f.allocationPercent,
+    })) as unknown as FundWithReason[];
+  }
+
+  // Dynamic allocation for retirement (all risk levels)
+  if (isRetirement) {
+    return buildDynamicRetirementPortfolio(scored, prefs, target);
+  }
+
+  // Dynamic allocation for wealth creation (all risk levels)
+  if (isWealth) {
+    return buildDynamicWealthPortfolio(scored, prefs, target);
+  }
+
+  // Dynamic allocation for capital preservation (all risk levels)
+  if (isPreservation) {
+    return buildDynamicCapitalPreservationPortfolio(scored, prefs, target);
+  }
+
+  // Dynamic allocation for passive income (all risk levels)
+  if (isPassiveIncome) {
+    return buildDynamicPassiveIncomePortfolio(scored, prefs, target);
+  }
+
+  // Dynamic allocation for child education (horizon-based bands)
+  if (normalizedGoal === 'child_education') {
+    return buildDynamicChildEducationPortfolio(scored, prefs, target);
   }
 
   const model = getAllocationModel(prefs.riskTolerance, prefs.investmentGoal);

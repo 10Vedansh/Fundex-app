@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Loader2, Shield, Target, TrendingUp, Clock, Wallet, AlertTriangle, PiggyBank, Info, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getRawFieldAvailability, validateProfile, ProfileState, RawOptionState } from '@/utils/recommendation/profileRules';
+import { deriveRiskFromProfile } from '@/utils/recommendation/riskCapacity';
 
 interface PreferencesModalProps {
   isOpen: boolean;
@@ -94,15 +95,6 @@ const FIELDS: PersonaField[] = [
     ],
   },
 ];
-
-const deriveRiskFromMarketReaction = (reaction: string | null): string => {
-  switch (reaction) {
-    case 'withdraw': return 'conservative';
-    case 'wait': return 'moderate';
-    case 'invest_more': return 'aggressive';
-    default: return 'moderate';
-  }
-};
 
 const deriveGoalFromPrimaryGoal = (goal: string | null): string => {
   switch (goal) {
@@ -232,7 +224,14 @@ export function PreferencesModal({ isOpen, onClose }: PreferencesModalProps) {
         investment_horizon: mapHorizon(preferences.investment_horizon),
         experience_level: dbValue,
         existing_investments: preferences.existing_investments,
-        risk_tolerance: deriveRiskFromMarketReaction(preferences.market_reaction),
+        risk_tolerance: deriveRiskFromProfile({
+          market_reaction: preferences.market_reaction,
+          investor_stage: preferences.investor_stage,
+          emergency_fund: preferences.emergency_fund,
+          existing_investments: preferences.existing_investments,
+          investment_horizon: mapHorizon(preferences.investment_horizon),
+          primary_goal: preferences.primary_goal,
+        }).riskTolerance,
         investment_goal: deriveGoalFromPrimaryGoal(preferences.primary_goal),
         investment_amount: 'medium',
       });

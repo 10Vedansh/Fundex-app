@@ -182,13 +182,13 @@ export const GOAL_ELIGIBILITY: Record<string, GoalEligibility> = {
     lockInFlag: false,
   },
   child_education: {
-    allowedCategoryPrefixes: ['EQ-', 'HY-', PLAIN_EQUITY, PLAIN_HYBRID, PLAIN_INDEX],
+    allowedCategoryPrefixes: ['EQ-', 'DT-', 'HY-DAA', 'HY-MAA', PLAIN_EQUITY, PLAIN_HYBRID, PLAIN_INDEX, PLAIN_DEBT, PLAIN_LIQUID],
     blockedCategories: [
-      'EQ-SC', 'EQ-DIV Y',
+      'EQ-SC',
       ...SECTORAL_CATEGORIES,
       'EQ-Quant',
       'EQ-INTL', 'EQ-T-ESG', 'EQ-FOF',
-      'HY-AH',
+      'HY-AH', 'HY-CH', 'HY-AR', 'HY-EQ S', 'HY-BH',
     ],
     maxVolatility: 10,
     minSharpe: null,
@@ -196,9 +196,11 @@ export const GOAL_ELIGIBILITY: Record<string, GoalEligibility> = {
     lockInFlag: false,
   },
   passive_income: {
-    allowedCategoryPrefixes: ['DT-', 'HY-CH', 'HY-AR', 'HY-EQ S', 'HY-IPA', PLAIN_DEBT, PLAIN_LIQUID, PLAIN_HYBRID],
+    allowedCategoryPrefixes: ['EQ-', 'DT-', 'HY-DAA', 'HY-CH', 'HY-MAA', PLAIN_DEBT, PLAIN_LIQUID, PLAIN_HYBRID],
     blockedCategories: [
-      'HY-AH', 'HY-BH', 'HY-DAA', 'HY-MAA', 'DT-CR',
+      'HY-AH', 'HY-BH', 'DT-CR',
+      'EQ-SC',
+      ...SECTORAL_CATEGORIES,
     ],
     maxVolatility: null,
     minSharpe: 1.5,
@@ -257,37 +259,14 @@ export const HORIZON_RULES: Record<string, HorizonRule> = {
 
 // ── 4. Experience Level → Weight Modifiers (NOT hard filters) ──
 export interface ExperienceModifier {
-  volatilityPenaltyMultiplier: number;
-  expensePenaltyMultiplier: number;
-  aumBonusMultiplier: number;
   allowSectoral: boolean;
 }
 
 export const EXPERIENCE_MODIFIERS: Record<string, ExperienceModifier> = {
-  beginner: {
-    volatilityPenaltyMultiplier: 1.8,
-    expensePenaltyMultiplier: 1.5,
-    aumBonusMultiplier: 1.5,
-    allowSectoral: false,
-  },
-  intermediate: {
-    volatilityPenaltyMultiplier: 1.0,
-    expensePenaltyMultiplier: 1.0,
-    aumBonusMultiplier: 1.0,
-    allowSectoral: true,
-  },
-  experienced: {
-    volatilityPenaltyMultiplier: 0.5,
-    expensePenaltyMultiplier: 0.7,
-    aumBonusMultiplier: 0.5,
-    allowSectoral: true,
-  },
-  advanced: {
-    volatilityPenaltyMultiplier: 0.5,
-    expensePenaltyMultiplier: 0.7,
-    aumBonusMultiplier: 0.5,
-    allowSectoral: true,
-  },
+  beginner: { allowSectoral: false },
+  intermediate: { allowSectoral: true },
+  experienced: { allowSectoral: true },
+  advanced: { allowSectoral: true },
 };
 
 // ── 5. Investment Amount → Constraints ──

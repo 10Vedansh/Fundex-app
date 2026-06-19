@@ -15,7 +15,7 @@
 
 import { MutualFund, CATEGORY_LABELS } from '@/types/mutualFund';
 import { ScoredFund, recommendFundsV2, RecommendationPreferences } from './intersectionEngine';
-import { computeRiskCapacity, RiskCapacityInputs, RiskCapacityResult } from './riskCapacity';
+import { deriveRiskFromProfile } from './riskCapacity';
 import { toCategoryCode } from './categoryMappings';
 
 // ── Types ──
@@ -39,7 +39,11 @@ export interface PortfolioStrategy {
 
 export interface StrategyGenerationResult {
   strategies: PortfolioStrategy[];
-  capacityResult: RiskCapacityResult;
+  riskProfile: {
+    riskTolerance: string;
+    score: number;
+    reasons: string[];
+  };
   userInputSummary: {
     riskTolerance: string;
     goal: string;
@@ -429,6 +433,17 @@ function getHorizonSuitability(strategyName: string, horizon: string): string {
   return map[strategyName]?.[horizon] || 'Moderate fit';
 }
 
+// ── Helpers ──
+
+function mapToMarketReaction(riskTolerance: string): string {
+  switch (riskTolerance) {
+    case 'conservative': return 'withdraw';
+    case 'moderate': return 'wait';
+    case 'aggressive': return 'invest_more';
+    default: return 'wait';
+  }
+}
+
 // ── MAIN ENTRY POINT ──
 
 export function generateStrategyPortfolios(
@@ -438,18 +453,37 @@ export function generateStrategyPortfolios(
   horizon: string,
   experience: string,
   investmentAmount: number,
-  capacityInputs: RiskCapacityInputs,
+  profile?: {
+    market_reaction?: string | null;
+    investor_stage?: string | null;
+    emergency_fund?: string | null;
+    existing_investments?: string | null;
+    dependents?: number | null;
+  },
 ): StrategyGenerationResult {
-  // Step 1: Compute risk capacity
-  const capacityResult = computeRiskCapacity(capacityInputs, riskTolerance);
+  // Step 1: Derive effective risk from profile if available, else use user selection directly
+  const effectiveRiskTolerance = profile
+    ? deriveRiskFromProfile({
+        market_reaction: profile.market_reaction || mapToMarketReaction(riskTolerance),
+        investor_stage: profile.investor_stage || 'mid_career',
+        emergency_fund: profile.emergency_fund || '>6_months',
+        existing_investments: profile.existing_investments || 'none',
+        dependents: profile.dependents,
+        investment_horizon: horizon,
+        primary_goal: goal,
+      })
+    : { riskTolerance, score: 3, reasons: [] };
 
-  // Step 2: Get scored fund universe
   const prefs: RecommendationPreferences = {
-    riskTolerance: capacityResult.adjustedRiskLevel,
+    riskTolerance: effectiveRiskTolerance.riskTolerance,
     investmentGoal: goal,
     investmentHorizon: horizon,
     experienceLevel: experience,
     investmentAmount: investmentAmount < 50000 ? 'small' : investmentAmount < 500000 ? 'medium' : 'large',
+    market_reaction: profile?.market_reaction || undefined,
+    emergency_fund: profile?.emergency_fund || undefined,
+    existing_investments: profile?.existing_investments || undefined,
+    investor_stage: profile?.investor_stage || undefined,
   };
 
   // Get a larger pool for strategy selection — use the full scored universe
@@ -458,7 +492,7 @@ export function generateStrategyPortfolios(
   // Also get a broader pool by relaxing some constraints for non-primary strategies
   const broadPrefs: RecommendationPreferences = {
     ...prefs,
-    riskTolerance: riskTolerance, // Use original risk, not adjusted
+    riskTolerance: riskTolerance,
   };
   const broadScoredFunds = recommendFundsV2(funds, broadPrefs);
 
@@ -472,7 +506,7 @@ export function generateStrategyPortfolios(
   const fundPool = Array.from(allScored.values()).sort((a, b) => b.compositeScore - a.compositeScore);
 
   // Step 3: Get strategy templates
-  const templates = getStrategyTemplates(riskTolerance, goal, horizon, capacityResult.capacityScore);
+  const templates = getStrategyTemplates(riskTolerance, goal, horizon, effectiveRiskTolerance.score);
 
   // Step 4: Build each strategy with unique fund sets
   const strategies: PortfolioStrategy[] = [];
@@ -494,15 +528,15 @@ export function generateStrategyPortfolios(
       riskLevel: template.riskLevel,
       expectedReturnRange: template.returnRange,
       horizonSuitability: getHorizonSuitability(template.name, horizon),
-      description: getProfileFitExplanation(template.name, riskTolerance, goal, horizon, capacityResult.capacityScore),
+      description: getProfileFitExplanation(template.name, riskTolerance, goal, horizon, effectiveRiskTolerance.score),
       funds,
-      profileFitExplanation: getProfileFitExplanation(template.name, riskTolerance, goal, horizon, capacityResult.capacityScore),
+      profileFitExplanation: getProfileFitExplanation(template.name, riskTolerance, goal, horizon, effectiveRiskTolerance.score),
     });
   }
 
   return {
     strategies,
-    capacityResult,
+    riskProfile: effectiveRiskTolerance,
     userInputSummary: {
       riskTolerance,
       goal,

@@ -33,6 +33,10 @@ export interface RecommendationPreferences {
   investmentHorizon: string;
   experienceLevel: string;
   investmentAmount: string;
+  market_reaction?: string;
+  emergency_fund?: string;
+  existing_investments?: string;
+  investor_stage?: string;
 }
 
 export type ConfidenceLevel = 'high' | 'medium' | 'limited_history';
@@ -224,6 +228,16 @@ function applyExperienceFilter(funds: MutualFund[], experience: string): MutualF
   return funds;
 }
 
+function applyInvestorStageFilter(funds: MutualFund[], investorStage: string | undefined): MutualFund[] {
+  if (!investorStage || investorStage !== 'retired') return funds;
+  const retiredBlockedCategories = [
+    'EQ-MC', 'EQ-SC', 'EQ-L&MC', 'EQ-MLC',
+    ...SECTORAL_CATEGORIES,
+    'EQ-Quant', 'EQ-VAL', 'EQ-DIV Y', 'HY-AH',
+  ];
+  return funds.filter(f => !retiredBlockedCategories.includes(catCode(f)));
+}
+
 function applyAmountConstraints(funds: MutualFund[], amount: string): MutualFund[] {
   const c = AMOUNT_CONSTRAINTS[amount];
   if (!c) return funds;
@@ -257,6 +271,7 @@ function applyFallback(
   prefs: RecommendationPreferences,
   allFundCategories: string[],
 ): MutualFund[] {
+  const investorStage = prefs.investor_stage;
   const risk = prefs.riskTolerance;
   const horizon = normalizeHorizon(prefs.investmentHorizon);
   const goal = normalizeGoal(prefs.investmentGoal);
@@ -350,15 +365,21 @@ function applyFallback(
         },
       ];
 
+  // Apply investor stage filter to each fallback result
+  const filterByStage = (funds: MutualFund[]) => {
+    if (!investorStage || investorStage !== 'retired') return funds;
+    return applyInvestorStageFilter(funds, investorStage);
+  };
+
   for (const step of fallbackChain) {
-    const eligible = step.fn(cleanFunds);
+    const eligible = filterByStage(step.fn(cleanFunds));
     if (eligible.length >= 5) {
       return eligible;
     }
   }
 
   // Last resort: relaxed risk+goal constraints only, but never return ALL funds
-  const lastResort = applyRiskConstraints(cleanFunds, risk);
+  const lastResort = filterByStage(applyRiskConstraints(cleanFunds, risk));
   const goalFiltered = goalConfig
     ? lastResort.filter(f => {
         const cat = catCode(f);
@@ -366,7 +387,8 @@ function applyFallback(
         return true;
       })
     : lastResort;
-  return goalFiltered.length >= 5 ? goalFiltered : [];
+  const stageFiltered = filterByStage(goalFiltered);
+  return stageFiltered.length >= 5 ? stageFiltered : [];
 }
 
 // ── MAIN ENTRY POINT ──
@@ -404,6 +426,9 @@ export function recommendFundsV2(
   eligible = applyExperienceFilter(eligible, normalizedPrefs.experienceLevel);
   lastCount = eligible.length;
 
+  eligible = applyInvestorStageFilter(eligible, normalizedPrefs.investor_stage);
+  lastCount = eligible.length;
+
   eligible = applyAmountConstraints(eligible, normalizedPrefs.investmentAmount);
 
   // Step 2: Fallback if empty
@@ -434,6 +459,12 @@ export function recommendFundsV2(
       normalizedPrefs.riskTolerance,
       normalizedPrefs.investmentHorizon,
       normalizedPrefs.investmentGoal,
+      {
+        market_reaction: normalizedPrefs.market_reaction,
+        emergency_fund: normalizedPrefs.emergency_fund,
+        existing_investments: normalizedPrefs.existing_investments,
+        investor_stage: normalizedPrefs.investor_stage,
+      },
     );
     const confidence = computeConfidence(fund);
     const explanations = generateExplanations({

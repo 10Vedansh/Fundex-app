@@ -1,7 +1,7 @@
 import { MutualFund } from '@/types/mutualFund';
 import { recommendFundsV2, RecommendationPreferences } from './recommendation/intersectionEngine';
 import { FundWithReason } from './recommendation/portfolioConstructor';
-import { computeRiskCapacity } from './recommendation/riskCapacity';
+import { deriveRiskFromProfile } from './recommendation/riskCapacity';
 import type { AnalyticsHolding } from '@/components/dashboard/PortfolioAnalytics';
 
 export interface PortfolioMetrics {
@@ -290,12 +290,11 @@ export interface ComparisonInput {
   investmentHorizon: string;
   experienceLevel: string;
   investmentAmount: string;
-  occupation?: string | null;
-  incomeStability?: string | null;
-  monthlyEmis?: number | null;
+  market_reaction?: string | null;
+  investor_stage?: string | null;
+  emergency_fund?: string | null;
+  existing_investments?: string | null;
   dependents?: number | null;
-  hasInsurance?: boolean | null;
-  existingInvestments?: string | null;
 }
 
 export function comparePortfolios(input: ComparisonInput): ComparisonResult | null {
@@ -307,26 +306,32 @@ export function comparePortfolios(input: ComparisonInput): ComparisonResult | nu
   const currentMetrics = computeCurrentMetrics(holdings, funds);
   if (!currentMetrics) return null;
 
-  // 2. Compute risk capacity
-  const riskCapacityResult = computeRiskCapacity(
-    {
-      occupation: input.occupation,
-      incomeStability: input.incomeStability,
-      monthlyEmis: input.monthlyEmis,
-      dependents: input.dependents,
-      hasInsurance: input.hasInsurance,
-      existingInvestments: input.existingInvestments,
-    },
-    riskTolerance,
-  );
+  // 2. Derive effective risk from profile
+  const marketReaction = input.market_reaction ||
+    (riskTolerance === 'conservative' ? 'withdraw' :
+     riskTolerance === 'aggressive' ? 'invest_more' : 'wait');
+  const riskProfileResult = deriveRiskFromProfile({
+    market_reaction: marketReaction,
+    investor_stage: input.investor_stage || 'mid_career',
+    emergency_fund: input.emergency_fund || '>6_months',
+    existing_investments: input.existing_investments || 'none',
+    investment_horizon: investmentHorizon,
+    primary_goal: investmentGoal,
+    dependents: input.dependents,
+  });
+  const effectiveRisk = riskProfileResult.riskTolerance;
 
   // 3. Run recommendation engine
   const prefs: RecommendationPreferences = {
-    riskTolerance,
+    riskTolerance: effectiveRisk,
     investmentGoal,
     investmentHorizon,
     experienceLevel,
     investmentAmount,
+    market_reaction: marketReaction,
+    investor_stage: input.investor_stage || undefined,
+    emergency_fund: input.emergency_fund || undefined,
+    existing_investments: input.existing_investments || undefined,
   };
 
   const constructedFunds = recommendFundsV2(funds, prefs);
