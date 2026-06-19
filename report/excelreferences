@@ -1,0 +1,231 @@
+================================================================================
+                      EXCEL REFERENCE REPORT — Phase 7
+          All .xlsx dependencies in the Fundex recommendation ecosystem
+================================================================================
+
+Table of Contents
+──────────────────────────────────────────────────────────────────────────────
+  A. Complete Reference Table
+  B. Pre-Cleanup State
+  C. Post-Cleanup State
+  D. Recommendation Data Flow Diagram
+  E. Files Archived
+  F. Files Preserved (Production Pipeline)
+  G. Verification
+
+
+================================================================================
+A. COMPLETE EXCEL REFERENCE TABLE
+================================================================================
+
+┌──────────────────────────────────────────────────────────────────┬────────┬─────────────────────────────────┬──────────┬──────────┬──────────────────────┐
+│ File                                                             │ Line(s)│ Pattern                        │ Active/  │ Can      │ Action Taken         │
+│                                                                  │        │                                │ Dead     │ Remove?  │                      │
+├──────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────┼──────────┼──────────┼──────────────────────┤
+│ src/utils/recommendation/                                       │ 2, 115,│ import * as XLSX from 'xlsx';   │ Test     │ YES      │ Replaced with        │
+│   verifyDifferentiation.test.ts                                  │ 171-174│ loadFundsFromExcel() →          │          │          │ import {MOCK_FUNDS}  │
+│                                                                  │ 282    │ Data.xlsx                       │          │          │ +121 mock funds      │
+├──────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────┼──────────┼──────────┼──────────────────────┤
+│ src/utils/recommendation/                                       │ 2, 91, │ import * as XLSX from 'xlsx';   │ Test     │ YES      │ Replaced with        │
+│   validateFixes.test.ts                                          │ 145-148│ loadFundsFromExcel() →          │          │          │ import {MOCK_FUNDS}  │
+│                                                                  │ 205    │ Data.xlsx                       │          │          │                      │
+├──────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────┼──────────┼──────────┼──────────────────────┤
+│ src/utils/recommendation/                                       │ 2, 72, │ import * as XLSX from 'xlsx';   │ Test     │ YES      │ Replaced with        │
+│   categoryPoolAudit.test.ts                                      │ 103-105│ loadFunds() → Data.xlsx         │          │          │ import {MOCK_FUNDS}  │
+│                                                                  │ 288    │                                │          │          │                      │
+├──────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────┼──────────┼──────────┼──────────────────────┤
+│ src/utils/recommendation/                                       │ 2, 61, │ import * as XLSX from 'xlsx';   │ Test     │ YES      │ Replaced with        │
+│   qualityAudit.test.ts                                           │ 92-94  │ loadFunds() → Data.xlsx         │          │          │ import {MOCK_FUNDS}  │
+│                                                                  │ 149    │                                │          │          │                      │
+├──────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────┼──────────┼──────────┼──────────────────────┤
+│ scripts/analyze-outliers.ts                                      │ 1, 86- │ import * as XLSX from 'xlsx';   │ Script   │ YES      │ Archived to          │
+│                                                                  │ 89, 119│ loadFundsFromExcel() →          │          │          │ archive/excel-legacy/│
+│                                                                  │        │ Data.xlsx                       │          │          │                      │
+├──────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────┼──────────┼──────────┼──────────────────────┤
+│ public/data/Data.xlsx                                            │ —      │ Excel source workbook           │ File     │ YES      │ Moved to             │
+│                                                                  │        │                                 │          │          │ archive/excel-legacy/│
+├──────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────┼──────────┼──────────┼──────────────────────┤
+│ supabase/functions/                                             │ 3, 195 │ import * as XLSX;               │ Prod     │ NO       │ KEPT - downloads     │
+│   process-workbook/index.ts                                      │ 190-214│ storage.download('Data.xlsx')   │ pipeline │          │ Excel from Supabase  │
+│                                                                  │        │ → XLSX.read() → fund_cache      │          │          │ Storage, parses into │
+│                                                                  │        │                                 │          │          │ fund_cache table     │
+├──────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────┼──────────┼──────────┼──────────────────────┤
+│ supabase/functions/                                             │ 3, 11  │ import * as XLSX;               │ Prod     │ NO       │ KEPT - downloads     │
+│   sync-onedrive/index.ts                                         │ 186-240│ fetch(OneDrive Data.xlsx URL)   │ pipeline │          │ Excel from OneDrive, │
+│                                                                  │        │ → XLSX.read() → fund_cache      │          │          │ syncs to fund_cache  │
+├──────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────┼──────────┼──────────┼──────────────────────┤
+│ supabase/functions/                                             │ 130-158│ Reads from fund_cache           │ Prod     │ NO       │ KEPT - fallback      │
+│   fetch-fund-data/index.ts                                       │ 150-155│ (populated from Excel via       │ fallback │          │ when fund_master_    │
+│                                                                  │        │  process-workbook)               │          │          │ enriched unavailable │
+├──────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────┼──────────┼──────────┼──────────────────────┤
+│ archive/CIFRAA-app/supabase/functions/                          │ 195    │ storage.download('Data.xlsx')   │ Archived │ N/A      │ Left untouched in    │
+│   process-workbook/index.ts                                      │        │                                 │ project  │          │ archive/             │
+├──────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────┼──────────┼──────────┼──────────────────────┤
+│ src/hooks/useFundCache.tsx                                       │ 55-68  │ References "workbook cache"     │ Prod     │ NO       │ KEPT - fallback      │
+│                                                                  │ 113-121│ as fallback path                 │          │          │ for primary DB       │
+├──────────────────────────────────────────────────────────────────┼────────┼─────────────────────────────────┼──────────┼──────────┼──────────────────────┤
+│ package.json                                                     │ 104    │ "xlsx": "^0.18.5"               │ Dep      │ KEPT     │ Dependency preserved │
+│                                                                  │        │                                 │          │          │ for edge function    │
+│                                                                  │        │                                 │          │          │ usage                │
+└──────────────────────────────────────────────────────────────────┴────────┴─────────────────────────────────┴──────────┴──────────┴──────────────────────┘
+
+
+================================================================================
+B. PRE-CLEANUP STATE
+================================================================================
+
+Before Phase 7, the following Excel dependencies existed in the recommendation
+ecosystem:
+
+  src/ directory:
+    - 4 test files importing 'xlsx' and reading public/data/Data.xlsx
+    - ~557 lines of Excel parsing code (processSheet, loadFundsFromExcel, etc.)
+    - 1 script (analyze-outliers.ts) reading public/data/Data.xlsx
+    - public/data/Data.xlsx (2,000+ fund records across 4 sheets)
+
+  archive/ directory:
+    - CIFRAA-app/ contains duplicate XLSX references (already archived in Phase 6)
+
+  supabase/functions/ directory:
+    - process-workbook/index.ts — production pipeline
+    - sync-onedrive/index.ts — production sync
+    - fetch-fund-data/index.ts — production API (reads Excel-derived cache)
+
+  package.json:
+    - "xlsx": "^0.18.5" — npm dependency
+
+
+================================================================================
+C. POST-CLEANUP STATE
+================================================================================
+
+  src/ directory:
+    - ZERO imports of 'xlsx' or any Excel library
+    - ZERO references to Data.xlsx or any .xlsx file
+    - ZERO loadFundsFromExcel() or loadWorkbook() functions
+    - 557 lines removed (Excel parsing code deleted)
+    - All 4 test files now import from mockFundUniverse.ts (121 in-memory funds)
+
+  archive/excel-legacy/ directory:
+    - scripts/analyze-outliers.ts
+    - public/data/Data.xlsx
+
+  supabase/functions/ (PRESERVED — production pipeline, not recommendation code):
+    - process-workbook/index.ts
+    - sync-onedrive/index.ts
+    - fetch-fund-data/index.ts
+
+  package.json:
+    - "xlsx": "^0.18.5" — KEPT, required by Supabase edge functions
+
+
+================================================================================
+D. RECOMMENDATION DATA FLOW DIAGRAM
+================================================================================
+
+  PRODUCTION PATH (NO EXCEL):
+
+   Supabase fund_master_enriched table
+      ↓
+   fetch-fund-data edge function (source=master)
+      ↓
+   fetchFundMasterFunds() → toMutualFunds()
+      ↓
+   MutualFund[] (in memory)
+      ↓
+   recommendFundsV2(funds, prefs)
+      ├── applyRiskConstraints()
+      ├── applyGoalEligibility()
+      ├── applyHorizonRules()
+      ├── applyExperienceFilter()
+      ├── applyAmountConstraints()
+      ├── scoreV3() → compositeScore
+      ├── generateExplanations()
+      └── constructPortfolio() → ScoredFund[]
+      ↓
+   UI Dashboard / Portfolio Comparison / Strategy Engine
+
+  VERIFIED: No .xlsx file, no read-excel-file, no xlsx library,
+  no workbook involved in any runtime recommendation path.
+
+  FALLBACK PATH (still uses Excel-derived cache, PRESERVED):
+
+   process-workbook (edge function)
+      ↓ reads Data.xlsx from Supabase Storage
+      ↓ parses with xlsx library
+      ↓ writes to fund_cache table
+   fetch-fund-data?action=cached (edge function)
+      ↓ reads from fund_cache
+   useFundCache → fetchCachedData()
+      ↓ only used if primary fund_master_enriched path fails
+
+
+================================================================================
+E. FILES ARCHIVED
+================================================================================
+
+  archive/excel-legacy/ directory created with:
+
+  archive/excel-legacy/Data.xlsx
+    - Original source workbook (2,000+ funds across Equity, Debt, Hybrid,
+      Commodities sheets)
+    - Previously at public/data/Data.xlsx
+    - Was served by Vite dev server (public/ directory)
+    - Was read by 4 test files and 1 script
+
+  archive/excel-legacy/scripts/analyze-outliers.ts
+    - Standalone outlier analysis script
+    - 232 lines, imported xlsx and read Data.xlsx
+    - Computed mean/min/max/median/IQR for all numeric metrics
+    - Not part of any build, test, or production path
+
+
+================================================================================
+F. FILES PRESERVED (PRODUCTION PIPELINE)
+================================================================================
+
+  These files use Excel as a data ingestion mechanism for Supabase. They are
+  NOT recommendation code — they are the pipeline that feeds data INTO
+  fund_master_enriched.
+
+  supabase/functions/process-workbook/index.ts
+    - Downloads Data.xlsx from Supabase Storage
+    - Parses with XLSX.read()
+    - Transforms and writes to fund_cache table
+    - Orchestrated by fetch-fund-data edge function
+    - CRITICAL: This is how fund data enters the system
+
+  supabase/functions/sync-onedrive/index.ts
+    - Alternative sync path from OneDrive
+    - Same parsing logic as process-workbook
+    - Writes to fund_cache table
+
+  supabase/functions/fetch-fund-data/index.ts
+    - Primary API for fund data
+    - source=master → fund_master_enriched (NO Excel)
+    - source=workbook → fund_cache (Excel-derived, fallback)
+    - action=cached/action=full → fund_cache
+
+
+================================================================================
+G. VERIFICATION
+================================================================================
+
+  Excel reference search in src/:
+    Pattern: .xlsx, XLSX, Data.xlsx, loadFundsFromExcel, loadWorkbook
+    Result:  ZERO matches
+
+  Build verification:
+    tsc --noEmit:    ✓ 0 errors
+    vitest run:      ✓ 50 passed (6 files)
+    npm run build:   ✓ success
+
+  Dependency verification:
+    xlsx package:    PRESERVED (required by supabase/functions/)
+    Regression test: Uses mock data only, no Excel dependency
+    All 4 test files: Import from mockFundUniverse.ts, not Excel
+
+
+================================================================================
+END OF REPORT
+================================================================================

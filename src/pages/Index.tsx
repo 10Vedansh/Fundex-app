@@ -231,6 +231,7 @@ const Index = () => {
       emergency_fund: profile.emergency_fund,
       existing_investments: profile.existing_investments,
       investment_horizon: profile.investment_horizon,
+      primary_goal: effectiveGoal,
     });
     const effectiveRisk = riskResult.riskTolerance;
 

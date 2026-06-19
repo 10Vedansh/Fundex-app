@@ -133,6 +133,10 @@ export const CATEGORY_LABELS: Record<string, string> = {
   'EQ-Manufacturing': 'Manufacturing',
   'EQ-Innovation': 'Innovation',
   'EQ-T-ESG': 'ESG',
+  'EQ-Focused': 'Focused',
+  'EQ-FOF': 'Fund of Funds',
+  'EQ-SOLUTION': 'Solution Oriented',
+  'EQ-ETF': 'ETF',
   // Debt
   'DT-LIQ': 'Liquid',
   'DT-USD': 'Ultra Short Duration',
@@ -151,6 +155,10 @@ export const CATEGORY_LABELS: Record<string, string> = {
   'DT-Floater': 'Floating Rate',
   'DT-TM': 'Target Maturity',
   'DT-Gilt 10Y CD': 'Gilt 10Y',
+  'DT-IN': 'Income',
+  'DT-OS': 'Overnight',
+  'DT-GSEC': 'Gilt / Govt Securities',
+  'DT-IDF': 'Infra Debt Fund',
   // Hybrid
   'HY-AH': 'Aggressive Hybrid',
   'HY-CH': 'Conservative Hybrid',
@@ -163,4 +171,11 @@ export const CATEGORY_LABELS: Record<string, string> = {
   // Commodities
   'Gold-Funds': 'Gold Funds',
   'Silver-Funds': 'Silver Funds',
+  // Plain / catch-all
+  'Equity': 'Equity',
+  'Debt': 'Debt',
+  'Hybrid': 'Hybrid',
+  'Index': 'Index',
+  'Liquid': 'Liquid',
+  'Unknown': 'Unknown',
 };

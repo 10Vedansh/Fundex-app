@@ -1,6 +1,6 @@
 import { MutualFund } from '@/types/mutualFund';
-import { recommendFundsV2, RecommendationPreferences, ScoredFund } from './recommendation/intersectionEngine';
-import { constructPortfolio, ConstructedPortfolio } from './recommendation/portfolioConstruction';
+import { recommendFundsV2, RecommendationPreferences } from './recommendation/intersectionEngine';
+import { FundWithReason } from './recommendation/portfolioConstructor';
 import { computeRiskCapacity } from './recommendation/riskCapacity';
 import type { AnalyticsHolding } from '@/components/dashboard/PortfolioAnalytics';
 
@@ -25,7 +25,7 @@ export interface ImprovementScore {
 export interface ComparisonResult {
   currentPortfolio: PortfolioMetrics;
   recommendedPortfolio: PortfolioMetrics & {
-    constructedPortfolio: ConstructedPortfolio;
+    constructedPortfolio: FundWithReason[];
   };
   improvementScore: ImprovementScore;
   rebalancingSuggestions: string[];
@@ -129,12 +129,35 @@ function computeCurrentMetrics(
 }
 
 function computeRecommendedMetrics(
-  constructed: ConstructedPortfolio,
+  constructed: FundWithReason[],
   funds: MutualFund[],
 ): PortfolioMetrics {
-  const { allocations, expectedCagr, expectedVolatility } = constructed;
+  const count = constructed.length;
+  if (count === 0) {
+    return {
+      expectedReturn: 0, volatility: 0, riskLevel: 'Conservative',
+      diversificationScore: 0, amcCount: 0, topAmcPct: 0,
+      equityPct: 0, debtPct: 0, hybridPct: 0,
+    };
+  }
 
-  const total = allocations.reduce((s, a) => s + a.allocationPercent, 0);
+  const equalWeight = 100 / count;
+
+  // Build allocation-like entries for metric computation
+  const allocations = constructed.map(fund => ({
+    fund,
+    allocationPercent: equalWeight,
+  }));
+
+  const expectedCagr = allocations.reduce((sum, a) => {
+    const cagr = safeNum(a.fund.ret3Y ?? a.fund.cagr3Y);
+    return sum + (cagr * a.allocationPercent / 100);
+  }, 0);
+
+  const expectedVolatility = allocations.reduce((sum, a) => {
+    const vol = safeNum(a.fund.volatility) || safeNum(a.fund.stdDev);
+    return sum + (vol * a.allocationPercent / 100);
+  }, 0);
 
   // AMC groups
   const amcGroups: Record<string, number> = {};
@@ -306,34 +329,18 @@ export function comparePortfolios(input: ComparisonInput): ComparisonResult | nu
     investmentAmount,
   };
 
-  const scoredFunds = recommendFundsV2(funds, prefs);
+  const constructedFunds = recommendFundsV2(funds, prefs);
 
-  // 4. Build recommended portfolio
-  const totalInvested = holdings.reduce((s, h) => s + h.invested, 0);
-  const monthlySip = 0;
-
-  const constructed = constructPortfolio(
-    scoredFunds,
-    riskCapacityResult.capacityScore,
-    totalInvested,
-    monthlySip,
-    investmentGoal,
-    new Set(holdings.map((h) => {
-      const fund = funds.find((f) => f.name === h.fund_name);
-      return fund?.id || '';
-    }).filter(Boolean)),
-  );
-
-  // 5. Compute recommended portfolio metrics
-  const recommendedMetrics = computeRecommendedMetrics(constructed, funds);
+  // 4. Compute recommended portfolio metrics
+  const recommendedMetrics = computeRecommendedMetrics(constructedFunds, funds);
 
   // 6. Compute improvement score
   const improvementScore = computeImprovementScore(currentMetrics, recommendedMetrics);
 
   // 7. Generate rebalancing suggestions
-  const recommendedAllocations = constructed.allocations.map((a) => ({
-    name: a.fund.name,
-    percent: a.allocationPercent,
+  const recommendedAllocations = constructedFunds.map((a) => ({
+    name: a.name,
+    percent: 100 / constructedFunds.length,
   }));
 
   const rebalancingSuggestions = generateRebalancingSuggestions(
@@ -347,7 +354,7 @@ export function comparePortfolios(input: ComparisonInput): ComparisonResult | nu
     currentPortfolio: currentMetrics,
     recommendedPortfolio: {
       ...recommendedMetrics,
-      constructedPortfolio: constructed,
+      constructedPortfolio: constructedFunds,
     },
     improvementScore,
     rebalancingSuggestions,

@@ -171,6 +171,7 @@ export function deriveRiskFromProfile(profile: {
   existing_investments?: string | null;
   investment_horizon?: string | null;
   dependents?: number | null;
+  primary_goal?: string | null;
 }): { riskTolerance: string; score: number; reasons: string[] } {
   let totalScore = 0;
   const reasons: string[] = [];
@@ -240,6 +241,18 @@ export function deriveRiskFromProfile(profile: {
   } else {
     riskTolerance = 'aggressive';
     reasons.push('Overall: Aggressive profile — pursuing maximum long-term growth');
+  }
+
+  // Goal-based risk cap: primary_goal overrides the raw score when
+  // the goal demands lower risk than the user's financial capacity alone suggests.
+  const goal = profile.primary_goal || '';
+  if (goal === 'retirement' && (riskTolerance === 'aggressive')) {
+    riskTolerance = 'moderate';
+    reasons.push('Risk capped at moderate: retirement goal prioritizes stability over growth');
+  }
+  if (goal === 'capital_preservation' && (riskTolerance === 'aggressive' || riskTolerance === 'moderate')) {
+    riskTolerance = 'conservative';
+    reasons.push('Risk capped at conservative: capital preservation goal protects principal');
   }
 
   return { riskTolerance, score: finalScore, reasons };

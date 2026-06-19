@@ -124,9 +124,8 @@ export const CORE_SATELLITE_MODELS: Record<string, CoreSatelliteModel> = {
     minSatelliteCategories: 1,
   },
   retirement: {
-    coreStrategyGroups: ['large_cap_index', 'flexi_multi_cap', 'conservative_hybrid', 'balanced_hybrid',
-      'short_debt', 'corp_debt'],
-    satelliteStrategyGroups: ['arbitrage', 'equity_savings', 'multi_asset', 'mid_cap', 'value'],
+    coreStrategyGroups: ['large_cap_index', 'flexi_multi_cap', 'mid_cap', 'short_debt', 'corp_debt'],
+    satelliteStrategyGroups: ['conservative_hybrid', 'balanced_hybrid', 'arbitrage', 'equity_savings', 'multi_asset', 'value'],
     minCoreCategories: 2,
     minSatelliteCategories: 1,
   },
@@ -140,9 +139,11 @@ export const CORE_SATELLITE_MODELS: Record<string, CoreSatelliteModel> = {
 };
 
 export function getProfileTypeForCoreSatellite(risk: string, goal: string): string {
-  if (risk === 'aggressive') return 'aggressive';
+  // Goal always wins — retirement must never use aggressive core-satellite model
   if (goal === 'retirement') return 'retirement';
   if (goal === 'capital_preservation') return 'preservation';
+  // risk-based fallback for wealth_creation, tax_saving, passive_income, etc.
+  if (risk === 'aggressive') return 'aggressive';
   // moderate + wealth_creation defaults to retirement-like (balanced)
   if (goal === 'wealth_creation') return 'retirement';
   return 'aggressive';

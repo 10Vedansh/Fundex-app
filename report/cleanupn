@@ -1,0 +1,500 @@
+================================================================================
+                     ARCHITECTURE CLEANUP — COMPLETE REPORT
+                          Phases 1–5 Summary
+================================================================================
+
+Table of Contents
+──────────────────────────────────────────────────────────────────────────────
+  PHASE 1 — Constructor Unification
+  PHASE 2 — Remove Dead recommendationEngine.ts
+  PHASE 3 — Remove Dead RecommendationCard, preferenceValidator, personaAllocations
+  PHASE 4 — CIFRAA-app Duplicate Analysis
+  PHASE 5 — Scoring Formula Unification
+  Overall Impact Summary
+  Remaining Work
+
+
+================================================================================
+PHASE 1 — Constructor Unification
+================================================================================
+
+Goal: Make the entire application use a single portfolio construction engine.
+
+Problem:
+  3 different portfolio constructors existed:
+    - portfolioConstructor.ts (NEW)    — Dashboard via recommendFundsV2()
+    - portfolioConstruction.ts (OLD)   — Portfolio Comparison
+    - strategyPortfolioEngine.ts (CUSTOM) — Build Portfolio tab
+  Identical inputs could produce different portfolios depending on UI tab.
+
+A. OLD constructor call sites (portfolioConstruction.ts)
+┌──────────────────────────────────────────────────┬────────┬──────────┐
+│ File                                             │ Line   │ Status   │
+├──────────────────────────────────────────────────┼────────┼──────────┤
+│ src/utils/portfolioComparisonEngine.ts           │ 3      │ REMOVED  │
+│ src/utils/portfolioComparisonEngine.ts           │ 315    │ REMOVED  │
+└──────────────────────────────────────────────────┴────────┴──────────┘
+
+B. NEW constructor call sites (portfolioConstructor.ts)
+┌──────────────────────────────────────────────────┬──────────────────────┬────────────────────────┐
+│ File                                             │ What's imported      │ Purpose                │
+├──────────────────────────────────────────────────┼──────────────────────┼────────────────────────┤
+│ src/utils/recommendation/intersectionEngine.ts   │ constructPortfolio,  │ Canonical orchestrator │
+│                                                  │ FundWithReason       │ calls NEW at line 465  │
+├──────────────────────────────────────────────────┼──────────────────────┼────────────────────────┤
+│ src/utils/portfolioComparisonEngine.ts           │ FundWithReason      │ Receives output via    │
+│                                                  │ (type only)          │ recommendFundsV2()     │
+├──────────────────────────────────────────────────┼──────────────────────┼────────────────────────┤
+│ src/utils/recommendation/regression.test.ts      │ constructPortfolio   │ Tests                  │
+└──────────────────────────────────────────────────┴──────────────────────┴────────────────────────┘
+
+C. Before / After
+  Before (dual-constructor):
+    Dashboard:  recommendFundsV2() → NEW constructor    (FundWithReason[])
+    Comparison: recommendFundsV2() → OLD constructor    (ConstructedPortfolio)
+
+  After (unified):
+    Dashboard:  recommendFundsV2() → NEW constructor    (FundWithReason[])
+    Comparison: recommendFundsV2() → NEW constructor    (FundWithReason[])
+
+D. Changes made to portfolioComparisonEngine.ts
+  1. Import swap: ConstructedPortfolio → FundWithReason
+  2. ComparisonResult.constructedPortfolio type changed to FundWithReason[]
+  3. Removed redundant constructPortfolio() call (OLD constructor re-run)
+  4. computeRecommendedMetrics() rewritten for FundWithReason[] input,
+     uses equal-weight allocations
+  5. Removed unused ScoredFund import
+
+E. Is portfolioConstruction.ts now unused?
+  YES. Zero imports, zero references in src/.
+  The file src/utils/recommendation/portfolioConstruction.ts sits unreferenced.
+
+F. Verification
+  - TypeScript: tsc --noEmit — clean
+  - Tests: vitest run — 49 passed (5 files), no regressions
+  - Build: npm run build — success
+
+
+================================================================================
+PHASE 2 — Remove Dead recommendationEngine.ts
+================================================================================
+
+Goal: Remove dead V1 recommendation engine code.
+
+A. Verification
+  - Searched for recommendFunds(, scoreFund(, getAllocationModel(
+  - recommendationEngine.ts contains:
+      * recommendFunds()      — V1 entry point (dead, 0 imports)
+      * scoreFund()           — private, only called by dead recommendFunds()
+      * getAllocationModel()  — private, only called by dead recommendFunds()
+  - NOTE: A separate public getAllocationModel() exists in categoryMappings.ts.
+    The one in recommendationEngine.ts was a private function with the same name
+    but different signature — no conflict.
+  - Zero imports from recommendationEngine.ts anywhere in src/
+  - reportPath.ts entry ('recommendationEngine' → 'recommendation-engine') is
+    a UI routing label, not a code dependency.
+
+B. File removed
+  src/utils/recommendationEngine.ts (491 lines)
+
+C. Imports removed
+  Zero — no file imported from this file.
+
+D. Build result
+  - tsc --noEmit: ✓ 0 errors
+  - vitest run:   ✓ 49 passed
+  - npm run build: ✓ success
+
+E. Runtime impact
+  NONE. recommendFundsV2() from intersectionEngine.ts was already the sole
+  recommendation entry point in production.
+
+
+================================================================================
+PHASE 3 — Remove Dead UI Components and Validators
+================================================================================
+
+Goal: Remove recommendation-related dead code identified in audit.
+
+A. Files deleted
+┌──────────────────────────────────────────────────────┬──────┬──────────────────────────────────┐
+│ File                                                 │ Lines│ Contents                          │
+├──────────────────────────────────────────────────────┼──────┼──────────────────────────────────┤
+│ src/components/dashboard/RecommendationCard.tsx      │ ~80  │ React component for rec card     │
+│ src/utils/recommendation/preferenceValidator.ts      │ ~120 │ Form validation for preferences  │
+│ src/utils/recommendation/personaAllocations.ts       │ ~50  │ Persona-based allocation presets │
+└──────────────────────────────────────────────────────┴──────┴──────────────────────────────────┘
+
+B. Bundle size reduction
+  Negligible — all three files were already tree-shaken (zero imports).
+
+  Asset          Before       After        Delta
+  ─────────────────────────────────────────────────
+  index.js       1,896.35 kB  1,896.35 kB   0 kB
+  index.css         95.26 kB     95.10 kB  −0.16 kB
+
+C. Import graph simplification
+  - RecommendationCard.tsx: Only component in src/components/dashboard/ that
+    was never rendered. Its CIFRAA-app/ duplicate remains (orphan project).
+  - preferenceValidator.ts: Only imported by CIFRAA-app/ (orphan).
+  - personaAllocations.ts: Zero imports from anywhere.
+
+D. Side effects
+  NONE. All three files were fully unreferenced by production code.
+  - tsc --noEmit: ✓ 0 errors
+  - vitest run:   ✓ 49 passed
+  - npm run build: ✓ success
+
+
+================================================================================
+PHASE 4 — CIFRAA-app Duplicate Analysis
+================================================================================
+
+Goal: Analyze whether CIFRAA-app/ is a duplicate project that participates in
+runtime, and produce divergence report.
+
+A. Does CIFRAA-app participate in runtime?
+  NO — it is a fully independent, self-contained duplicate project.
+
+  Check                       Result
+  ─────────────────────────────────────────────────────────────
+  Root vite.config.ts @ alias  ./src only — never CIFRAA-app/
+  Root tsconfig.app.json       include: ["src"] — excludes CIFRAA-app/
+  CIFRAA-app imports boundary  Zero imports escape to parent src/
+  CIFRAA-app config            Separate vite.config, tsconfig, package.json,
+                               node_modules/, index.html
+  Build output                 Separate dist/ within CIFRAA-app
+
+B. Duplicate file comparison
+┌─────────────────────────┬──────┬─────────┬────────────────────────────────────────┬──────────┐
+│ File                    │ src  │ CIFRAA  │ Differences                            │ Verdict  │
+├─────────────────────────┼──────┼─────────┼────────────────────────────────────────┼──────────┤
+│ portfolioConstruction.ts│ 195  │ 195     │ Byte-for-byte identical                 │ SAME     │
+│ riskCapacity.ts         │ 259  │ 153     │ Lines 1-153 identical; src has extra    │ SUBSET   │
+│                         │      │         │ deriveRiskFromProfile() (93 lines)      │          │
+│ scoringEngineV3.ts      │ 459  │ 438     │ Expense formula, profile promotion      │ DIVERGED │
+│                         │      │         │ rules, completeness penalty weights,    │          │
+│                         │      │         │ credit-risk suppression, age penalty    │          │
+│ categoryMappings.ts     │ 519  │ 455     │ Missing toCategoryCode(); different     │ DIVERGED │
+│                         │      │         │ goal eligibility (wealth_creation       │          │
+│                         │      │         │ EQ-only vs EQ+HY+DT); different AMC     │          │
+│                         │      │         │ canonicals; different allocation models │          │
+│ intersectionEngine.ts   │ 468  │ 556     │ Inline diversify() vs external           │ DIVERGED │
+│                         │      │         │ constructPortfolio; different fallback   │          │
+│                         │      │         │ strategy; missing confidence/            │          │
+│                         │      │         │ explainability; heavy logging in CIFRAA │          │
+│ recommendationEngine.ts │ DEL  │ 487     │ Deleted from src/ in Phase 2            │ DEAD     │
+│ preferenceValidator.ts  │ DEL  │ 135     │ Deleted from src/ in Phase 3            │ DEAD     │
+│ strategyPortfolioEngine │ 454  │ 453     │ Minor diff (not fully compared)         │ LIKELY   │
+│                         │      │         │                                        │ SAME     │
+└─────────────────────────┴──────┴─────────┴────────────────────────────────────────┴──────────┘
+
+C. Key divergence details
+  1. Category normalization: src/ has toCategoryCode() to map "Equity - Large Cap"
+     → EQ-LC; CIFRAA assumes data is already in short-code format.
+  2. Goal eligibility (wealth_creation): src/ allows EQ-, HY-, DT- categories;
+     CIFRAA restricts to EQ- only.
+  3. Expense scoring: src/ uses 1 - (ratio - 0.8) / 1.2; CIFRAA uses
+     1 - min(ratio, 2) × 0.35.
+  4. Completeness penalty: src/ penalizes missing CAGR/vol/Sharpe at 15% each;
+     CIFRAA penalizes all fields uniformly at 5% each.
+  5. Age penalty: src/ penalizes funds <5 years; CIFRAA does not.
+  6. Conservative promotion: CIFRAA promotes conservative→moderate for
+     long-horizon wealth creation; src/ never promotes.
+  7. Aggressive demotion: CIFRAA demotes on short OR beginner; src/ requires both.
+  8. Diversification: src/ delegates to portfolioConstructor.ts (core-satellite,
+     AMC cap=1); CIFRAA has inline diversify() with ETF caps, arbitrage caps.
+
+D. Recommended source of truth
+  src/ (main app) is canonical. CIFRAA-app is an abandoned fork that never
+  received the fixes from Phases 1-3.
+
+E. Safe cleanup plan
+  All recommendation files in CIFRAA-app/ are SAFE TO ARCHIVE.
+  Recommendation: move entire CIFRAA-app/ directory to an archive location
+  (e.g., archive/CIFRAA-app/) or delete it. Zero runtime impact.
+
+
+================================================================================
+PHASE 5 — Scoring Formula Unification
+================================================================================
+
+Goal: Ensure one canonical scoring formula exists across all three systems.
+
+A. Three scoring systems identified
+  #  System                           Location                        Formula type
+  ─────────────────────────────────────────────────────────────────────────────────
+  1  scoreV3()                        scoringEngineV3.ts:274         Profile-adaptive,
+                                                                     category-relative
+  2  calcRecommendationScore()        supabase/functions/            Fixed-weight,
+                                      calculate-fund-metrics:151     raw-normalized
+  3  SQL recalc (Step 7)              sql/sanitize_metric_outliers   Fixed-weight,
+                                      .sql:115                       raw-normalized
+
+B. Truth table — where each metric is consumed
+┌────────────────────┬──────────────┬───────────┬────────┬────────────────────┐
+│ Metric             │ Source       │ Written   │ Read   │ Used for           │
+│                    │              │ to DB?    │ by UI? │ recommendation?    │
+├────────────────────┼──────────────┼───────────┼────────┼────────────────────┤
+│ compositeScore     │ scoreV3()    │ No        │ Yes    │ YES — primary key  │
+│ recommendation_    │ Edge fn      │ Yes       │ No     │ NO                 │
+│ score (DB)         │ (1yr NAV)    │           │        │                    │
+│ recommendation_    │ SQL Step 7   │ Yes       │ No     │ NO                 │
+│ score (SQL)        │ recalc       │           │        │                    │
+└────────────────────┴──────────────┴───────────┴────────┴────────────────────┘
+
+Why recommendation_score is NOT consumed by the UI:
+  1. fetch-fund-data reads recommendation_score from DB → FundMasterRow
+  2. fundMasterAdapter.ts:42 has the field in its type interface
+  3. BUT toMutualFund() (line 61-112) never maps recommendation_score to any
+     MutualFund property
+  4. The UI receives MutualFund[] with no recommendation_score
+  5. The recommendation pipeline calls scoreV3() to compute compositeScore
+     from raw metrics (CAGR, Sharpe, Sortino, Vol, etc.)
+  6. compositeScore is the sole sort key
+
+C. Formula comparison
+┌─────────────────────┬──────────────────────┬──────────────────────┬─────────────────────┐
+│ Factor              │ scoreV3() (V3)        │ Edge function        │ SQL Step 7           │
+├─────────────────────┼──────────────────────┼──────────────────────┼─────────────────────┤
+│ Metric period       │ Multi-year           │ 1Y only              │ 1Y only              │
+│                     │ (prefers longer)     │                      │                     │
+│ Weights             │ Profile-adaptive     │ Fixed: CAGR 30%,     │ Same as edge         │
+│                     │ (4 profiles)         │ Sharpe 25%,          │ function             │
+│                     │                      │ Sortino 25%,         │                     │
+│                     │                      │ Vol 15%, Exp 5%     │                     │
+│ Scoring method      │ Category-relative    │ Raw value → linear   │ Same as edge         │
+│                     │ (z-score vs median)  │ interpolation 0-100  │ function             │
+│ Extra factors       │ Consistency,         │ None                 │ None                 │
+│                     │ diversification      │                      │                     │
+│                     │ bonus, fund mgr,     │                      │                     │
+│                     │ expense, confidence, │                      │                     │
+│                     │ age, category        │                      │                     │
+│                     │ breadth, downside    │                      │                     │
+│ Profile awareness   │ Yes — 4 weight sets  │ No                   │ No                   │
+│ Goal awareness      │ Via eligibility/     │ No                   │ No                   │
+│                     │ fallback             │                      │                     │
+│ Null handling       │ Per-field penalty    │ Weight               │ Same as edge         │
+│                     │ weight redistribution│ redistribution       │ function             │
+│ Output range        │ 0-100               │ 0-100                │ 0-100               │
+└─────────────────────┴──────────────────────┴──────────────────────┴─────────────────────┘
+
+D. Data flow diagram (current)
+
+ NAV Data Pipeline
+   ↓
+ Edge function (calculate-fund-metrics)
+   ├── writes recommendation_score → fund_metrics DB  ← DEAD END
+   └── writes raw metrics (CAGR, Sharpe, Vol, ...) → fund_metrics DB
+                                                             ↓
+ SQL sanitize_metric_outliers (Step 7)
+   └── recalculates recommendation_score → fund_metrics DB  ← DEAD END
+                                                             ↓
+ fetch-fund-data edge function
+   ├── reads recommendation_score → FundMasterRow           ← UNMAPPED
+   └── reads raw metrics → FundMasterRow → MutualFund[]    ← USED
+                                                             ↓
+ UI (recommendFundsV2 → scoreV3)
+   └── computes compositeScore from raw metrics             ← CANONICAL PATH
+
+E. Recommended canonical source
+  scoreV3() in scoringEngineV3.ts — it is the only formula actually consumed
+  by the UI, the only profile-adaptive formula, the only category-relative
+  formula, and the only one incorporating multi-year data and 20+ factors.
+
+F. Which formulas should be removed
+┌──────────────────────────────────────────────────┬──────────┬─────────────────────────┐
+│ System                                           │ Action   │ Rationale               │
+├──────────────────────────────────────────────────┼──────────┼─────────────────────────┤
+│ Edge function calcRecommendationScore()          │ Deprecate│ Writes to column nobody │
+│ (calculate-fund-metrics/index.ts:151)            │          │ reads. Remove ~40 lines │
+├──────────────────────────────────────────────────┼──────────┼─────────────────────────┤
+│ SQL Step 7 recalc                                │ Remove   │ Same dead formula.      │
+│ (sanitize_metric_outliers.sql:115-174)           │          │ Overwrites unused column│
+├──────────────────────────────────────────────────┼──────────┼─────────────────────────┤
+│ recommendation_score column in fund_metrics      │ Keep     │ Views/queries may       │
+│                                                  │ (nullable)│ reference it. Stop      │
+│                                                  │          │ populating; drop later. │
+├──────────────────────────────────────────────────┼──────────┼─────────────────────────┤
+│ FundMasterRow.recommendation_score               │ Remove   │ Unused type field       │
+│ (fundMasterAdapter.ts:42)                        │          │ creating illusion of    │
+│                                                  │          │ consumption             │
+├──────────────────────────────────────────────────┼──────────┼─────────────────────────┤
+│ scoreV3() (scoringEngineV3.ts:274)               │ KEEP     │ This is canonical       │
+└──────────────────────────────────────────────────┴──────────┴─────────────────────────┘
+
+
+================================================================================
+OVERALL IMPACT SUMMARY
+================================================================================
+
+A. Files removed (production src/)
+  src/utils/recommendationEngine.ts                  (491 lines)
+  src/components/dashboard/RecommendationCard.tsx     (~80 lines)
+  src/utils/recommendation/preferenceValidator.ts     (~120 lines)
+  src/utils/recommendation/personaAllocations.ts      (~50 lines)
+
+B. Files modified
+  src/utils/portfolioComparisonEngine.ts              (constructor swap + adaptation)
+
+C. Files identified as unused but not deleted
+  src/utils/recommendation/portfolioConstruction.ts   (awaiting Phase 6 deletion)
+  supabase/functions/calculate-fund-metrics/          (calcRecommendationScore to deprecate)
+  sql/sanitize_metric_outliers.sql Step 7             (to remove)
+
+D. Files marked safe to archive
+  Entire CIFRAA-app/ directory (separate orphan project)
+
+E. Test results
+  All phases: vitest run — 49 passed, 5 files, zero regressions
+  TypeScript:  tsc --noEmit — zero errors
+  Build:       npm run build — success
+
+F. Runtime impact
+  NONE across all phases. Only dead code was removed; no live code paths
+  were changed except the constructor unification which ensures Dashboard
+  and Portfolio Comparison now use the same fund selection logic.
+
+
+================================================================================
+REMAINING WORK
+================================================================================
+
+1. Delete src/utils/recommendation/portfolioConstruction.ts
+   (no production imports remain after Phase 1)
+
+2. Deprecate calcRecommendationScore() in
+   supabase/functions/calculate-fund-metrics/index.ts
+
+3. Remove SQL Step 7 in sql/sanitize_metric_outliers.sql (lines 115-174)
+
+4. Remove FundMasterRow.recommendation_score field in fundMasterAdapter.ts
+
+5. Delete remaining dead files:
+   - src/utils/recommendation/explainabilityEngine.ts (if confirmed dead)
+
+
+================================================================================
+PHASE 6 — Archive CIFRAA-app & Category Pool Quality Audit
+================================================================================
+
+A. CIFRAA-app archived
+  - Moved CIFRAA-app/ → archive/CIFRAA-app/
+  - Zero imports reference archive/ in src/ or config files
+  - tsc --noEmit: ✓ 0 errors
+  - vitest run:   ✓ 50 passed (6 files)
+  - npm run build: ✓ success
+
+B. Category Pool Quality Audit — Methodology
+  For each of the 3 profiles (Retirement Planner, Capital Preservation,
+  Aggressive Growth), the full candidate pool was scored using scoreV3()
+  and grouped by category. The constructed portfolio output was compared
+  against the top eligible candidates to determine whether weak results
+  stem from weak construction or weak candidate pools.
+
+C. Target Category Deep Dive (across all 3 profiles)
+
+┌────────────┬──────────┬──────────┬──────────┬──────────┬──────────┬──────────┐
+│ Category   │Retirement│          │Capital   │          │Aggressive│          │
+│            │Avg Score │Pool      │Avg Score │Pool      │Avg Score │Pool      │
+├────────────┼──────────┼──────────┼──────────┼──────────┼──────────┼──────────┤
+│ HY-DAA     │ 27.2     │Very Weak │ N/A      │N/A (*)   │ 23.2     │Very Weak │
+│ HY-MAA     │ 21.1     │Very Weak │ N/A      │N/A (*)   │ 18.2     │Very Weak │
+│ HY-AR      │ 38.8     │Weak      │ 54.8     │Adequate  │ 29.9     │Very Weak │
+│ HY-EQ S    │ 31.4     │Very Weak │ 49.0     │Adequate  │ 25.7     │Very Weak │
+│ HY-CH      │ 35.3     │Weak      │ 54.7     │Adequate  │ 28.6     │Very Weak │
+│ DT-CB      │ 37.4     │Weak      │ 60.4     │Strong    │ 29.9     │Very Weak │
+│ DT-SD      │ 34.1     │Very Weak │ 55.3     │Strong    │ 27.3     │Very Weak │
+└────────────┴──────────┴──────────┴──────────┴──────────┴──────────┴──────────┘
+  (*) HY-DAA and HY-MAA are blocked for capital_preservation by goal eligibility.
+
+D. Category Ranking (strongest to weakest across all profiles)
+
+  Top 10 Strongest:
+   1. DT-MM        (60.7)  Strong     — Liquid/Money Market
+   2. DT-LIQ       (49.3)  Adequate   — Liquid
+   3. DT-Floater   (47.3)  Weak       — Debt Floating Rate
+   4. DT-OVERNHT   (45.8)  Adequate   — Overnight
+   5. DT-MD        (44.3)  Weak       — Medium Duration Debt
+   6. DT-USD       (42.6)  Weak       — Ultra Short Duration
+   7. DT-CB        (42.6)  Weak       — Corporate Bond
+   8. HY-AR        (41.2)  Adequate   — Arbitrage
+   9. DT-BK & PSU  (40.4)  Weak       — Banking & PSU
+  10. HY-CH        (39.5)  Adequate   — Conservative Hybrid
+
+  Bottom 5 Weakest:
+  44. DT-LONG D    (13.5)  Very Weak  — Long Duration Debt
+  45. EQ-Energy    (13.4)  Very Weak  — Energy Sectoral
+  46. EQ-IT        (11.0)  Very Weak  — IT Sectoral
+  47. EQ-THEMATIC  ( 8.9)  Very Weak  — Thematic
+  48. EQ-Innovation( 8.3)  Very Weak  — Innovation
+
+  Key finding: ALL equity categories score Very Weak (avg 8-33).
+  Debt categories are Strong/Adequate. Hybrid is mixed.
+
+E. Root Cause Analysis
+
+  Profile              Candidate   Top 10    Constructed  Score      Strong Cats /  Verdict
+                       Pool Size   Avg Score Avg Score    Drop       Weak Cats
+  ─────────────────────────────────────────────────────────────────────────────────────────
+  Retirement Planner   1,019        59.7       39.2       20.5 pts   0 / 27       🔴 Weak construction
+  Capital Preservation   544        78.0       65.3       12.7 pts  14 /  4       🔴 Mixed (construction
+                                                                                  drops but pool is good)
+  Aggressive Growth    1,697        52.8       51.7        1.0 pts   0 / 45       🔴 Weak candidate pools
+
+  Retirement Planner:
+    - Strong candidates exist (HY-AR funds score 57-63, DT-USD scores 60)
+    - But constructor picks EQ-LC (score 10.5) and EQ-MLC (score 24.6) as "Core"
+      instead of high-scoring HY-AR / DT funds
+    - 20.5-point drop indicates construction is prioritizing strategy group coverage
+      (needs large cap, flexi cap, etc.) over score quality
+    - AMC cap=1 prevents picking multiple top HY-AR funds from same AMC
+
+  Capital Preservation:
+    - Strong candidate pool (DT categories average 50-65, all rated Strong/Adequate)
+    - Construction achieves 65.3 which is respectable, but top 10 eligible average 78.0
+    - 12.7-point drop because constructor diversifies across DT subtypes (CB, GL, SD, LD)
+      rather than picking the absolute highest-scoring funds
+    - Still the best-performing profile due to strong DT candidate pool
+
+  Aggressive Growth:
+    - ALL 45 eligible categories are Very Weak (avg scores 8-35)
+    - No category has more than 2 funds scoring over 50 in the entire pool
+    - Construction achieves 51.7 — essentially the best the pool can offer (52.8 top 10 avg)
+    - Only 1.0-point drop — constructor is picking the best available
+    - Root cause: equity categories have poor scoreV3 scores due to:
+      a) High volatility penalized heavily in profile-adaptive scoring
+      b) Category-relative scoring means top equity funds still score low
+         when compared against low-volatility DT benchmarks
+      c) scoreV3's conservative-leaning weights penalize aggressive categories
+         (volatility penalty, consistency requirements)
+
+  VERDICT SUMMARY:
+    The scoring engine (scoreV3) is designed with a conservative bias —
+    debt categories naturally score higher due to low volatility, high
+    Sharpe/Sortino, and consistency. Equity categories score lower because:
+    - Higher volatility triggers penalties
+    - Category-relative scoring within equity categories is harsh
+      (all equity funds are volatile relative to debt benchmarks)
+    - Profile-adaptive weights for aggressive still favor Sortino over CAGR
+
+    This means:
+    - Capital Preservation works well (strong DT pools + high DT scores)
+    - Retirement Planner suffers from construction forcing equity allocation
+      (the allocation model mandates equity categories, but those score poorly)
+    - Aggressive Growth appears weak but is actually operating at the ceiling
+      of what the candidate pool can provide
+
+    RECOMMENDATION: The scoring formula itself needs recalibration for aggressive
+    profiles. ScoreV3 weights aggressively toward Sortino and consistency, which
+    inherently disadvantages equity funds. Consider adjusting profile weights so
+    that aggressive profiles reward CAGR more and penalize volatility less.
+
+F. Audit test added
+  src/utils/recommendation/categoryPoolAudit.test.ts — 1 test, 585ms runtime.
+  Can be re-run anytime via: npx vitest run categoryPoolAudit.test.ts
+
+
+================================================================================
+END OF REPORT
+================================================================================

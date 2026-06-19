@@ -1,5 +1,6 @@
 import { MutualFund } from '@/types/mutualFund';
 import { supabase } from '@/integrations/supabase/client';
+import { applyCorrections } from './categoryCorrections';
 
 export interface FundMasterRow {
   scheme_code: string;
@@ -60,10 +61,12 @@ export interface FundMasterRow {
 
 export function toMutualFund(row: FundMasterRow): MutualFund {
   const name = row.workbook_name || row.scheme_name || 'Unknown Fund';
+  const rawCategory = row.category || '';
+  const correctedCategory = applyCorrections(name, rawCategory);
   return {
     id: row.workbook_id || row.scheme_code,
     name,
-    category: row.category || '',
+    category: correctedCategory,
     amc: row.amc || '',
     nav: 0,
     aum: row.aum ?? row.net_assets ?? null,

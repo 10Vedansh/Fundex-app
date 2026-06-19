@@ -128,7 +128,7 @@ export const RISK_CONSTRAINTS: Record<string, RiskConstraint> = {
     ],
   },
   moderate: {
-    maxVolatility: 8,
+    maxVolatility: 18,
     maxDrawdown: null,
     minCreditQuality: null,
     blockedCategories: [
@@ -176,7 +176,7 @@ export const GOAL_ELIGIBILITY: Record<string, GoalEligibility> = {
       'HY-AH',
       'DT-CR',
     ],
-    maxVolatility: 8,
+    maxVolatility: 18,
     minSharpe: null,
     requirePositive3Y: false,
     lockInFlag: false,
@@ -219,7 +219,7 @@ export const GOAL_ELIGIBILITY: Record<string, GoalEligibility> = {
     maxVolatility: 4,
     minSharpe: null,
     requirePositive3Y: false,
-    lockInFlag: false,
+    lockInFlag: true,
   },
 };
 
@@ -455,14 +455,13 @@ export function getAllocationModel(risk: string, goal: string): AllocationBucket
     }
     if (g === 'retirement') {
       return [
-        { categories: ['HY-DAA'], maxFunds: 1 },             // Balanced Advantage
-        { categories: ['EQ-FLX', 'EQ-MLC'], maxFunds: 2 },   // Flexi Cap
-        { categories: ['EQ-LC'], maxFunds: 1 },               // Large Cap
-        { categories: ['HY-MAA'], maxFunds: 1 },              // Multi Asset Allocation
-        { categories: ['HY-CH'], maxFunds: 1 },               // Conservative Hybrid
-        { categories: ['DT-CB', 'DT-BK & PSU', 'DT-SD', PLAIN_DEBT], maxFunds: 1 }, // Corporate Bond + Short Duration
-        { categories: ['HY-AR'], maxFunds: 1 },               // Arbitrage (max 1)
-        { categories: ['HY-EQ S'], maxFunds: 1 },             // Equity Savings
+        { categories: ['EQ-LC', 'EQ-L&MC', PLAIN_INDEX], maxFunds: 2 },
+        { categories: ['EQ-FLX'], maxFunds: 2 },
+        { categories: ['EQ-MLC'], maxFunds: 1 },
+        { categories: ['DT-CB', 'DT-BK & PSU', PLAIN_DEBT], maxFunds: 1 },
+        { categories: ['DT-SD'], maxFunds: 1 },
+        { categories: ['HY-DAA'], maxFunds: 1 },
+        { categories: ['HY-MAA'], maxFunds: 1 },
       ];
     }
     if (g === 'wealth') {
@@ -487,15 +486,15 @@ export function getAllocationModel(risk: string, goal: string): AllocationBucket
   // Aggressive
   if (g === 'retirement') {
     return [
-      { categories: ['EQ-FLX', 'EQ-MLC'], maxFunds: 2 },   // Flexi/Multi Cap
-      { categories: ['EQ-LC', 'EQ-L&MC', PLAIN_INDEX], maxFunds: 1 }, // Large Cap
-      { categories: ['EQ-MC'], maxFunds: 1 },               // Mid Cap
-      { categories: ['HY-DAA'], maxFunds: 1 },              // Balanced Advantage
-      { categories: ['HY-MAA'], maxFunds: 1 },              // Multi Asset Allocation
-      { categories: ['HY-CH'], maxFunds: 1 },               // Conservative Hybrid
-      { categories: ['DT-CB', 'DT-BK & PSU', 'DT-SD', PLAIN_DEBT], maxFunds: 1 }, // Debt
-      { categories: ['HY-AR'], maxFunds: 1 },               // Arbitrage
-      { categories: ['HY-EQ S'], maxFunds: 1 },             // Equity Savings
+      { categories: ['EQ-FLX', 'EQ-MLC'], maxFunds: 2 },
+      { categories: ['EQ-LC', 'EQ-L&MC', PLAIN_INDEX], maxFunds: 1 },
+      { categories: ['EQ-MC'], maxFunds: 1 },
+      { categories: ['EQ-VAL', 'EQ-SC'], maxFunds: 1 },
+      { categories: ['HY-DAA', 'HY-CH'], maxFunds: 1 },
+      { categories: ['HY-MAA', 'HY-EQ S'], maxFunds: 1 },
+      { categories: ['DT-CB', 'DT-BK & PSU', PLAIN_DEBT], maxFunds: 1 },
+      { categories: ['DT-SD', 'DT-GL', 'DT-Floater'], maxFunds: 1 },
+      { categories: ['HY-AR'], maxFunds: 1 },
     ];
   }
   if (g === 'wealth') {
